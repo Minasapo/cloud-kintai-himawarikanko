@@ -20,7 +20,8 @@ export default function AggregateExportButton({
   workDates,
   selectedStaff,
 }: Props) {
-  const { getHourlyPaidHolidayEnabled } = useContext(AppConfigContext);
+  const { getHourlyPaidHolidayEnabled, getSpecialHolidayEnabled } =
+    useContext(AppConfigContext);
 
   const onClick = async () => {
     if (workDates.length === 0 || selectedStaff.length === 0) return;
@@ -30,16 +31,21 @@ export default function AggregateExportButton({
     );
 
     const hourlyPaidHolidayEnabled = getHourlyPaidHolidayEnabled();
+    const includeSpecialHoliday = getSpecialHolidayEnabled
+      ? getSpecialHolidayEnabled()
+      : false;
 
     const header = [
       "従業員コード",
       "名前",
       "対象日数",
       "出勤日数",
+      "欠勤日数",
       "実働合計(h)",
       "休憩合計(h)",
       "有給日数",
       "振替休日日数",
+      ...(includeSpecialHoliday ? ["特別休暇"] : []),
       ...(hourlyPaidHolidayEnabled ? ["時間単位休暇合計(h)"] : []),
       "摘要",
     ];
@@ -58,13 +64,17 @@ export default function AggregateExportButton({
         let totalWork = 0;
         let totalRest = 0;
         let paidHolidayCount = 0;
+        let absentCount = 0;
         let substituteCount = 0;
+        let specialHolidayCount = 0;
         let hourlyPaidHolidayHoursSum = 0;
         const remarks: string[] = [];
 
         attendances.forEach((att) => {
           if (att.paidHolidayFlag) paidHolidayCount += 1;
+          if (att.absentFlag) absentCount += 1;
           if (att.substituteHolidayDate) substituteCount += 1;
+          if (att.specialHolidayFlag) specialHolidayCount += 1;
           if (hourlyPaidHolidayEnabled && att.hourlyPaidHolidayHours)
             hourlyPaidHolidayHoursSum +=
               Number(att.hourlyPaidHolidayHours) || 0;
@@ -93,10 +103,12 @@ export default function AggregateExportButton({
           `${staff.familyName} ${staff.givenName}`,
           workDates.length,
           出勤日数,
+          absentCount,
           totalWork.toFixed(2),
           totalRest.toFixed(2),
           paidHolidayCount,
           substituteCount,
+          ...(includeSpecialHoliday ? [specialHolidayCount] : []),
           ...(hourlyPaidHolidayEnabled
             ? [hourlyPaidHolidayHoursSum.toFixed(2)]
             : []),

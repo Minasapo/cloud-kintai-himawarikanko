@@ -39,6 +39,8 @@ type AppConfigContextProps = {
   getPmHolidayStartTime: () => dayjs.Dayjs;
   getPmHolidayEndTime: () => dayjs.Dayjs;
   getAmPmHolidayEnabled: () => boolean;
+  getSpecialHolidayEnabled?: () => boolean;
+  getAbsentEnabled?: () => boolean;
 };
 
 export const AppConfigContext = createContext<AppConfigContextProps>({
@@ -65,4 +67,6 @@ export const AppConfigContext = createContext<AppConfigContextProps>({
   getPmHolidayStartTime: () => dayjs("13:00", "HH:mm"),
   getPmHolidayEndTime: () => dayjs("18:00", "HH:mm"),
   getAmPmHolidayEnabled: () => false,
+  getSpecialHolidayEnabled: () => false,
+  getAbsentEnabled: () => false,
 });

@@ -22,6 +22,21 @@ type Staff @model @auth(rules: [{ allow: private }]) {
   notifications: Notification
   sortKey: String
   workType: String
+  approverSetting: ApproverSettingMode
+  approverSingle: String
+  approverMultiple: [String]
+  approverMultipleMode: ApproverMultipleMode
+}
+
+enum ApproverSettingMode {
+  ADMINS
+  SINGLE
+  MULTIPLE
+}
+
+enum ApproverMultipleMode {
+  ANY
+  ORDER
 }
 
 type Notification {
@@ -67,10 +82,12 @@ type Attendance @model @auth(rules: [{ allow: private }]) {
   endTime: String
   goDirectlyFlag: Boolean
   returnDirectlyFlag: Boolean
+  absentFlag: Boolean
   rests: [Rest]
   hourlyPaidHolidayTimes: [HourlyPaidHolidayTime]
   remarks: String
   paidHolidayFlag: Boolean
+  specialHolidayFlag: Boolean
   isDeemedHoliday: Boolean
   hourlyPaidHolidayHours: Int
   substituteHolidayDate: String
@@ -105,11 +122,13 @@ type AttendanceHistory {
   startTime: String
   endTime: String
   goDirectlyFlag: Boolean
+  absentFlag: Boolean
   returnDirectlyFlag: Boolean
   rests: [Rest]
   hourlyPaidHolidayTimes: [HourlyPaidHolidayTime]
   remarks: String
   paidHolidayFlag: Boolean
+  specialHolidayFlag: Boolean
   hourlyPaidHolidayHours: Int
   substituteHolidayFlag: Boolean
   substituteHolidayDate: String
@@ -120,11 +139,13 @@ type AttendanceChangeRequest {
   startTime: String
   endTime: String
   goDirectlyFlag: Boolean
+  absentFlag: Boolean
   returnDirectlyFlag: Boolean
   rests: [Rest]
   hourlyPaidHolidayTimes: [HourlyPaidHolidayTime]
   remarks: String
   paidHolidayFlag: Boolean
+  specialHolidayFlag: Boolean
   hourlyPaidHolidayHours: Int
   substituteHolidayFlag: Boolean
   substituteHolidayDate: String
@@ -161,8 +182,10 @@ type AppConfig @model {
   amHolidayEndTime: String
   pmHolidayStartTime: String
   pmHolidayEndTime: String
+  specialHolidayEnabled: Boolean
   amPmHolidayEnabled: Boolean
   officeMode: Boolean
+  absentEnabled: Boolean
   hourlyPaidHolidayEnabled: Boolean
   links: [Link]
   reasons: [Reason]
@@ -189,4 +212,69 @@ type Query {
 type HourlyPaidHolidayTime {
   startTime: String!
   endTime: String!
+}
+
+enum WorkflowCategory {
+  PAID_LEAVE
+  ABSENCE
+  OVERTIME
+  CUSTOM
+}
+
+enum WorkflowStatus {
+  DRAFT
+  SUBMITTED
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+type OverTimeWorkflow {
+  date: String!
+  startTime: String!
+  endTime: String!
+  reason: String!
+}
+
+type WorkflowComment {
+  id: ID!
+  staffId: String!
+  text: String!
+  createdAt: String!
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  SKIPPED
+}
+
+type ApprovalStep {
+  id: ID!
+  approverStaffId: String!
+  decisionStatus: ApprovalStatus!
+  approverComment: String
+  decisionTimestamp: String
+  stepOrder: Int
+}
+
+type Workflow @model @auth(rules: [{ allow: private }]) {
+  id: ID!
+  approvedStaffIds: [String]
+  rejectedStaffIds: [String]
+  finalDecisionTimestamp: String
+  category: WorkflowCategory
+  staffId: String! @index(name: "byStaffId", queryField: "workflowsByStaffId")
+  status: WorkflowStatus!
+  assignedApproverStaffIds: [String]
+  approvalSteps: [ApprovalStep]
+  nextApprovalStepIndex: Int
+  submitterApproverSetting: ApproverSettingMode
+  submitterApproverId: String
+  submitterApproverIds: [String]
+  submitterApproverMultipleMode: ApproverMultipleMode
+  overTimeDetails: OverTimeWorkflow
+  comments: [WorkflowComment]
 }

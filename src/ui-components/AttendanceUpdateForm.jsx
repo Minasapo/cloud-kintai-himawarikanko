@@ -36,8 +36,10 @@ export default function AttendanceUpdateForm(props) {
     endTime: "",
     goDirectlyFlag: false,
     returnDirectlyFlag: false,
+    absentFlag: false,
     remarks: "",
     paidHolidayFlag: false,
+    specialHolidayFlag: false,
     isDeemedHoliday: false,
     hourlyPaidHolidayHours: "",
     substituteHolidayDate: "",
@@ -53,9 +55,13 @@ export default function AttendanceUpdateForm(props) {
   const [returnDirectlyFlag, setReturnDirectlyFlag] = React.useState(
     initialValues.returnDirectlyFlag
   );
+  const [absentFlag, setAbsentFlag] = React.useState(initialValues.absentFlag);
   const [remarks, setRemarks] = React.useState(initialValues.remarks);
   const [paidHolidayFlag, setPaidHolidayFlag] = React.useState(
     initialValues.paidHolidayFlag
+  );
+  const [specialHolidayFlag, setSpecialHolidayFlag] = React.useState(
+    initialValues.specialHolidayFlag
   );
   const [isDeemedHoliday, setIsDeemedHoliday] = React.useState(
     initialValues.isDeemedHoliday
@@ -78,8 +84,10 @@ export default function AttendanceUpdateForm(props) {
     setEndTime(cleanValues.endTime);
     setGoDirectlyFlag(cleanValues.goDirectlyFlag);
     setReturnDirectlyFlag(cleanValues.returnDirectlyFlag);
+    setAbsentFlag(cleanValues.absentFlag);
     setRemarks(cleanValues.remarks);
     setPaidHolidayFlag(cleanValues.paidHolidayFlag);
+    setSpecialHolidayFlag(cleanValues.specialHolidayFlag);
     setIsDeemedHoliday(cleanValues.isDeemedHoliday);
     setHourlyPaidHolidayHours(cleanValues.hourlyPaidHolidayHours);
     setSubstituteHolidayDate(cleanValues.substituteHolidayDate);
@@ -110,8 +118,10 @@ export default function AttendanceUpdateForm(props) {
     endTime: [],
     goDirectlyFlag: [],
     returnDirectlyFlag: [],
+    absentFlag: [],
     remarks: [],
     paidHolidayFlag: [],
+    specialHolidayFlag: [],
     isDeemedHoliday: [],
     hourlyPaidHolidayHours: [],
     substituteHolidayDate: [],
@@ -149,8 +159,10 @@ export default function AttendanceUpdateForm(props) {
           endTime: endTime ?? null,
           goDirectlyFlag: goDirectlyFlag ?? null,
           returnDirectlyFlag: returnDirectlyFlag ?? null,
+          absentFlag: absentFlag ?? null,
           remarks: remarks ?? null,
           paidHolidayFlag: paidHolidayFlag ?? null,
+          specialHolidayFlag: specialHolidayFlag ?? null,
           isDeemedHoliday: isDeemedHoliday ?? null,
           hourlyPaidHolidayHours: hourlyPaidHolidayHours ?? null,
           substituteHolidayDate: substituteHolidayDate ?? null,
@@ -221,8 +233,10 @@ export default function AttendanceUpdateForm(props) {
               endTime,
               goDirectlyFlag,
               returnDirectlyFlag,
+              absentFlag,
               remarks,
               paidHolidayFlag,
+              specialHolidayFlag,
               isDeemedHoliday,
               hourlyPaidHolidayHours,
               substituteHolidayDate,
@@ -256,8 +270,10 @@ export default function AttendanceUpdateForm(props) {
               endTime,
               goDirectlyFlag,
               returnDirectlyFlag,
+              absentFlag,
               remarks,
               paidHolidayFlag,
+              specialHolidayFlag,
               isDeemedHoliday,
               hourlyPaidHolidayHours,
               substituteHolidayDate,
@@ -291,8 +307,10 @@ export default function AttendanceUpdateForm(props) {
               endTime,
               goDirectlyFlag,
               returnDirectlyFlag,
+              absentFlag,
               remarks,
               paidHolidayFlag,
+              specialHolidayFlag,
               isDeemedHoliday,
               hourlyPaidHolidayHours,
               substituteHolidayDate,
@@ -326,8 +344,10 @@ export default function AttendanceUpdateForm(props) {
               endTime: value,
               goDirectlyFlag,
               returnDirectlyFlag,
+              absentFlag,
               remarks,
               paidHolidayFlag,
+              specialHolidayFlag,
               isDeemedHoliday,
               hourlyPaidHolidayHours,
               substituteHolidayDate,
@@ -361,8 +381,10 @@ export default function AttendanceUpdateForm(props) {
               endTime,
               goDirectlyFlag: value,
               returnDirectlyFlag,
+              absentFlag,
               remarks,
               paidHolidayFlag,
+              specialHolidayFlag,
               isDeemedHoliday,
               hourlyPaidHolidayHours,
               substituteHolidayDate,
@@ -396,8 +418,10 @@ export default function AttendanceUpdateForm(props) {
               endTime,
               goDirectlyFlag,
               returnDirectlyFlag: value,
+              absentFlag,
               remarks,
               paidHolidayFlag,
+              specialHolidayFlag,
               isDeemedHoliday,
               hourlyPaidHolidayHours,
               substituteHolidayDate,
@@ -418,6 +442,43 @@ export default function AttendanceUpdateForm(props) {
         hasError={errors.returnDirectlyFlag?.hasError}
         {...getOverrideProps(overrides, "returnDirectlyFlag")}
       ></SwitchField>
+      <SwitchField
+        label="Absent flag"
+        defaultChecked={false}
+        isDisabled={false}
+        isChecked={absentFlag}
+        onChange={(e) => {
+          let value = e.target.checked;
+          if (onChange) {
+            const modelFields = {
+              staffId,
+              workDate,
+              startTime,
+              endTime,
+              goDirectlyFlag,
+              returnDirectlyFlag,
+              absentFlag: value,
+              remarks,
+              paidHolidayFlag,
+              specialHolidayFlag,
+              isDeemedHoliday,
+              hourlyPaidHolidayHours,
+              substituteHolidayDate,
+              revision,
+            };
+            const result = onChange(modelFields);
+            value = result?.absentFlag ?? value;
+          }
+          if (errors.absentFlag?.hasError) {
+            runValidationTasks("absentFlag", value);
+          }
+          setAbsentFlag(value);
+        }}
+        onBlur={() => runValidationTasks("absentFlag", absentFlag)}
+        errorMessage={errors.absentFlag?.errorMessage}
+        hasError={errors.absentFlag?.hasError}
+        {...getOverrideProps(overrides, "absentFlag")}
+      ></SwitchField>
       <TextField
         label="Remarks"
         isRequired={false}
@@ -433,8 +494,10 @@ export default function AttendanceUpdateForm(props) {
               endTime,
               goDirectlyFlag,
               returnDirectlyFlag,
+              absentFlag,
               remarks: value,
               paidHolidayFlag,
+              specialHolidayFlag,
               isDeemedHoliday,
               hourlyPaidHolidayHours,
               substituteHolidayDate,
@@ -468,8 +531,10 @@ export default function AttendanceUpdateForm(props) {
               endTime,
               goDirectlyFlag,
               returnDirectlyFlag,
+              absentFlag,
               remarks,
               paidHolidayFlag: value,
+              specialHolidayFlag,
               isDeemedHoliday,
               hourlyPaidHolidayHours,
               substituteHolidayDate,
@@ -489,6 +554,45 @@ export default function AttendanceUpdateForm(props) {
         {...getOverrideProps(overrides, "paidHolidayFlag")}
       ></SwitchField>
       <SwitchField
+        label="Special holiday flag"
+        defaultChecked={false}
+        isDisabled={false}
+        isChecked={specialHolidayFlag}
+        onChange={(e) => {
+          let value = e.target.checked;
+          if (onChange) {
+            const modelFields = {
+              staffId,
+              workDate,
+              startTime,
+              endTime,
+              goDirectlyFlag,
+              returnDirectlyFlag,
+              absentFlag,
+              remarks,
+              paidHolidayFlag,
+              specialHolidayFlag: value,
+              isDeemedHoliday,
+              hourlyPaidHolidayHours,
+              substituteHolidayDate,
+              revision,
+            };
+            const result = onChange(modelFields);
+            value = result?.specialHolidayFlag ?? value;
+          }
+          if (errors.specialHolidayFlag?.hasError) {
+            runValidationTasks("specialHolidayFlag", value);
+          }
+          setSpecialHolidayFlag(value);
+        }}
+        onBlur={() =>
+          runValidationTasks("specialHolidayFlag", specialHolidayFlag)
+        }
+        errorMessage={errors.specialHolidayFlag?.errorMessage}
+        hasError={errors.specialHolidayFlag?.hasError}
+        {...getOverrideProps(overrides, "specialHolidayFlag")}
+      ></SwitchField>
+      <SwitchField
         label="Is deemed holiday"
         defaultChecked={false}
         isDisabled={false}
@@ -503,8 +607,10 @@ export default function AttendanceUpdateForm(props) {
               endTime,
               goDirectlyFlag,
               returnDirectlyFlag,
+              absentFlag,
               remarks,
               paidHolidayFlag,
+              specialHolidayFlag,
               isDeemedHoliday: value,
               hourlyPaidHolidayHours,
               substituteHolidayDate,
@@ -542,8 +648,10 @@ export default function AttendanceUpdateForm(props) {
               endTime,
               goDirectlyFlag,
               returnDirectlyFlag,
+              absentFlag,
               remarks,
               paidHolidayFlag,
+              specialHolidayFlag,
               isDeemedHoliday,
               hourlyPaidHolidayHours: value,
               substituteHolidayDate,
@@ -579,8 +687,10 @@ export default function AttendanceUpdateForm(props) {
               endTime,
               goDirectlyFlag,
               returnDirectlyFlag,
+              absentFlag,
               remarks,
               paidHolidayFlag,
+              specialHolidayFlag,
               isDeemedHoliday,
               hourlyPaidHolidayHours,
               substituteHolidayDate: value,
@@ -620,8 +730,10 @@ export default function AttendanceUpdateForm(props) {
               endTime,
               goDirectlyFlag,
               returnDirectlyFlag,
+              absentFlag,
               remarks,
               paidHolidayFlag,
+              specialHolidayFlag,
               isDeemedHoliday,
               hourlyPaidHolidayHours,
               substituteHolidayDate,

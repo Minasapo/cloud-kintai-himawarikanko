@@ -24,7 +24,8 @@ export class AttendanceDataManager {
     })) as GraphQLResult<GetAttendanceQuery>;
 
     if (response.errors) {
-      throw new Error(response.errors[0].message);
+      // Throw full errors object to make debugging GraphQL errors easier
+      throw new Error(JSON.stringify(response.errors));
     }
 
     if (!response.data?.getAttendance) {
@@ -53,7 +54,7 @@ export class AttendanceDataManager {
       })) as GraphQLResult<AttendancesByStaffIdQuery>;
 
       if (response.errors) {
-        throw new Error(response.errors[0].message);
+        throw new Error(JSON.stringify(response.errors));
       }
 
       if (!response.data?.attendancesByStaffId) {
@@ -96,7 +97,7 @@ export class AttendanceDataManager {
     })) as GraphQLResult<CreateAttendanceMutation>;
 
     if (response.errors) {
-      throw new Error(response.errors[0].message);
+      throw new Error(JSON.stringify(response.errors));
     }
 
     if (!response.data?.createAttendance) {
@@ -133,6 +134,7 @@ export class AttendanceDataManager {
       returnDirectlyFlag: currentAttendance.returnDirectlyFlag,
       remarks: currentAttendance.remarks,
       paidHolidayFlag: currentAttendance.paidHolidayFlag,
+      specialHolidayFlag: currentAttendance.specialHolidayFlag,
       substituteHolidayDate: currentAttendance.substituteHolidayDate,
       createdAt,
       rests: currentAttendance.rests
@@ -166,6 +168,7 @@ export class AttendanceDataManager {
               returnDirectlyFlag: history.returnDirectlyFlag,
               remarks: history.remarks,
               paidHolidayFlag: history.paidHolidayFlag,
+              specialHolidayFlag: history.specialHolidayFlag,
               substituteHolidayDate: history.substituteHolidayDate,
               createdAt: history.createdAt,
               rests: history.rests
@@ -201,7 +204,7 @@ export class AttendanceDataManager {
     })) as GraphQLResult<UpdateAttendanceMutation>;
 
     if (response.errors) {
-      throw new Error(response.errors[0].message);
+      throw new Error(JSON.stringify(response.errors));
     }
 
     if (!response.data?.updateAttendance) {

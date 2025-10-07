@@ -7,14 +7,24 @@ export function SummaryTableCell({
   paidHolidayFlag,
   substituteHolidayDate,
   remarks,
+  specialHolidayFlag,
+  absentFlag,
 }: {
   paidHolidayFlag: Attendance["paidHolidayFlag"];
   substituteHolidayDate: Attendance["substituteHolidayDate"];
   remarks: Attendance["remarks"];
+  specialHolidayFlag?: Attendance["specialHolidayFlag"];
+  absentFlag?: Attendance["absentFlag"];
 }) {
   return (
     <TableCell sx={{ whiteSpace: "nowrap" }}>
-      {getSummaryText(paidHolidayFlag, substituteHolidayDate, remarks)}
+      {getSummaryText(
+        paidHolidayFlag,
+        substituteHolidayDate,
+        remarks,
+        specialHolidayFlag,
+        absentFlag
+      )}
     </TableCell>
   );
 }
@@ -22,7 +32,9 @@ export function SummaryTableCell({
 function getSummaryText(
   paidHolidayFlag: Attendance["paidHolidayFlag"],
   substituteHolidayDate: Attendance["substituteHolidayDate"],
-  remarks: string | null | undefined
+  remarks: string | null | undefined,
+  specialHolidayFlag?: Attendance["specialHolidayFlag"],
+  absentFlag?: Attendance["absentFlag"]
 ) {
   const isSubstituteHoliday = substituteHolidayDate
     ? dayjs(substituteHolidayDate).isValid()
@@ -30,7 +42,9 @@ function getSummaryText(
 
   return (() => {
     const summaryMessage = [];
+    if (absentFlag) summaryMessage.push("欠勤");
     if (paidHolidayFlag) summaryMessage.push("有給休暇");
+    if (specialHolidayFlag) summaryMessage.push("特別休暇");
     if (isSubstituteHoliday) summaryMessage.push("振替休日");
     if (remarks) summaryMessage.push(remarks);
 

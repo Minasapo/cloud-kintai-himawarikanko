@@ -71,8 +71,10 @@ export const createAppConfig = /* GraphQL */ `mutation CreateAppConfig(
     amHolidayEndTime
     pmHolidayStartTime
     pmHolidayEndTime
+    specialHolidayEnabled
     amPmHolidayEnabled
     officeMode
+    absentEnabled
     hourlyPaidHolidayEnabled
     links {
       label
@@ -120,8 +122,10 @@ export const updateAppConfig = /* GraphQL */ `mutation UpdateAppConfig(
     amHolidayEndTime
     pmHolidayStartTime
     pmHolidayEndTime
+    specialHolidayEnabled
     amPmHolidayEnabled
     officeMode
+    absentEnabled
     hourlyPaidHolidayEnabled
     links {
       label
@@ -169,8 +173,10 @@ export const deleteAppConfig = /* GraphQL */ `mutation DeleteAppConfig(
     amHolidayEndTime
     pmHolidayStartTime
     pmHolidayEndTime
+    specialHolidayEnabled
     amPmHolidayEnabled
     officeMode
+    absentEnabled
     hourlyPaidHolidayEnabled
     links {
       label
@@ -225,6 +231,10 @@ export const createStaff = /* GraphQL */ `mutation CreateStaff(
     }
     sortKey
     workType
+    approverSetting
+    approverSingle
+    approverMultiple
+    approverMultipleMode
     createdAt
     updatedAt
     __typename
@@ -256,6 +266,10 @@ export const updateStaff = /* GraphQL */ `mutation UpdateStaff(
     }
     sortKey
     workType
+    approverSetting
+    approverSingle
+    approverMultiple
+    approverMultipleMode
     createdAt
     updatedAt
     __typename
@@ -287,6 +301,10 @@ export const deleteStaff = /* GraphQL */ `mutation DeleteStaff(
     }
     sortKey
     workType
+    approverSetting
+    approverSingle
+    approverMultiple
+    approverMultipleMode
     createdAt
     updatedAt
     __typename
@@ -464,6 +482,7 @@ export const createAttendance = /* GraphQL */ `mutation CreateAttendance(
     endTime
     goDirectlyFlag
     returnDirectlyFlag
+    absentFlag
     rests {
       startTime
       endTime
@@ -476,6 +495,7 @@ export const createAttendance = /* GraphQL */ `mutation CreateAttendance(
     }
     remarks
     paidHolidayFlag
+    specialHolidayFlag
     isDeemedHoliday
     hourlyPaidHolidayHours
     substituteHolidayDate
@@ -485,6 +505,7 @@ export const createAttendance = /* GraphQL */ `mutation CreateAttendance(
       startTime
       endTime
       goDirectlyFlag
+      absentFlag
       returnDirectlyFlag
       rests {
         startTime
@@ -498,6 +519,7 @@ export const createAttendance = /* GraphQL */ `mutation CreateAttendance(
       }
       remarks
       paidHolidayFlag
+      specialHolidayFlag
       hourlyPaidHolidayHours
       substituteHolidayFlag
       substituteHolidayDate
@@ -508,6 +530,7 @@ export const createAttendance = /* GraphQL */ `mutation CreateAttendance(
       startTime
       endTime
       goDirectlyFlag
+      absentFlag
       returnDirectlyFlag
       rests {
         startTime
@@ -521,6 +544,7 @@ export const createAttendance = /* GraphQL */ `mutation CreateAttendance(
       }
       remarks
       paidHolidayFlag
+      specialHolidayFlag
       hourlyPaidHolidayHours
       substituteHolidayFlag
       substituteHolidayDate
@@ -557,6 +581,7 @@ export const updateAttendance = /* GraphQL */ `mutation UpdateAttendance(
     endTime
     goDirectlyFlag
     returnDirectlyFlag
+    absentFlag
     rests {
       startTime
       endTime
@@ -569,6 +594,7 @@ export const updateAttendance = /* GraphQL */ `mutation UpdateAttendance(
     }
     remarks
     paidHolidayFlag
+    specialHolidayFlag
     isDeemedHoliday
     hourlyPaidHolidayHours
     substituteHolidayDate
@@ -578,6 +604,7 @@ export const updateAttendance = /* GraphQL */ `mutation UpdateAttendance(
       startTime
       endTime
       goDirectlyFlag
+      absentFlag
       returnDirectlyFlag
       rests {
         startTime
@@ -591,6 +618,7 @@ export const updateAttendance = /* GraphQL */ `mutation UpdateAttendance(
       }
       remarks
       paidHolidayFlag
+      specialHolidayFlag
       hourlyPaidHolidayHours
       substituteHolidayFlag
       substituteHolidayDate
@@ -601,6 +629,7 @@ export const updateAttendance = /* GraphQL */ `mutation UpdateAttendance(
       startTime
       endTime
       goDirectlyFlag
+      absentFlag
       returnDirectlyFlag
       rests {
         startTime
@@ -614,6 +643,7 @@ export const updateAttendance = /* GraphQL */ `mutation UpdateAttendance(
       }
       remarks
       paidHolidayFlag
+      specialHolidayFlag
       hourlyPaidHolidayHours
       substituteHolidayFlag
       substituteHolidayDate
@@ -650,6 +680,7 @@ export const deleteAttendance = /* GraphQL */ `mutation DeleteAttendance(
     endTime
     goDirectlyFlag
     returnDirectlyFlag
+    absentFlag
     rests {
       startTime
       endTime
@@ -662,6 +693,7 @@ export const deleteAttendance = /* GraphQL */ `mutation DeleteAttendance(
     }
     remarks
     paidHolidayFlag
+    specialHolidayFlag
     isDeemedHoliday
     hourlyPaidHolidayHours
     substituteHolidayDate
@@ -671,6 +703,7 @@ export const deleteAttendance = /* GraphQL */ `mutation DeleteAttendance(
       startTime
       endTime
       goDirectlyFlag
+      absentFlag
       returnDirectlyFlag
       rests {
         startTime
@@ -684,6 +717,7 @@ export const deleteAttendance = /* GraphQL */ `mutation DeleteAttendance(
       }
       remarks
       paidHolidayFlag
+      specialHolidayFlag
       hourlyPaidHolidayHours
       substituteHolidayFlag
       substituteHolidayDate
@@ -694,6 +728,7 @@ export const deleteAttendance = /* GraphQL */ `mutation DeleteAttendance(
       startTime
       endTime
       goDirectlyFlag
+      absentFlag
       returnDirectlyFlag
       rests {
         startTime
@@ -707,6 +742,7 @@ export const deleteAttendance = /* GraphQL */ `mutation DeleteAttendance(
       }
       remarks
       paidHolidayFlag
+      specialHolidayFlag
       hourlyPaidHolidayHours
       substituteHolidayFlag
       substituteHolidayDate
@@ -790,4 +826,154 @@ export const deleteDocument = /* GraphQL */ `mutation DeleteDocument(
 ` as GeneratedMutation<
   APITypes.DeleteDocumentMutationVariables,
   APITypes.DeleteDocumentMutation
+>;
+export const createWorkflow = /* GraphQL */ `mutation CreateWorkflow(
+  $input: CreateWorkflowInput!
+  $condition: ModelWorkflowConditionInput
+) {
+  createWorkflow(input: $input, condition: $condition) {
+    id
+    approvedStaffIds
+    rejectedStaffIds
+    finalDecisionTimestamp
+    category
+    staffId
+    status
+    assignedApproverStaffIds
+    approvalSteps {
+      id
+      approverStaffId
+      decisionStatus
+      approverComment
+      decisionTimestamp
+      stepOrder
+      __typename
+    }
+    nextApprovalStepIndex
+    submitterApproverSetting
+    submitterApproverId
+    submitterApproverIds
+    submitterApproverMultipleMode
+    overTimeDetails {
+      date
+      startTime
+      endTime
+      reason
+      __typename
+    }
+    comments {
+      id
+      staffId
+      text
+      createdAt
+      __typename
+    }
+    createdAt
+    updatedAt
+    __typename
+  }
+}
+` as GeneratedMutation<
+  APITypes.CreateWorkflowMutationVariables,
+  APITypes.CreateWorkflowMutation
+>;
+export const updateWorkflow = /* GraphQL */ `mutation UpdateWorkflow(
+  $input: UpdateWorkflowInput!
+  $condition: ModelWorkflowConditionInput
+) {
+  updateWorkflow(input: $input, condition: $condition) {
+    id
+    approvedStaffIds
+    rejectedStaffIds
+    finalDecisionTimestamp
+    category
+    staffId
+    status
+    assignedApproverStaffIds
+    approvalSteps {
+      id
+      approverStaffId
+      decisionStatus
+      approverComment
+      decisionTimestamp
+      stepOrder
+      __typename
+    }
+    nextApprovalStepIndex
+    submitterApproverSetting
+    submitterApproverId
+    submitterApproverIds
+    submitterApproverMultipleMode
+    overTimeDetails {
+      date
+      startTime
+      endTime
+      reason
+      __typename
+    }
+    comments {
+      id
+      staffId
+      text
+      createdAt
+      __typename
+    }
+    createdAt
+    updatedAt
+    __typename
+  }
+}
+` as GeneratedMutation<
+  APITypes.UpdateWorkflowMutationVariables,
+  APITypes.UpdateWorkflowMutation
+>;
+export const deleteWorkflow = /* GraphQL */ `mutation DeleteWorkflow(
+  $input: DeleteWorkflowInput!
+  $condition: ModelWorkflowConditionInput
+) {
+  deleteWorkflow(input: $input, condition: $condition) {
+    id
+    approvedStaffIds
+    rejectedStaffIds
+    finalDecisionTimestamp
+    category
+    staffId
+    status
+    assignedApproverStaffIds
+    approvalSteps {
+      id
+      approverStaffId
+      decisionStatus
+      approverComment
+      decisionTimestamp
+      stepOrder
+      __typename
+    }
+    nextApprovalStepIndex
+    submitterApproverSetting
+    submitterApproverId
+    submitterApproverIds
+    submitterApproverMultipleMode
+    overTimeDetails {
+      date
+      startTime
+      endTime
+      reason
+      __typename
+    }
+    comments {
+      id
+      staffId
+      text
+      createdAt
+      __typename
+    }
+    createdAt
+    updatedAt
+    __typename
+  }
+}
+` as GeneratedMutation<
+  APITypes.DeleteWorkflowMutationVariables,
+  APITypes.DeleteWorkflowMutation
 >;

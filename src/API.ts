@@ -84,8 +84,10 @@ export type CreateAppConfigInput = {
   amHolidayEndTime?: string | null,
   pmHolidayStartTime?: string | null,
   pmHolidayEndTime?: string | null,
+  specialHolidayEnabled?: boolean | null,
   amPmHolidayEnabled?: boolean | null,
   officeMode?: boolean | null,
+  absentEnabled?: boolean | null,
   hourlyPaidHolidayEnabled?: boolean | null,
   links?: Array< LinkInput | null > | null,
   reasons?: Array< ReasonInput | null > | null,
@@ -120,8 +122,10 @@ export type ModelAppConfigConditionInput = {
   amHolidayEndTime?: ModelStringInput | null,
   pmHolidayStartTime?: ModelStringInput | null,
   pmHolidayEndTime?: ModelStringInput | null,
+  specialHolidayEnabled?: ModelBooleanInput | null,
   amPmHolidayEnabled?: ModelBooleanInput | null,
   officeMode?: ModelBooleanInput | null,
+  absentEnabled?: ModelBooleanInput | null,
   hourlyPaidHolidayEnabled?: ModelBooleanInput | null,
   and?: Array< ModelAppConfigConditionInput | null > | null,
   or?: Array< ModelAppConfigConditionInput | null > | null,
@@ -149,8 +153,10 @@ export type AppConfig = {
   amHolidayEndTime?: string | null,
   pmHolidayStartTime?: string | null,
   pmHolidayEndTime?: string | null,
+  specialHolidayEnabled?: boolean | null,
   amPmHolidayEnabled?: boolean | null,
   officeMode?: boolean | null,
+  absentEnabled?: boolean | null,
   hourlyPaidHolidayEnabled?: boolean | null,
   links?:  Array<Link | null > | null,
   reasons?:  Array<Reason | null > | null,
@@ -191,8 +197,10 @@ export type UpdateAppConfigInput = {
   amHolidayEndTime?: string | null,
   pmHolidayStartTime?: string | null,
   pmHolidayEndTime?: string | null,
+  specialHolidayEnabled?: boolean | null,
   amPmHolidayEnabled?: boolean | null,
   officeMode?: boolean | null,
+  absentEnabled?: boolean | null,
   hourlyPaidHolidayEnabled?: boolean | null,
   links?: Array< LinkInput | null > | null,
   reasons?: Array< ReasonInput | null > | null,
@@ -218,12 +226,29 @@ export type CreateStaffInput = {
   notifications?: NotificationInput | null,
   sortKey?: string | null,
   workType?: string | null,
+  approverSetting?: ApproverSettingMode | null,
+  approverSingle?: string | null,
+  approverMultiple?: Array< string | null > | null,
+  approverMultipleMode?: ApproverMultipleMode | null,
 };
 
 export type NotificationInput = {
   workStart?: boolean | null,
   workEnd?: boolean | null,
 };
+
+export enum ApproverSettingMode {
+  ADMINS = "ADMINS",
+  SINGLE = "SINGLE",
+  MULTIPLE = "MULTIPLE",
+}
+
+
+export enum ApproverMultipleMode {
+  ANY = "ANY",
+  ORDER = "ORDER",
+}
+
 
 export type ModelStaffConditionInput = {
   cognitoUserId?: ModelStringInput | null,
@@ -237,11 +262,25 @@ export type ModelStaffConditionInput = {
   usageStartDate?: ModelStringInput | null,
   sortKey?: ModelStringInput | null,
   workType?: ModelStringInput | null,
+  approverSetting?: ModelApproverSettingModeInput | null,
+  approverSingle?: ModelStringInput | null,
+  approverMultiple?: ModelStringInput | null,
+  approverMultipleMode?: ModelApproverMultipleModeInput | null,
   and?: Array< ModelStaffConditionInput | null > | null,
   or?: Array< ModelStaffConditionInput | null > | null,
   not?: ModelStaffConditionInput | null,
   createdAt?: ModelStringInput | null,
   updatedAt?: ModelStringInput | null,
+};
+
+export type ModelApproverSettingModeInput = {
+  eq?: ApproverSettingMode | null,
+  ne?: ApproverSettingMode | null,
+};
+
+export type ModelApproverMultipleModeInput = {
+  eq?: ApproverMultipleMode | null,
+  ne?: ApproverMultipleMode | null,
 };
 
 export type Staff = {
@@ -259,6 +298,10 @@ export type Staff = {
   notifications?: Notification | null,
   sortKey?: string | null,
   workType?: string | null,
+  approverSetting?: ApproverSettingMode | null,
+  approverSingle?: string | null,
+  approverMultiple?: Array< string | null > | null,
+  approverMultipleMode?: ApproverMultipleMode | null,
   createdAt: string,
   updatedAt: string,
 };
@@ -283,6 +326,10 @@ export type UpdateStaffInput = {
   notifications?: NotificationInput | null,
   sortKey?: string | null,
   workType?: string | null,
+  approverSetting?: ApproverSettingMode | null,
+  approverSingle?: string | null,
+  approverMultiple?: Array< string | null > | null,
+  approverMultipleMode?: ApproverMultipleMode | null,
 };
 
 export type DeleteStaffInput = {
@@ -406,10 +453,12 @@ export type CreateAttendanceInput = {
   endTime?: string | null,
   goDirectlyFlag?: boolean | null,
   returnDirectlyFlag?: boolean | null,
+  absentFlag?: boolean | null,
   rests?: Array< RestInput | null > | null,
   hourlyPaidHolidayTimes?: Array< HourlyPaidHolidayTimeInput | null > | null,
   remarks?: string | null,
   paidHolidayFlag?: boolean | null,
+  specialHolidayFlag?: boolean | null,
   isDeemedHoliday?: boolean | null,
   hourlyPaidHolidayHours?: number | null,
   substituteHolidayDate?: string | null,
@@ -435,11 +484,13 @@ export type AttendanceHistoryInput = {
   startTime?: string | null,
   endTime?: string | null,
   goDirectlyFlag?: boolean | null,
+  absentFlag?: boolean | null,
   returnDirectlyFlag?: boolean | null,
   rests?: Array< RestInput | null > | null,
   hourlyPaidHolidayTimes?: Array< HourlyPaidHolidayTimeInput | null > | null,
   remarks?: string | null,
   paidHolidayFlag?: boolean | null,
+  specialHolidayFlag?: boolean | null,
   hourlyPaidHolidayHours?: number | null,
   substituteHolidayFlag?: boolean | null,
   substituteHolidayDate?: string | null,
@@ -450,11 +501,13 @@ export type AttendanceChangeRequestInput = {
   startTime?: string | null,
   endTime?: string | null,
   goDirectlyFlag?: boolean | null,
+  absentFlag?: boolean | null,
   returnDirectlyFlag?: boolean | null,
   rests?: Array< RestInput | null > | null,
   hourlyPaidHolidayTimes?: Array< HourlyPaidHolidayTimeInput | null > | null,
   remarks?: string | null,
   paidHolidayFlag?: boolean | null,
+  specialHolidayFlag?: boolean | null,
   hourlyPaidHolidayHours?: number | null,
   substituteHolidayFlag?: boolean | null,
   substituteHolidayDate?: string | null,
@@ -476,8 +529,10 @@ export type ModelAttendanceConditionInput = {
   endTime?: ModelStringInput | null,
   goDirectlyFlag?: ModelBooleanInput | null,
   returnDirectlyFlag?: ModelBooleanInput | null,
+  absentFlag?: ModelBooleanInput | null,
   remarks?: ModelStringInput | null,
   paidHolidayFlag?: ModelBooleanInput | null,
+  specialHolidayFlag?: ModelBooleanInput | null,
   isDeemedHoliday?: ModelBooleanInput | null,
   hourlyPaidHolidayHours?: ModelIntInput | null,
   substituteHolidayDate?: ModelStringInput | null,
@@ -510,10 +565,12 @@ export type Attendance = {
   endTime?: string | null,
   goDirectlyFlag?: boolean | null,
   returnDirectlyFlag?: boolean | null,
+  absentFlag?: boolean | null,
   rests?:  Array<Rest | null > | null,
   hourlyPaidHolidayTimes?:  Array<HourlyPaidHolidayTime | null > | null,
   remarks?: string | null,
   paidHolidayFlag?: boolean | null,
+  specialHolidayFlag?: boolean | null,
   isDeemedHoliday?: boolean | null,
   hourlyPaidHolidayHours?: number | null,
   substituteHolidayDate?: string | null,
@@ -544,11 +601,13 @@ export type AttendanceHistory = {
   startTime?: string | null,
   endTime?: string | null,
   goDirectlyFlag?: boolean | null,
+  absentFlag?: boolean | null,
   returnDirectlyFlag?: boolean | null,
   rests?:  Array<Rest | null > | null,
   hourlyPaidHolidayTimes?:  Array<HourlyPaidHolidayTime | null > | null,
   remarks?: string | null,
   paidHolidayFlag?: boolean | null,
+  specialHolidayFlag?: boolean | null,
   hourlyPaidHolidayHours?: number | null,
   substituteHolidayFlag?: boolean | null,
   substituteHolidayDate?: string | null,
@@ -560,11 +619,13 @@ export type AttendanceChangeRequest = {
   startTime?: string | null,
   endTime?: string | null,
   goDirectlyFlag?: boolean | null,
+  absentFlag?: boolean | null,
   returnDirectlyFlag?: boolean | null,
   rests?:  Array<Rest | null > | null,
   hourlyPaidHolidayTimes?:  Array<HourlyPaidHolidayTime | null > | null,
   remarks?: string | null,
   paidHolidayFlag?: boolean | null,
+  specialHolidayFlag?: boolean | null,
   hourlyPaidHolidayHours?: number | null,
   substituteHolidayFlag?: boolean | null,
   substituteHolidayDate?: string | null,
@@ -588,10 +649,12 @@ export type UpdateAttendanceInput = {
   endTime?: string | null,
   goDirectlyFlag?: boolean | null,
   returnDirectlyFlag?: boolean | null,
+  absentFlag?: boolean | null,
   rests?: Array< RestInput | null > | null,
   hourlyPaidHolidayTimes?: Array< HourlyPaidHolidayTimeInput | null > | null,
   remarks?: string | null,
   paidHolidayFlag?: boolean | null,
+  specialHolidayFlag?: boolean | null,
   isDeemedHoliday?: boolean | null,
   hourlyPaidHolidayHours?: number | null,
   substituteHolidayDate?: string | null,
@@ -652,6 +715,175 @@ export type DeleteDocumentInput = {
   id: string,
 };
 
+export type CreateWorkflowInput = {
+  id?: string | null,
+  approvedStaffIds?: Array< string | null > | null,
+  rejectedStaffIds?: Array< string | null > | null,
+  finalDecisionTimestamp?: string | null,
+  category?: WorkflowCategory | null,
+  staffId: string,
+  status: WorkflowStatus,
+  assignedApproverStaffIds?: Array< string | null > | null,
+  approvalSteps?: Array< ApprovalStepInput | null > | null,
+  nextApprovalStepIndex?: number | null,
+  submitterApproverSetting?: ApproverSettingMode | null,
+  submitterApproverId?: string | null,
+  submitterApproverIds?: Array< string | null > | null,
+  submitterApproverMultipleMode?: ApproverMultipleMode | null,
+  overTimeDetails?: OverTimeWorkflowInput | null,
+  comments?: Array< WorkflowCommentInput | null > | null,
+};
+
+export enum WorkflowCategory {
+  PAID_LEAVE = "PAID_LEAVE",
+  ABSENCE = "ABSENCE",
+  OVERTIME = "OVERTIME",
+  CUSTOM = "CUSTOM",
+}
+
+
+export enum WorkflowStatus {
+  DRAFT = "DRAFT",
+  SUBMITTED = "SUBMITTED",
+  PENDING = "PENDING",
+  APPROVED = "APPROVED",
+  REJECTED = "REJECTED",
+  CANCELLED = "CANCELLED",
+}
+
+
+export type ApprovalStepInput = {
+  id: string,
+  approverStaffId: string,
+  decisionStatus: ApprovalStatus,
+  approverComment?: string | null,
+  decisionTimestamp?: string | null,
+  stepOrder?: number | null,
+};
+
+export enum ApprovalStatus {
+  PENDING = "PENDING",
+  APPROVED = "APPROVED",
+  REJECTED = "REJECTED",
+  SKIPPED = "SKIPPED",
+}
+
+
+export type OverTimeWorkflowInput = {
+  date: string,
+  startTime: string,
+  endTime: string,
+  reason: string,
+};
+
+export type WorkflowCommentInput = {
+  id: string,
+  staffId: string,
+  text: string,
+  createdAt: string,
+};
+
+export type ModelWorkflowConditionInput = {
+  approvedStaffIds?: ModelStringInput | null,
+  rejectedStaffIds?: ModelStringInput | null,
+  finalDecisionTimestamp?: ModelStringInput | null,
+  category?: ModelWorkflowCategoryInput | null,
+  staffId?: ModelStringInput | null,
+  status?: ModelWorkflowStatusInput | null,
+  assignedApproverStaffIds?: ModelStringInput | null,
+  nextApprovalStepIndex?: ModelIntInput | null,
+  submitterApproverSetting?: ModelApproverSettingModeInput | null,
+  submitterApproverId?: ModelStringInput | null,
+  submitterApproverIds?: ModelStringInput | null,
+  submitterApproverMultipleMode?: ModelApproverMultipleModeInput | null,
+  and?: Array< ModelWorkflowConditionInput | null > | null,
+  or?: Array< ModelWorkflowConditionInput | null > | null,
+  not?: ModelWorkflowConditionInput | null,
+  createdAt?: ModelStringInput | null,
+  updatedAt?: ModelStringInput | null,
+};
+
+export type ModelWorkflowCategoryInput = {
+  eq?: WorkflowCategory | null,
+  ne?: WorkflowCategory | null,
+};
+
+export type ModelWorkflowStatusInput = {
+  eq?: WorkflowStatus | null,
+  ne?: WorkflowStatus | null,
+};
+
+export type Workflow = {
+  __typename: "Workflow",
+  id: string,
+  approvedStaffIds?: Array< string | null > | null,
+  rejectedStaffIds?: Array< string | null > | null,
+  finalDecisionTimestamp?: string | null,
+  category?: WorkflowCategory | null,
+  staffId: string,
+  status: WorkflowStatus,
+  assignedApproverStaffIds?: Array< string | null > | null,
+  approvalSteps?:  Array<ApprovalStep | null > | null,
+  nextApprovalStepIndex?: number | null,
+  submitterApproverSetting?: ApproverSettingMode | null,
+  submitterApproverId?: string | null,
+  submitterApproverIds?: Array< string | null > | null,
+  submitterApproverMultipleMode?: ApproverMultipleMode | null,
+  overTimeDetails?: OverTimeWorkflow | null,
+  comments?:  Array<WorkflowComment | null > | null,
+  createdAt: string,
+  updatedAt: string,
+};
+
+export type ApprovalStep = {
+  __typename: "ApprovalStep",
+  id: string,
+  approverStaffId: string,
+  decisionStatus: ApprovalStatus,
+  approverComment?: string | null,
+  decisionTimestamp?: string | null,
+  stepOrder?: number | null,
+};
+
+export type OverTimeWorkflow = {
+  __typename: "OverTimeWorkflow",
+  date: string,
+  startTime: string,
+  endTime: string,
+  reason: string,
+};
+
+export type WorkflowComment = {
+  __typename: "WorkflowComment",
+  id: string,
+  staffId: string,
+  text: string,
+  createdAt: string,
+};
+
+export type UpdateWorkflowInput = {
+  id: string,
+  approvedStaffIds?: Array< string | null > | null,
+  rejectedStaffIds?: Array< string | null > | null,
+  finalDecisionTimestamp?: string | null,
+  category?: WorkflowCategory | null,
+  staffId?: string | null,
+  status?: WorkflowStatus | null,
+  assignedApproverStaffIds?: Array< string | null > | null,
+  approvalSteps?: Array< ApprovalStepInput | null > | null,
+  nextApprovalStepIndex?: number | null,
+  submitterApproverSetting?: ApproverSettingMode | null,
+  submitterApproverId?: string | null,
+  submitterApproverIds?: Array< string | null > | null,
+  submitterApproverMultipleMode?: ApproverMultipleMode | null,
+  overTimeDetails?: OverTimeWorkflowInput | null,
+  comments?: Array< WorkflowCommentInput | null > | null,
+};
+
+export type DeleteWorkflowInput = {
+  id: string,
+};
+
 export type EmailData = {
   to?: Array< string | null > | null,
   subject: string,
@@ -707,8 +939,10 @@ export type ModelAppConfigFilterInput = {
   amHolidayEndTime?: ModelStringInput | null,
   pmHolidayStartTime?: ModelStringInput | null,
   pmHolidayEndTime?: ModelStringInput | null,
+  specialHolidayEnabled?: ModelBooleanInput | null,
   amPmHolidayEnabled?: ModelBooleanInput | null,
   officeMode?: ModelBooleanInput | null,
+  absentEnabled?: ModelBooleanInput | null,
   hourlyPaidHolidayEnabled?: ModelBooleanInput | null,
   createdAt?: ModelStringInput | null,
   updatedAt?: ModelStringInput | null,
@@ -736,6 +970,10 @@ export type ModelStaffFilterInput = {
   usageStartDate?: ModelStringInput | null,
   sortKey?: ModelStringInput | null,
   workType?: ModelStringInput | null,
+  approverSetting?: ModelApproverSettingModeInput | null,
+  approverSingle?: ModelStringInput | null,
+  approverMultiple?: ModelStringInput | null,
+  approverMultipleMode?: ModelApproverMultipleModeInput | null,
   createdAt?: ModelStringInput | null,
   updatedAt?: ModelStringInput | null,
   and?: Array< ModelStaffFilterInput | null > | null,
@@ -825,8 +1063,10 @@ export type ModelAttendanceFilterInput = {
   endTime?: ModelStringInput | null,
   goDirectlyFlag?: ModelBooleanInput | null,
   returnDirectlyFlag?: ModelBooleanInput | null,
+  absentFlag?: ModelBooleanInput | null,
   remarks?: ModelStringInput | null,
   paidHolidayFlag?: ModelBooleanInput | null,
+  specialHolidayFlag?: ModelBooleanInput | null,
   isDeemedHoliday?: ModelBooleanInput | null,
   hourlyPaidHolidayHours?: ModelIntInput | null,
   substituteHolidayDate?: ModelStringInput | null,
@@ -871,6 +1111,33 @@ export type ModelDocumentFilterInput = {
 export type ModelDocumentConnection = {
   __typename: "ModelDocumentConnection",
   items:  Array<Document | null >,
+  nextToken?: string | null,
+};
+
+export type ModelWorkflowFilterInput = {
+  id?: ModelIDInput | null,
+  approvedStaffIds?: ModelStringInput | null,
+  rejectedStaffIds?: ModelStringInput | null,
+  finalDecisionTimestamp?: ModelStringInput | null,
+  category?: ModelWorkflowCategoryInput | null,
+  staffId?: ModelStringInput | null,
+  status?: ModelWorkflowStatusInput | null,
+  assignedApproverStaffIds?: ModelStringInput | null,
+  nextApprovalStepIndex?: ModelIntInput | null,
+  submitterApproverSetting?: ModelApproverSettingModeInput | null,
+  submitterApproverId?: ModelStringInput | null,
+  submitterApproverIds?: ModelStringInput | null,
+  submitterApproverMultipleMode?: ModelApproverMultipleModeInput | null,
+  createdAt?: ModelStringInput | null,
+  updatedAt?: ModelStringInput | null,
+  and?: Array< ModelWorkflowFilterInput | null > | null,
+  or?: Array< ModelWorkflowFilterInput | null > | null,
+  not?: ModelWorkflowFilterInput | null,
+};
+
+export type ModelWorkflowConnection = {
+  __typename: "ModelWorkflowConnection",
+  items:  Array<Workflow | null >,
   nextToken?: string | null,
 };
 
@@ -924,8 +1191,10 @@ export type ModelSubscriptionAppConfigFilterInput = {
   amHolidayEndTime?: ModelSubscriptionStringInput | null,
   pmHolidayStartTime?: ModelSubscriptionStringInput | null,
   pmHolidayEndTime?: ModelSubscriptionStringInput | null,
+  specialHolidayEnabled?: ModelSubscriptionBooleanInput | null,
   amPmHolidayEnabled?: ModelSubscriptionBooleanInput | null,
   officeMode?: ModelSubscriptionBooleanInput | null,
+  absentEnabled?: ModelSubscriptionBooleanInput | null,
   hourlyPaidHolidayEnabled?: ModelSubscriptionBooleanInput | null,
   createdAt?: ModelSubscriptionStringInput | null,
   updatedAt?: ModelSubscriptionStringInput | null,
@@ -951,6 +1220,10 @@ export type ModelSubscriptionStaffFilterInput = {
   usageStartDate?: ModelSubscriptionStringInput | null,
   sortKey?: ModelSubscriptionStringInput | null,
   workType?: ModelSubscriptionStringInput | null,
+  approverSetting?: ModelSubscriptionStringInput | null,
+  approverSingle?: ModelSubscriptionStringInput | null,
+  approverMultiple?: ModelSubscriptionStringInput | null,
+  approverMultipleMode?: ModelSubscriptionStringInput | null,
   createdAt?: ModelSubscriptionStringInput | null,
   updatedAt?: ModelSubscriptionStringInput | null,
   and?: Array< ModelSubscriptionStaffFilterInput | null > | null,
@@ -996,8 +1269,10 @@ export type ModelSubscriptionAttendanceFilterInput = {
   endTime?: ModelSubscriptionStringInput | null,
   goDirectlyFlag?: ModelSubscriptionBooleanInput | null,
   returnDirectlyFlag?: ModelSubscriptionBooleanInput | null,
+  absentFlag?: ModelSubscriptionBooleanInput | null,
   remarks?: ModelSubscriptionStringInput | null,
   paidHolidayFlag?: ModelSubscriptionBooleanInput | null,
+  specialHolidayFlag?: ModelSubscriptionBooleanInput | null,
   isDeemedHoliday?: ModelSubscriptionBooleanInput | null,
   hourlyPaidHolidayHours?: ModelSubscriptionIntInput | null,
   substituteHolidayDate?: ModelSubscriptionStringInput | null,
@@ -1031,6 +1306,26 @@ export type ModelSubscriptionDocumentFilterInput = {
   updatedAt?: ModelSubscriptionStringInput | null,
   and?: Array< ModelSubscriptionDocumentFilterInput | null > | null,
   or?: Array< ModelSubscriptionDocumentFilterInput | null > | null,
+};
+
+export type ModelSubscriptionWorkflowFilterInput = {
+  id?: ModelSubscriptionIDInput | null,
+  approvedStaffIds?: ModelSubscriptionStringInput | null,
+  rejectedStaffIds?: ModelSubscriptionStringInput | null,
+  finalDecisionTimestamp?: ModelSubscriptionStringInput | null,
+  category?: ModelSubscriptionStringInput | null,
+  staffId?: ModelSubscriptionStringInput | null,
+  status?: ModelSubscriptionStringInput | null,
+  assignedApproverStaffIds?: ModelSubscriptionStringInput | null,
+  nextApprovalStepIndex?: ModelSubscriptionIntInput | null,
+  submitterApproverSetting?: ModelSubscriptionStringInput | null,
+  submitterApproverId?: ModelSubscriptionStringInput | null,
+  submitterApproverIds?: ModelSubscriptionStringInput | null,
+  submitterApproverMultipleMode?: ModelSubscriptionStringInput | null,
+  createdAt?: ModelSubscriptionStringInput | null,
+  updatedAt?: ModelSubscriptionStringInput | null,
+  and?: Array< ModelSubscriptionWorkflowFilterInput | null > | null,
+  or?: Array< ModelSubscriptionWorkflowFilterInput | null > | null,
 };
 
 export type CreateCheckForUpdateMutationVariables = {
@@ -1096,8 +1391,10 @@ export type CreateAppConfigMutation = {
     amHolidayEndTime?: string | null,
     pmHolidayStartTime?: string | null,
     pmHolidayEndTime?: string | null,
+    specialHolidayEnabled?: boolean | null,
     amPmHolidayEnabled?: boolean | null,
     officeMode?: boolean | null,
+    absentEnabled?: boolean | null,
     hourlyPaidHolidayEnabled?: boolean | null,
     links?:  Array< {
       __typename: "Link",
@@ -1144,8 +1441,10 @@ export type UpdateAppConfigMutation = {
     amHolidayEndTime?: string | null,
     pmHolidayStartTime?: string | null,
     pmHolidayEndTime?: string | null,
+    specialHolidayEnabled?: boolean | null,
     amPmHolidayEnabled?: boolean | null,
     officeMode?: boolean | null,
+    absentEnabled?: boolean | null,
     hourlyPaidHolidayEnabled?: boolean | null,
     links?:  Array< {
       __typename: "Link",
@@ -1192,8 +1491,10 @@ export type DeleteAppConfigMutation = {
     amHolidayEndTime?: string | null,
     pmHolidayStartTime?: string | null,
     pmHolidayEndTime?: string | null,
+    specialHolidayEnabled?: boolean | null,
     amPmHolidayEnabled?: boolean | null,
     officeMode?: boolean | null,
+    absentEnabled?: boolean | null,
     hourlyPaidHolidayEnabled?: boolean | null,
     links?:  Array< {
       __typename: "Link",
@@ -1247,6 +1548,10 @@ export type CreateStaffMutation = {
     } | null,
     sortKey?: string | null,
     workType?: string | null,
+    approverSetting?: ApproverSettingMode | null,
+    approverSingle?: string | null,
+    approverMultiple?: Array< string | null > | null,
+    approverMultipleMode?: ApproverMultipleMode | null,
     createdAt: string,
     updatedAt: string,
   } | null,
@@ -1277,6 +1582,10 @@ export type UpdateStaffMutation = {
     } | null,
     sortKey?: string | null,
     workType?: string | null,
+    approverSetting?: ApproverSettingMode | null,
+    approverSingle?: string | null,
+    approverMultiple?: Array< string | null > | null,
+    approverMultipleMode?: ApproverMultipleMode | null,
     createdAt: string,
     updatedAt: string,
   } | null,
@@ -1307,6 +1616,10 @@ export type DeleteStaffMutation = {
     } | null,
     sortKey?: string | null,
     workType?: string | null,
+    approverSetting?: ApproverSettingMode | null,
+    approverSingle?: string | null,
+    approverMultiple?: Array< string | null > | null,
+    approverMultipleMode?: ApproverMultipleMode | null,
     createdAt: string,
     updatedAt: string,
   } | null,
@@ -1474,6 +1787,7 @@ export type CreateAttendanceMutation = {
     endTime?: string | null,
     goDirectlyFlag?: boolean | null,
     returnDirectlyFlag?: boolean | null,
+    absentFlag?: boolean | null,
     rests?:  Array< {
       __typename: "Rest",
       startTime?: string | null,
@@ -1486,6 +1800,7 @@ export type CreateAttendanceMutation = {
     } | null > | null,
     remarks?: string | null,
     paidHolidayFlag?: boolean | null,
+    specialHolidayFlag?: boolean | null,
     isDeemedHoliday?: boolean | null,
     hourlyPaidHolidayHours?: number | null,
     substituteHolidayDate?: string | null,
@@ -1496,6 +1811,7 @@ export type CreateAttendanceMutation = {
       startTime?: string | null,
       endTime?: string | null,
       goDirectlyFlag?: boolean | null,
+      absentFlag?: boolean | null,
       returnDirectlyFlag?: boolean | null,
       rests?:  Array< {
         __typename: "Rest",
@@ -1509,6 +1825,7 @@ export type CreateAttendanceMutation = {
       } | null > | null,
       remarks?: string | null,
       paidHolidayFlag?: boolean | null,
+      specialHolidayFlag?: boolean | null,
       hourlyPaidHolidayHours?: number | null,
       substituteHolidayFlag?: boolean | null,
       substituteHolidayDate?: string | null,
@@ -1519,6 +1836,7 @@ export type CreateAttendanceMutation = {
       startTime?: string | null,
       endTime?: string | null,
       goDirectlyFlag?: boolean | null,
+      absentFlag?: boolean | null,
       returnDirectlyFlag?: boolean | null,
       rests?:  Array< {
         __typename: "Rest",
@@ -1532,6 +1850,7 @@ export type CreateAttendanceMutation = {
       } | null > | null,
       remarks?: string | null,
       paidHolidayFlag?: boolean | null,
+      specialHolidayFlag?: boolean | null,
       hourlyPaidHolidayHours?: number | null,
       substituteHolidayFlag?: boolean | null,
       substituteHolidayDate?: string | null,
@@ -1566,6 +1885,7 @@ export type UpdateAttendanceMutation = {
     endTime?: string | null,
     goDirectlyFlag?: boolean | null,
     returnDirectlyFlag?: boolean | null,
+    absentFlag?: boolean | null,
     rests?:  Array< {
       __typename: "Rest",
       startTime?: string | null,
@@ -1578,6 +1898,7 @@ export type UpdateAttendanceMutation = {
     } | null > | null,
     remarks?: string | null,
     paidHolidayFlag?: boolean | null,
+    specialHolidayFlag?: boolean | null,
     isDeemedHoliday?: boolean | null,
     hourlyPaidHolidayHours?: number | null,
     substituteHolidayDate?: string | null,
@@ -1588,6 +1909,7 @@ export type UpdateAttendanceMutation = {
       startTime?: string | null,
       endTime?: string | null,
       goDirectlyFlag?: boolean | null,
+      absentFlag?: boolean | null,
       returnDirectlyFlag?: boolean | null,
       rests?:  Array< {
         __typename: "Rest",
@@ -1601,6 +1923,7 @@ export type UpdateAttendanceMutation = {
       } | null > | null,
       remarks?: string | null,
       paidHolidayFlag?: boolean | null,
+      specialHolidayFlag?: boolean | null,
       hourlyPaidHolidayHours?: number | null,
       substituteHolidayFlag?: boolean | null,
       substituteHolidayDate?: string | null,
@@ -1611,6 +1934,7 @@ export type UpdateAttendanceMutation = {
       startTime?: string | null,
       endTime?: string | null,
       goDirectlyFlag?: boolean | null,
+      absentFlag?: boolean | null,
       returnDirectlyFlag?: boolean | null,
       rests?:  Array< {
         __typename: "Rest",
@@ -1624,6 +1948,7 @@ export type UpdateAttendanceMutation = {
       } | null > | null,
       remarks?: string | null,
       paidHolidayFlag?: boolean | null,
+      specialHolidayFlag?: boolean | null,
       hourlyPaidHolidayHours?: number | null,
       substituteHolidayFlag?: boolean | null,
       substituteHolidayDate?: string | null,
@@ -1658,6 +1983,7 @@ export type DeleteAttendanceMutation = {
     endTime?: string | null,
     goDirectlyFlag?: boolean | null,
     returnDirectlyFlag?: boolean | null,
+    absentFlag?: boolean | null,
     rests?:  Array< {
       __typename: "Rest",
       startTime?: string | null,
@@ -1670,6 +1996,7 @@ export type DeleteAttendanceMutation = {
     } | null > | null,
     remarks?: string | null,
     paidHolidayFlag?: boolean | null,
+    specialHolidayFlag?: boolean | null,
     isDeemedHoliday?: boolean | null,
     hourlyPaidHolidayHours?: number | null,
     substituteHolidayDate?: string | null,
@@ -1680,6 +2007,7 @@ export type DeleteAttendanceMutation = {
       startTime?: string | null,
       endTime?: string | null,
       goDirectlyFlag?: boolean | null,
+      absentFlag?: boolean | null,
       returnDirectlyFlag?: boolean | null,
       rests?:  Array< {
         __typename: "Rest",
@@ -1693,6 +2021,7 @@ export type DeleteAttendanceMutation = {
       } | null > | null,
       remarks?: string | null,
       paidHolidayFlag?: boolean | null,
+      specialHolidayFlag?: boolean | null,
       hourlyPaidHolidayHours?: number | null,
       substituteHolidayFlag?: boolean | null,
       substituteHolidayDate?: string | null,
@@ -1703,6 +2032,7 @@ export type DeleteAttendanceMutation = {
       startTime?: string | null,
       endTime?: string | null,
       goDirectlyFlag?: boolean | null,
+      absentFlag?: boolean | null,
       returnDirectlyFlag?: boolean | null,
       rests?:  Array< {
         __typename: "Rest",
@@ -1716,6 +2046,7 @@ export type DeleteAttendanceMutation = {
       } | null > | null,
       remarks?: string | null,
       paidHolidayFlag?: boolean | null,
+      specialHolidayFlag?: boolean | null,
       hourlyPaidHolidayHours?: number | null,
       substituteHolidayFlag?: boolean | null,
       substituteHolidayDate?: string | null,
@@ -1792,6 +2123,153 @@ export type DeleteDocumentMutation = {
   } | null,
 };
 
+export type CreateWorkflowMutationVariables = {
+  input: CreateWorkflowInput,
+  condition?: ModelWorkflowConditionInput | null,
+};
+
+export type CreateWorkflowMutation = {
+  createWorkflow?:  {
+    __typename: "Workflow",
+    id: string,
+    approvedStaffIds?: Array< string | null > | null,
+    rejectedStaffIds?: Array< string | null > | null,
+    finalDecisionTimestamp?: string | null,
+    category?: WorkflowCategory | null,
+    staffId: string,
+    status: WorkflowStatus,
+    assignedApproverStaffIds?: Array< string | null > | null,
+    approvalSteps?:  Array< {
+      __typename: "ApprovalStep",
+      id: string,
+      approverStaffId: string,
+      decisionStatus: ApprovalStatus,
+      approverComment?: string | null,
+      decisionTimestamp?: string | null,
+      stepOrder?: number | null,
+    } | null > | null,
+    nextApprovalStepIndex?: number | null,
+    submitterApproverSetting?: ApproverSettingMode | null,
+    submitterApproverId?: string | null,
+    submitterApproverIds?: Array< string | null > | null,
+    submitterApproverMultipleMode?: ApproverMultipleMode | null,
+    overTimeDetails?:  {
+      __typename: "OverTimeWorkflow",
+      date: string,
+      startTime: string,
+      endTime: string,
+      reason: string,
+    } | null,
+    comments?:  Array< {
+      __typename: "WorkflowComment",
+      id: string,
+      staffId: string,
+      text: string,
+      createdAt: string,
+    } | null > | null,
+    createdAt: string,
+    updatedAt: string,
+  } | null,
+};
+
+export type UpdateWorkflowMutationVariables = {
+  input: UpdateWorkflowInput,
+  condition?: ModelWorkflowConditionInput | null,
+};
+
+export type UpdateWorkflowMutation = {
+  updateWorkflow?:  {
+    __typename: "Workflow",
+    id: string,
+    approvedStaffIds?: Array< string | null > | null,
+    rejectedStaffIds?: Array< string | null > | null,
+    finalDecisionTimestamp?: string | null,
+    category?: WorkflowCategory | null,
+    staffId: string,
+    status: WorkflowStatus,
+    assignedApproverStaffIds?: Array< string | null > | null,
+    approvalSteps?:  Array< {
+      __typename: "ApprovalStep",
+      id: string,
+      approverStaffId: string,
+      decisionStatus: ApprovalStatus,
+      approverComment?: string | null,
+      decisionTimestamp?: string | null,
+      stepOrder?: number | null,
+    } | null > | null,
+    nextApprovalStepIndex?: number | null,
+    submitterApproverSetting?: ApproverSettingMode | null,
+    submitterApproverId?: string | null,
+    submitterApproverIds?: Array< string | null > | null,
+    submitterApproverMultipleMode?: ApproverMultipleMode | null,
+    overTimeDetails?:  {
+      __typename: "OverTimeWorkflow",
+      date: string,
+      startTime: string,
+      endTime: string,
+      reason: string,
+    } | null,
+    comments?:  Array< {
+      __typename: "WorkflowComment",
+      id: string,
+      staffId: string,
+      text: string,
+      createdAt: string,
+    } | null > | null,
+    createdAt: string,
+    updatedAt: string,
+  } | null,
+};
+
+export type DeleteWorkflowMutationVariables = {
+  input: DeleteWorkflowInput,
+  condition?: ModelWorkflowConditionInput | null,
+};
+
+export type DeleteWorkflowMutation = {
+  deleteWorkflow?:  {
+    __typename: "Workflow",
+    id: string,
+    approvedStaffIds?: Array< string | null > | null,
+    rejectedStaffIds?: Array< string | null > | null,
+    finalDecisionTimestamp?: string | null,
+    category?: WorkflowCategory | null,
+    staffId: string,
+    status: WorkflowStatus,
+    assignedApproverStaffIds?: Array< string | null > | null,
+    approvalSteps?:  Array< {
+      __typename: "ApprovalStep",
+      id: string,
+      approverStaffId: string,
+      decisionStatus: ApprovalStatus,
+      approverComment?: string | null,
+      decisionTimestamp?: string | null,
+      stepOrder?: number | null,
+    } | null > | null,
+    nextApprovalStepIndex?: number | null,
+    submitterApproverSetting?: ApproverSettingMode | null,
+    submitterApproverId?: string | null,
+    submitterApproverIds?: Array< string | null > | null,
+    submitterApproverMultipleMode?: ApproverMultipleMode | null,
+    overTimeDetails?:  {
+      __typename: "OverTimeWorkflow",
+      date: string,
+      startTime: string,
+      endTime: string,
+      reason: string,
+    } | null,
+    comments?:  Array< {
+      __typename: "WorkflowComment",
+      id: string,
+      staffId: string,
+      text: string,
+      createdAt: string,
+    } | null > | null,
+    createdAt: string,
+    updatedAt: string,
+  } | null,
+};
+
 export type SendMailQueryVariables = {
   data: EmailData,
 };
@@ -1855,8 +2333,10 @@ export type GetAppConfigQuery = {
     amHolidayEndTime?: string | null,
     pmHolidayStartTime?: string | null,
     pmHolidayEndTime?: string | null,
+    specialHolidayEnabled?: boolean | null,
     amPmHolidayEnabled?: boolean | null,
     officeMode?: boolean | null,
+    absentEnabled?: boolean | null,
     hourlyPaidHolidayEnabled?: boolean | null,
     links?:  Array< {
       __typename: "Link",
@@ -1906,8 +2386,10 @@ export type ListAppConfigsQuery = {
       amHolidayEndTime?: string | null,
       pmHolidayStartTime?: string | null,
       pmHolidayEndTime?: string | null,
+      specialHolidayEnabled?: boolean | null,
       amPmHolidayEnabled?: boolean | null,
       officeMode?: boolean | null,
+      absentEnabled?: boolean | null,
       hourlyPaidHolidayEnabled?: boolean | null,
       links?:  Array< {
         __typename: "Link",
@@ -1962,6 +2444,10 @@ export type GetStaffQuery = {
     } | null,
     sortKey?: string | null,
     workType?: string | null,
+    approverSetting?: ApproverSettingMode | null,
+    approverSingle?: string | null,
+    approverMultiple?: Array< string | null > | null,
+    approverMultipleMode?: ApproverMultipleMode | null,
     createdAt: string,
     updatedAt: string,
   } | null,
@@ -1995,6 +2481,10 @@ export type ListStaffQuery = {
       } | null,
       sortKey?: string | null,
       workType?: string | null,
+      approverSetting?: ApproverSettingMode | null,
+      approverSingle?: string | null,
+      approverMultiple?: Array< string | null > | null,
+      approverMultipleMode?: ApproverMultipleMode | null,
       createdAt: string,
       updatedAt: string,
     } | null >,
@@ -2033,6 +2523,10 @@ export type StaffByCognitoUserIdQuery = {
       } | null,
       sortKey?: string | null,
       workType?: string | null,
+      approverSetting?: ApproverSettingMode | null,
+      approverSingle?: string | null,
+      approverMultiple?: Array< string | null > | null,
+      approverMultipleMode?: ApproverMultipleMode | null,
       createdAt: string,
       updatedAt: string,
     } | null >,
@@ -2164,6 +2658,7 @@ export type GetAttendanceQuery = {
     endTime?: string | null,
     goDirectlyFlag?: boolean | null,
     returnDirectlyFlag?: boolean | null,
+    absentFlag?: boolean | null,
     rests?:  Array< {
       __typename: "Rest",
       startTime?: string | null,
@@ -2176,6 +2671,7 @@ export type GetAttendanceQuery = {
     } | null > | null,
     remarks?: string | null,
     paidHolidayFlag?: boolean | null,
+    specialHolidayFlag?: boolean | null,
     isDeemedHoliday?: boolean | null,
     hourlyPaidHolidayHours?: number | null,
     substituteHolidayDate?: string | null,
@@ -2186,6 +2682,7 @@ export type GetAttendanceQuery = {
       startTime?: string | null,
       endTime?: string | null,
       goDirectlyFlag?: boolean | null,
+      absentFlag?: boolean | null,
       returnDirectlyFlag?: boolean | null,
       rests?:  Array< {
         __typename: "Rest",
@@ -2199,6 +2696,7 @@ export type GetAttendanceQuery = {
       } | null > | null,
       remarks?: string | null,
       paidHolidayFlag?: boolean | null,
+      specialHolidayFlag?: boolean | null,
       hourlyPaidHolidayHours?: number | null,
       substituteHolidayFlag?: boolean | null,
       substituteHolidayDate?: string | null,
@@ -2209,6 +2707,7 @@ export type GetAttendanceQuery = {
       startTime?: string | null,
       endTime?: string | null,
       goDirectlyFlag?: boolean | null,
+      absentFlag?: boolean | null,
       returnDirectlyFlag?: boolean | null,
       rests?:  Array< {
         __typename: "Rest",
@@ -2222,6 +2721,7 @@ export type GetAttendanceQuery = {
       } | null > | null,
       remarks?: string | null,
       paidHolidayFlag?: boolean | null,
+      specialHolidayFlag?: boolean | null,
       hourlyPaidHolidayHours?: number | null,
       substituteHolidayFlag?: boolean | null,
       substituteHolidayDate?: string | null,
@@ -2259,6 +2759,7 @@ export type ListAttendancesQuery = {
       endTime?: string | null,
       goDirectlyFlag?: boolean | null,
       returnDirectlyFlag?: boolean | null,
+      absentFlag?: boolean | null,
       rests?:  Array< {
         __typename: "Rest",
         startTime?: string | null,
@@ -2271,6 +2772,7 @@ export type ListAttendancesQuery = {
       } | null > | null,
       remarks?: string | null,
       paidHolidayFlag?: boolean | null,
+      specialHolidayFlag?: boolean | null,
       isDeemedHoliday?: boolean | null,
       hourlyPaidHolidayHours?: number | null,
       substituteHolidayDate?: string | null,
@@ -2281,6 +2783,7 @@ export type ListAttendancesQuery = {
         startTime?: string | null,
         endTime?: string | null,
         goDirectlyFlag?: boolean | null,
+        absentFlag?: boolean | null,
         returnDirectlyFlag?: boolean | null,
         rests?:  Array< {
           __typename: "Rest",
@@ -2294,6 +2797,7 @@ export type ListAttendancesQuery = {
         } | null > | null,
         remarks?: string | null,
         paidHolidayFlag?: boolean | null,
+        specialHolidayFlag?: boolean | null,
         hourlyPaidHolidayHours?: number | null,
         substituteHolidayFlag?: boolean | null,
         substituteHolidayDate?: string | null,
@@ -2304,6 +2808,7 @@ export type ListAttendancesQuery = {
         startTime?: string | null,
         endTime?: string | null,
         goDirectlyFlag?: boolean | null,
+        absentFlag?: boolean | null,
         returnDirectlyFlag?: boolean | null,
         rests?:  Array< {
           __typename: "Rest",
@@ -2317,6 +2822,7 @@ export type ListAttendancesQuery = {
         } | null > | null,
         remarks?: string | null,
         paidHolidayFlag?: boolean | null,
+        specialHolidayFlag?: boolean | null,
         hourlyPaidHolidayHours?: number | null,
         substituteHolidayFlag?: boolean | null,
         substituteHolidayDate?: string | null,
@@ -2359,6 +2865,7 @@ export type AttendancesByStaffIdQuery = {
       endTime?: string | null,
       goDirectlyFlag?: boolean | null,
       returnDirectlyFlag?: boolean | null,
+      absentFlag?: boolean | null,
       rests?:  Array< {
         __typename: "Rest",
         startTime?: string | null,
@@ -2371,6 +2878,7 @@ export type AttendancesByStaffIdQuery = {
       } | null > | null,
       remarks?: string | null,
       paidHolidayFlag?: boolean | null,
+      specialHolidayFlag?: boolean | null,
       isDeemedHoliday?: boolean | null,
       hourlyPaidHolidayHours?: number | null,
       substituteHolidayDate?: string | null,
@@ -2381,6 +2889,7 @@ export type AttendancesByStaffIdQuery = {
         startTime?: string | null,
         endTime?: string | null,
         goDirectlyFlag?: boolean | null,
+        absentFlag?: boolean | null,
         returnDirectlyFlag?: boolean | null,
         rests?:  Array< {
           __typename: "Rest",
@@ -2394,6 +2903,7 @@ export type AttendancesByStaffIdQuery = {
         } | null > | null,
         remarks?: string | null,
         paidHolidayFlag?: boolean | null,
+        specialHolidayFlag?: boolean | null,
         hourlyPaidHolidayHours?: number | null,
         substituteHolidayFlag?: boolean | null,
         substituteHolidayDate?: string | null,
@@ -2404,6 +2914,7 @@ export type AttendancesByStaffIdQuery = {
         startTime?: string | null,
         endTime?: string | null,
         goDirectlyFlag?: boolean | null,
+        absentFlag?: boolean | null,
         returnDirectlyFlag?: boolean | null,
         rests?:  Array< {
           __typename: "Rest",
@@ -2417,6 +2928,7 @@ export type AttendancesByStaffIdQuery = {
         } | null > | null,
         remarks?: string | null,
         paidHolidayFlag?: boolean | null,
+        specialHolidayFlag?: boolean | null,
         hourlyPaidHolidayHours?: number | null,
         substituteHolidayFlag?: boolean | null,
         substituteHolidayDate?: string | null,
@@ -2473,6 +2985,164 @@ export type ListDocumentsQuery = {
       tag?: Array< string | null > | null,
       targetRole?: Array< string | null > | null,
       revision?: number | null,
+      createdAt: string,
+      updatedAt: string,
+    } | null >,
+    nextToken?: string | null,
+  } | null,
+};
+
+export type GetWorkflowQueryVariables = {
+  id: string,
+};
+
+export type GetWorkflowQuery = {
+  getWorkflow?:  {
+    __typename: "Workflow",
+    id: string,
+    approvedStaffIds?: Array< string | null > | null,
+    rejectedStaffIds?: Array< string | null > | null,
+    finalDecisionTimestamp?: string | null,
+    category?: WorkflowCategory | null,
+    staffId: string,
+    status: WorkflowStatus,
+    assignedApproverStaffIds?: Array< string | null > | null,
+    approvalSteps?:  Array< {
+      __typename: "ApprovalStep",
+      id: string,
+      approverStaffId: string,
+      decisionStatus: ApprovalStatus,
+      approverComment?: string | null,
+      decisionTimestamp?: string | null,
+      stepOrder?: number | null,
+    } | null > | null,
+    nextApprovalStepIndex?: number | null,
+    submitterApproverSetting?: ApproverSettingMode | null,
+    submitterApproverId?: string | null,
+    submitterApproverIds?: Array< string | null > | null,
+    submitterApproverMultipleMode?: ApproverMultipleMode | null,
+    overTimeDetails?:  {
+      __typename: "OverTimeWorkflow",
+      date: string,
+      startTime: string,
+      endTime: string,
+      reason: string,
+    } | null,
+    comments?:  Array< {
+      __typename: "WorkflowComment",
+      id: string,
+      staffId: string,
+      text: string,
+      createdAt: string,
+    } | null > | null,
+    createdAt: string,
+    updatedAt: string,
+  } | null,
+};
+
+export type ListWorkflowsQueryVariables = {
+  filter?: ModelWorkflowFilterInput | null,
+  limit?: number | null,
+  nextToken?: string | null,
+};
+
+export type ListWorkflowsQuery = {
+  listWorkflows?:  {
+    __typename: "ModelWorkflowConnection",
+    items:  Array< {
+      __typename: "Workflow",
+      id: string,
+      approvedStaffIds?: Array< string | null > | null,
+      rejectedStaffIds?: Array< string | null > | null,
+      finalDecisionTimestamp?: string | null,
+      category?: WorkflowCategory | null,
+      staffId: string,
+      status: WorkflowStatus,
+      assignedApproverStaffIds?: Array< string | null > | null,
+      approvalSteps?:  Array< {
+        __typename: "ApprovalStep",
+        id: string,
+        approverStaffId: string,
+        decisionStatus: ApprovalStatus,
+        approverComment?: string | null,
+        decisionTimestamp?: string | null,
+        stepOrder?: number | null,
+      } | null > | null,
+      nextApprovalStepIndex?: number | null,
+      submitterApproverSetting?: ApproverSettingMode | null,
+      submitterApproverId?: string | null,
+      submitterApproverIds?: Array< string | null > | null,
+      submitterApproverMultipleMode?: ApproverMultipleMode | null,
+      overTimeDetails?:  {
+        __typename: "OverTimeWorkflow",
+        date: string,
+        startTime: string,
+        endTime: string,
+        reason: string,
+      } | null,
+      comments?:  Array< {
+        __typename: "WorkflowComment",
+        id: string,
+        staffId: string,
+        text: string,
+        createdAt: string,
+      } | null > | null,
+      createdAt: string,
+      updatedAt: string,
+    } | null >,
+    nextToken?: string | null,
+  } | null,
+};
+
+export type WorkflowsByStaffIdQueryVariables = {
+  staffId: string,
+  sortDirection?: ModelSortDirection | null,
+  filter?: ModelWorkflowFilterInput | null,
+  limit?: number | null,
+  nextToken?: string | null,
+};
+
+export type WorkflowsByStaffIdQuery = {
+  workflowsByStaffId?:  {
+    __typename: "ModelWorkflowConnection",
+    items:  Array< {
+      __typename: "Workflow",
+      id: string,
+      approvedStaffIds?: Array< string | null > | null,
+      rejectedStaffIds?: Array< string | null > | null,
+      finalDecisionTimestamp?: string | null,
+      category?: WorkflowCategory | null,
+      staffId: string,
+      status: WorkflowStatus,
+      assignedApproverStaffIds?: Array< string | null > | null,
+      approvalSteps?:  Array< {
+        __typename: "ApprovalStep",
+        id: string,
+        approverStaffId: string,
+        decisionStatus: ApprovalStatus,
+        approverComment?: string | null,
+        decisionTimestamp?: string | null,
+        stepOrder?: number | null,
+      } | null > | null,
+      nextApprovalStepIndex?: number | null,
+      submitterApproverSetting?: ApproverSettingMode | null,
+      submitterApproverId?: string | null,
+      submitterApproverIds?: Array< string | null > | null,
+      submitterApproverMultipleMode?: ApproverMultipleMode | null,
+      overTimeDetails?:  {
+        __typename: "OverTimeWorkflow",
+        date: string,
+        startTime: string,
+        endTime: string,
+        reason: string,
+      } | null,
+      comments?:  Array< {
+        __typename: "WorkflowComment",
+        id: string,
+        staffId: string,
+        text: string,
+        createdAt: string,
+      } | null > | null,
       createdAt: string,
       updatedAt: string,
     } | null >,
@@ -2539,8 +3209,10 @@ export type OnCreateAppConfigSubscription = {
     amHolidayEndTime?: string | null,
     pmHolidayStartTime?: string | null,
     pmHolidayEndTime?: string | null,
+    specialHolidayEnabled?: boolean | null,
     amPmHolidayEnabled?: boolean | null,
     officeMode?: boolean | null,
+    absentEnabled?: boolean | null,
     hourlyPaidHolidayEnabled?: boolean | null,
     links?:  Array< {
       __typename: "Link",
@@ -2586,8 +3258,10 @@ export type OnUpdateAppConfigSubscription = {
     amHolidayEndTime?: string | null,
     pmHolidayStartTime?: string | null,
     pmHolidayEndTime?: string | null,
+    specialHolidayEnabled?: boolean | null,
     amPmHolidayEnabled?: boolean | null,
     officeMode?: boolean | null,
+    absentEnabled?: boolean | null,
     hourlyPaidHolidayEnabled?: boolean | null,
     links?:  Array< {
       __typename: "Link",
@@ -2633,8 +3307,10 @@ export type OnDeleteAppConfigSubscription = {
     amHolidayEndTime?: string | null,
     pmHolidayStartTime?: string | null,
     pmHolidayEndTime?: string | null,
+    specialHolidayEnabled?: boolean | null,
     amPmHolidayEnabled?: boolean | null,
     officeMode?: boolean | null,
+    absentEnabled?: boolean | null,
     hourlyPaidHolidayEnabled?: boolean | null,
     links?:  Array< {
       __typename: "Link",
@@ -2687,6 +3363,10 @@ export type OnCreateStaffSubscription = {
     } | null,
     sortKey?: string | null,
     workType?: string | null,
+    approverSetting?: ApproverSettingMode | null,
+    approverSingle?: string | null,
+    approverMultiple?: Array< string | null > | null,
+    approverMultipleMode?: ApproverMultipleMode | null,
     createdAt: string,
     updatedAt: string,
   } | null,
@@ -2716,6 +3396,10 @@ export type OnUpdateStaffSubscription = {
     } | null,
     sortKey?: string | null,
     workType?: string | null,
+    approverSetting?: ApproverSettingMode | null,
+    approverSingle?: string | null,
+    approverMultiple?: Array< string | null > | null,
+    approverMultipleMode?: ApproverMultipleMode | null,
     createdAt: string,
     updatedAt: string,
   } | null,
@@ -2745,6 +3429,10 @@ export type OnDeleteStaffSubscription = {
     } | null,
     sortKey?: string | null,
     workType?: string | null,
+    approverSetting?: ApproverSettingMode | null,
+    approverSingle?: string | null,
+    approverMultiple?: Array< string | null > | null,
+    approverMultipleMode?: ApproverMultipleMode | null,
     createdAt: string,
     updatedAt: string,
   } | null,
@@ -2902,6 +3590,7 @@ export type OnCreateAttendanceSubscription = {
     endTime?: string | null,
     goDirectlyFlag?: boolean | null,
     returnDirectlyFlag?: boolean | null,
+    absentFlag?: boolean | null,
     rests?:  Array< {
       __typename: "Rest",
       startTime?: string | null,
@@ -2914,6 +3603,7 @@ export type OnCreateAttendanceSubscription = {
     } | null > | null,
     remarks?: string | null,
     paidHolidayFlag?: boolean | null,
+    specialHolidayFlag?: boolean | null,
     isDeemedHoliday?: boolean | null,
     hourlyPaidHolidayHours?: number | null,
     substituteHolidayDate?: string | null,
@@ -2924,6 +3614,7 @@ export type OnCreateAttendanceSubscription = {
       startTime?: string | null,
       endTime?: string | null,
       goDirectlyFlag?: boolean | null,
+      absentFlag?: boolean | null,
       returnDirectlyFlag?: boolean | null,
       rests?:  Array< {
         __typename: "Rest",
@@ -2937,6 +3628,7 @@ export type OnCreateAttendanceSubscription = {
       } | null > | null,
       remarks?: string | null,
       paidHolidayFlag?: boolean | null,
+      specialHolidayFlag?: boolean | null,
       hourlyPaidHolidayHours?: number | null,
       substituteHolidayFlag?: boolean | null,
       substituteHolidayDate?: string | null,
@@ -2947,6 +3639,7 @@ export type OnCreateAttendanceSubscription = {
       startTime?: string | null,
       endTime?: string | null,
       goDirectlyFlag?: boolean | null,
+      absentFlag?: boolean | null,
       returnDirectlyFlag?: boolean | null,
       rests?:  Array< {
         __typename: "Rest",
@@ -2960,6 +3653,7 @@ export type OnCreateAttendanceSubscription = {
       } | null > | null,
       remarks?: string | null,
       paidHolidayFlag?: boolean | null,
+      specialHolidayFlag?: boolean | null,
       hourlyPaidHolidayHours?: number | null,
       substituteHolidayFlag?: boolean | null,
       substituteHolidayDate?: string | null,
@@ -2993,6 +3687,7 @@ export type OnUpdateAttendanceSubscription = {
     endTime?: string | null,
     goDirectlyFlag?: boolean | null,
     returnDirectlyFlag?: boolean | null,
+    absentFlag?: boolean | null,
     rests?:  Array< {
       __typename: "Rest",
       startTime?: string | null,
@@ -3005,6 +3700,7 @@ export type OnUpdateAttendanceSubscription = {
     } | null > | null,
     remarks?: string | null,
     paidHolidayFlag?: boolean | null,
+    specialHolidayFlag?: boolean | null,
     isDeemedHoliday?: boolean | null,
     hourlyPaidHolidayHours?: number | null,
     substituteHolidayDate?: string | null,
@@ -3015,6 +3711,7 @@ export type OnUpdateAttendanceSubscription = {
       startTime?: string | null,
       endTime?: string | null,
       goDirectlyFlag?: boolean | null,
+      absentFlag?: boolean | null,
       returnDirectlyFlag?: boolean | null,
       rests?:  Array< {
         __typename: "Rest",
@@ -3028,6 +3725,7 @@ export type OnUpdateAttendanceSubscription = {
       } | null > | null,
       remarks?: string | null,
       paidHolidayFlag?: boolean | null,
+      specialHolidayFlag?: boolean | null,
       hourlyPaidHolidayHours?: number | null,
       substituteHolidayFlag?: boolean | null,
       substituteHolidayDate?: string | null,
@@ -3038,6 +3736,7 @@ export type OnUpdateAttendanceSubscription = {
       startTime?: string | null,
       endTime?: string | null,
       goDirectlyFlag?: boolean | null,
+      absentFlag?: boolean | null,
       returnDirectlyFlag?: boolean | null,
       rests?:  Array< {
         __typename: "Rest",
@@ -3051,6 +3750,7 @@ export type OnUpdateAttendanceSubscription = {
       } | null > | null,
       remarks?: string | null,
       paidHolidayFlag?: boolean | null,
+      specialHolidayFlag?: boolean | null,
       hourlyPaidHolidayHours?: number | null,
       substituteHolidayFlag?: boolean | null,
       substituteHolidayDate?: string | null,
@@ -3084,6 +3784,7 @@ export type OnDeleteAttendanceSubscription = {
     endTime?: string | null,
     goDirectlyFlag?: boolean | null,
     returnDirectlyFlag?: boolean | null,
+    absentFlag?: boolean | null,
     rests?:  Array< {
       __typename: "Rest",
       startTime?: string | null,
@@ -3096,6 +3797,7 @@ export type OnDeleteAttendanceSubscription = {
     } | null > | null,
     remarks?: string | null,
     paidHolidayFlag?: boolean | null,
+    specialHolidayFlag?: boolean | null,
     isDeemedHoliday?: boolean | null,
     hourlyPaidHolidayHours?: number | null,
     substituteHolidayDate?: string | null,
@@ -3106,6 +3808,7 @@ export type OnDeleteAttendanceSubscription = {
       startTime?: string | null,
       endTime?: string | null,
       goDirectlyFlag?: boolean | null,
+      absentFlag?: boolean | null,
       returnDirectlyFlag?: boolean | null,
       rests?:  Array< {
         __typename: "Rest",
@@ -3119,6 +3822,7 @@ export type OnDeleteAttendanceSubscription = {
       } | null > | null,
       remarks?: string | null,
       paidHolidayFlag?: boolean | null,
+      specialHolidayFlag?: boolean | null,
       hourlyPaidHolidayHours?: number | null,
       substituteHolidayFlag?: boolean | null,
       substituteHolidayDate?: string | null,
@@ -3129,6 +3833,7 @@ export type OnDeleteAttendanceSubscription = {
       startTime?: string | null,
       endTime?: string | null,
       goDirectlyFlag?: boolean | null,
+      absentFlag?: boolean | null,
       returnDirectlyFlag?: boolean | null,
       rests?:  Array< {
         __typename: "Rest",
@@ -3142,6 +3847,7 @@ export type OnDeleteAttendanceSubscription = {
       } | null > | null,
       remarks?: string | null,
       paidHolidayFlag?: boolean | null,
+      specialHolidayFlag?: boolean | null,
       hourlyPaidHolidayHours?: number | null,
       substituteHolidayFlag?: boolean | null,
       substituteHolidayDate?: string | null,
@@ -3210,6 +3916,150 @@ export type OnDeleteDocumentSubscription = {
     tag?: Array< string | null > | null,
     targetRole?: Array< string | null > | null,
     revision?: number | null,
+    createdAt: string,
+    updatedAt: string,
+  } | null,
+};
+
+export type OnCreateWorkflowSubscriptionVariables = {
+  filter?: ModelSubscriptionWorkflowFilterInput | null,
+};
+
+export type OnCreateWorkflowSubscription = {
+  onCreateWorkflow?:  {
+    __typename: "Workflow",
+    id: string,
+    approvedStaffIds?: Array< string | null > | null,
+    rejectedStaffIds?: Array< string | null > | null,
+    finalDecisionTimestamp?: string | null,
+    category?: WorkflowCategory | null,
+    staffId: string,
+    status: WorkflowStatus,
+    assignedApproverStaffIds?: Array< string | null > | null,
+    approvalSteps?:  Array< {
+      __typename: "ApprovalStep",
+      id: string,
+      approverStaffId: string,
+      decisionStatus: ApprovalStatus,
+      approverComment?: string | null,
+      decisionTimestamp?: string | null,
+      stepOrder?: number | null,
+    } | null > | null,
+    nextApprovalStepIndex?: number | null,
+    submitterApproverSetting?: ApproverSettingMode | null,
+    submitterApproverId?: string | null,
+    submitterApproverIds?: Array< string | null > | null,
+    submitterApproverMultipleMode?: ApproverMultipleMode | null,
+    overTimeDetails?:  {
+      __typename: "OverTimeWorkflow",
+      date: string,
+      startTime: string,
+      endTime: string,
+      reason: string,
+    } | null,
+    comments?:  Array< {
+      __typename: "WorkflowComment",
+      id: string,
+      staffId: string,
+      text: string,
+      createdAt: string,
+    } | null > | null,
+    createdAt: string,
+    updatedAt: string,
+  } | null,
+};
+
+export type OnUpdateWorkflowSubscriptionVariables = {
+  filter?: ModelSubscriptionWorkflowFilterInput | null,
+};
+
+export type OnUpdateWorkflowSubscription = {
+  onUpdateWorkflow?:  {
+    __typename: "Workflow",
+    id: string,
+    approvedStaffIds?: Array< string | null > | null,
+    rejectedStaffIds?: Array< string | null > | null,
+    finalDecisionTimestamp?: string | null,
+    category?: WorkflowCategory | null,
+    staffId: string,
+    status: WorkflowStatus,
+    assignedApproverStaffIds?: Array< string | null > | null,
+    approvalSteps?:  Array< {
+      __typename: "ApprovalStep",
+      id: string,
+      approverStaffId: string,
+      decisionStatus: ApprovalStatus,
+      approverComment?: string | null,
+      decisionTimestamp?: string | null,
+      stepOrder?: number | null,
+    } | null > | null,
+    nextApprovalStepIndex?: number | null,
+    submitterApproverSetting?: ApproverSettingMode | null,
+    submitterApproverId?: string | null,
+    submitterApproverIds?: Array< string | null > | null,
+    submitterApproverMultipleMode?: ApproverMultipleMode | null,
+    overTimeDetails?:  {
+      __typename: "OverTimeWorkflow",
+      date: string,
+      startTime: string,
+      endTime: string,
+      reason: string,
+    } | null,
+    comments?:  Array< {
+      __typename: "WorkflowComment",
+      id: string,
+      staffId: string,
+      text: string,
+      createdAt: string,
+    } | null > | null,
+    createdAt: string,
+    updatedAt: string,
+  } | null,
+};
+
+export type OnDeleteWorkflowSubscriptionVariables = {
+  filter?: ModelSubscriptionWorkflowFilterInput | null,
+};
+
+export type OnDeleteWorkflowSubscription = {
+  onDeleteWorkflow?:  {
+    __typename: "Workflow",
+    id: string,
+    approvedStaffIds?: Array< string | null > | null,
+    rejectedStaffIds?: Array< string | null > | null,
+    finalDecisionTimestamp?: string | null,
+    category?: WorkflowCategory | null,
+    staffId: string,
+    status: WorkflowStatus,
+    assignedApproverStaffIds?: Array< string | null > | null,
+    approvalSteps?:  Array< {
+      __typename: "ApprovalStep",
+      id: string,
+      approverStaffId: string,
+      decisionStatus: ApprovalStatus,
+      approverComment?: string | null,
+      decisionTimestamp?: string | null,
+      stepOrder?: number | null,
+    } | null > | null,
+    nextApprovalStepIndex?: number | null,
+    submitterApproverSetting?: ApproverSettingMode | null,
+    submitterApproverId?: string | null,
+    submitterApproverIds?: Array< string | null > | null,
+    submitterApproverMultipleMode?: ApproverMultipleMode | null,
+    overTimeDetails?:  {
+      __typename: "OverTimeWorkflow",
+      date: string,
+      startTime: string,
+      endTime: string,
+      reason: string,
+    } | null,
+    comments?:  Array< {
+      __typename: "WorkflowComment",
+      id: string,
+      staffId: string,
+      text: string,
+      createdAt: string,
+    } | null > | null,
     createdAt: string,
     updatedAt: string,
   } | null,

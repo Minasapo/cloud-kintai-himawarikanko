@@ -180,6 +180,8 @@ export default function DesktopList({
                         paidHolidayFlag={attendance.paidHolidayFlag}
                         substituteHolidayDate={attendance.substituteHolidayDate}
                         remarks={attendance.remarks}
+                        specialHolidayFlag={attendance.specialHolidayFlag}
+                        absentFlag={attendance.absentFlag}
                       />
 
                       {/* 作成日時 */}
@@ -248,6 +250,8 @@ export default function DesktopList({
                   paidHolidayFlag={attendance.paidHolidayFlag}
                   substituteHolidayDate={attendance.substituteHolidayDate}
                   remarks={attendance.remarks}
+                  specialHolidayFlag={attendance.specialHolidayFlag}
+                  absentFlag={attendance.absentFlag}
                 />
 
                 {/* 作成日時 */}
