@@ -3,6 +3,7 @@ import { createBrowserRouter } from "react-router-dom";
 import Layout from "./Layout";
 import AdminAttendance from "./pages/admin/AdminAttendance";
 import AdminAttendanceEditor from "./pages/admin/AdminAttendanceEditor";
+import AdminAttendanceHistory from "./pages/admin/AdminAttendanceHistory";
 import AdminAttendancePrint from "./pages/admin/AdminAttendancePrint";
 import Absent from "./pages/admin/AdminConfigManagement/Absent";
 import AdminConfigManagement from "./pages/admin/AdminConfigManagement/AdminConfigManagement";
@@ -15,11 +16,14 @@ import SpecialHoliday from "./pages/admin/AdminConfigManagement/SpecialHoliday";
 import WorkingTime from "./pages/admin/AdminConfigManagement/WorkingTime";
 import AdminHolidayCalendar from "./pages/admin/AdminHolidayCalendar/HolidayCalendar/AdminHolidayCalendar";
 import AdminLayout from "./pages/admin/AdminLayout";
+import AdminLogs from "./pages/admin/AdminLogs/AdminLogsClean";
 import AdminMasterLayout from "./pages/admin/AdminMasterLayout";
 import AdminShiftGuard from "./pages/admin/AdminShiftGuard";
+import AdminShiftSettings from "./pages/admin/AdminShiftSettings/AdminShiftSettings";
 import AdminStaff from "./pages/admin/AdminStaff/AdminStaff";
 import AdminStaffAttendanceList from "./pages/admin/AdminStaffAttendanceList/AdminStaffAttendanceList";
 import AdminStaffEditor from "./pages/admin/AdminStaffEditor/AdminStaffEditor";
+import AdminTheme from "./pages/admin/AdminTheme/AdminTheme";
 import AdminWorkflow from "./pages/admin/AdminWorkflow/AdminWorkflow";
 import AdminWorkflowDetail from "./pages/admin/AdminWorkflow/AdminWorkflowDetail";
 import JobTerm from "./pages/admin/JobTerm/JobTerm";
@@ -101,11 +105,7 @@ const router = createBrowserRouter([
         children: [
           {
             index: true,
-            element: (
-              <AdminShiftGuard>
-                <ShiftRequest />
-              </AdminShiftGuard>
-            ),
+            element: <ShiftRequest />,
           },
         ],
       },
@@ -189,6 +189,10 @@ const router = createBrowserRouter([
                 element: <AdminAttendanceEditor />,
               },
               {
+                path: "history/:targetWorkDate/:staffId",
+                element: <AdminAttendanceHistory />,
+              },
+              {
                 path: "print",
                 element: <AdminAttendancePrint />,
               },
@@ -233,6 +237,14 @@ const router = createBrowserRouter([
               {
                 path: "holiday_calendar",
                 element: <AdminHolidayCalendar />,
+              },
+              {
+                path: "theme",
+                element: <AdminTheme />,
+              },
+              {
+                path: "shift",
+                element: <AdminShiftSettings />,
               },
               {
                 path: "feature_management",
@@ -284,6 +296,10 @@ const router = createBrowserRouter([
                 element: <AdminWorkflowDetail />,
               },
             ],
+          },
+          {
+            path: "logs",
+            element: <AdminLogs />,
           },
         ],
       },

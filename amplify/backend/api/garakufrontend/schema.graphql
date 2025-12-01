@@ -27,6 +27,7 @@ type Staff @model @auth(rules: [{ allow: private }]) {
   approverSingle: String
   approverMultiple: [String]
   approverMultipleMode: ApproverMultipleMode
+  shiftGroup: String
 }
 
 enum ApproverSettingMode {
@@ -172,6 +173,14 @@ type QuickInputTime {
   enabled: Boolean!
 }
 
+type ShiftGroup {
+  label: String!
+  description: String
+  min: Int
+  max: Int
+  fixed: Int
+}
+
 type AppConfig @model {
   id: ID!
   name: String!
@@ -192,6 +201,8 @@ type AppConfig @model {
   reasons: [Reason]
   quickInputStartTimes: [QuickInputTime]
   quickInputEndTimes: [QuickInputTime]
+  themeColor: String
+  shiftGroups: [ShiftGroup]
 }
 
 type EmailResult {
@@ -278,4 +289,32 @@ type Workflow @model @auth(rules: [{ allow: private }]) {
   submitterApproverMultipleMode: ApproverMultipleMode
   overTimeDetails: OverTimeWorkflow
   comments: [WorkflowComment]
+}
+
+type OperationLog @model @auth(rules: [{ allow: private }]) {
+  id: ID!
+  staffId: String
+    @index(
+      name: "byStaffId"
+      sortKeyFields: ["timestamp"]
+      queryField: "operationLogsByStaffId"
+    )
+  # 行った操作の種類（例: "LOGIN", "ATTENDANCE_UPDATE"）
+  action: String!
+  # 対象リソースの種類（例: "Attendance", "Workflow", "AppConfig"）
+  resource: String
+  # 対象リソースの ID（あれば）
+  resourceId: String
+  # ISO 8601 形式のタイムスタンプ
+  timestamp: String!
+  # 操作の詳細を JSON 文字列などで保存
+  details: String
+  # オプション: 発生元 IP
+  ipAddress: String
+  # オプション: ユーザーエージェント
+  userAgent: String
+  # 任意の追加メタデータ（JSON 文字列）
+  metadata: String
+  # 重大度レベル（例: INFO, WARN, ERROR）
+  severity: String
 }

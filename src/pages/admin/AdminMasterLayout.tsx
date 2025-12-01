@@ -39,7 +39,7 @@ export default function AdminMasterLayout() {
       const s = localStorage.getItem("adminSettingsOpen");
       if (s !== null) setSettingsOpen(s === "true");
     } catch (e) {
-      // ignore
+      void e;
     }
   }, []);
 
@@ -50,7 +50,9 @@ export default function AdminMasterLayout() {
         "adminSidebarCollapsed",
         sidebarCollapsed ? "true" : "false"
       );
-    } catch (e) {}
+    } catch (e) {
+      void e;
+    }
   }, [sidebarCollapsed]);
   useEffect(() => {
     try {
@@ -58,12 +60,16 @@ export default function AdminMasterLayout() {
         "adminSettingsOpen",
         settingsOpen ? "true" : "false"
       );
-    } catch (e) {}
+    } catch (e) {
+      void e;
+    }
   }, [settingsOpen]);
 
   const menuList = [
     { name: "集計対象月", path: "/admin/master/job_term" },
     { name: "休日カレンダー", path: "/admin/master/holiday_calendar" },
+    { name: "テーマ", path: "/admin/master/theme" },
+    { name: "シフト", path: "/admin/master/shift" },
     {
       name: "勤怠",
       path: "/admin/master/feature_management",
