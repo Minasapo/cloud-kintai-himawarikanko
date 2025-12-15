@@ -30,24 +30,24 @@ import AdminWorkflow from "./pages/admin/AdminWorkflow/AdminWorkflow";
 import AdminWorkflowDetail from "./pages/admin/AdminWorkflow/AdminWorkflowDetail";
 import JobTerm from "./pages/admin/JobTerm/JobTerm";
 import ShiftPlanManagement from "./pages/admin/ShiftPlanManagement/ShiftPlanManagement";
-import AttendanceEdit from "./pages/AttendanceEdit/AttendanceEdit";
-import AttendanceListPage from "./pages/AttendanceListPage";
-import DailyReport from "./pages/DailyReport/DailyReport";
+import DailyReport from "./pages/attendance/daily-report/DailyReport";
+import AttendanceEdit from "./pages/attendance/edit/AttendanceEdit";
+import AttendanceListPage from "./pages/attendance/list/AttendanceListPage";
 import Login from "./pages/Login/Login";
-import OfficeLayout from "./pages/office/OfficeLayout";
-import OfficePage from "./pages/office/OfficePage";
-import OfficeQRRegister from "./pages/office/qr/OfficeQRRegister";
-import OfficeQRView from "./pages/office/qr/OfficeQRView";
+import OfficeHomePage from "./pages/office/home/OfficeHomePage";
+import OfficeLayoutPage from "./pages/office/layout/OfficeLayoutPage";
+import OfficeQrPage from "./pages/office/qr/OfficeQrPage";
+import OfficeQrRegisterPage from "./pages/office/qr-register/OfficeQrRegisterPage";
 import Profile from "./pages/Profile";
 import Register from "./pages/Register";
-import ShiftRequest from "./pages/Shift/ShiftRequest";
-import ShiftDayView from "./pages/ShiftManagement/ShiftDayView";
-import ShiftManagement from "./pages/ShiftManagement/ShiftManagement";
-import StaffShiftList from "./pages/ShiftManagement/StaffShiftList";
-import NewWorkflow from "./pages/Workflow/NewWorkflow";
-import Workflow from "./pages/Workflow/Workflow";
-import WorkflowDetail from "./pages/Workflow/WorkflowDetail";
-import WorkflowEdit from "./pages/Workflow/WorkflowEdit";
+import ShiftDayViewPage from "./pages/shift/day-view";
+import ShiftManagementPage from "./pages/shift/management";
+import ShiftRequestPage from "./pages/shift/request";
+import StaffShiftListPage from "./pages/shift/staff";
+import WorkflowDetailPage from "./pages/workflow/detail/WorkflowDetailPage";
+import WorkflowEditPage from "./pages/workflow/edit/WorkflowEditPage";
+import WorkflowListPage from "./pages/workflow/list/WorkflowListPage";
+import NewWorkflowPage from "./pages/workflow/new/NewWorkflowPage";
 
 const router = createBrowserRouter([
   {
@@ -92,19 +92,19 @@ const router = createBrowserRouter([
         children: [
           {
             index: true,
-            element: <Workflow />,
+            element: <WorkflowListPage />,
           },
           {
             path: ":id",
-            element: <WorkflowDetail />,
+            element: <WorkflowDetailPage />,
           },
           {
             path: ":id/edit",
-            element: <WorkflowEdit />,
+            element: <WorkflowEditPage />,
           },
           {
             path: "new",
-            element: <NewWorkflow />,
+            element: <NewWorkflowPage />,
           },
         ],
       },
@@ -113,7 +113,7 @@ const router = createBrowserRouter([
         children: [
           {
             index: true,
-            element: <ShiftRequest />,
+            element: <ShiftRequestPage />,
           },
         ],
       },
@@ -183,7 +183,7 @@ const router = createBrowserRouter([
             path: "shift",
             element: (
               <AdminShiftGuard>
-                <ShiftManagement />
+                <ShiftManagementPage />
               </AdminShiftGuard>
             ),
           },
@@ -191,7 +191,7 @@ const router = createBrowserRouter([
             path: "shift/day/:date",
             element: (
               <AdminShiftGuard>
-                <ShiftDayView />
+                <ShiftDayViewPage />
               </AdminShiftGuard>
             ),
           },
@@ -199,7 +199,7 @@ const router = createBrowserRouter([
             path: "shift/:staffId",
             element: (
               <AdminShiftGuard>
-                <StaffShiftList />
+                <StaffShiftListPage />
               </AdminShiftGuard>
             ),
           },
@@ -303,19 +303,19 @@ const router = createBrowserRouter([
       },
       {
         path: "office",
-        element: <OfficeLayout />,
+        element: <OfficeLayoutPage />,
         children: [
           {
             index: true,
-            element: <OfficePage />,
+            element: <OfficeHomePage />,
           },
           {
             path: "qr",
-            element: <OfficeQRView />,
+            element: <OfficeQrPage />,
           },
           {
             path: "qr/register",
-            element: <OfficeQRRegister />,
+            element: <OfficeQrRegisterPage />,
           },
         ],
       },
