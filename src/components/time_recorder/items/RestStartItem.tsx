@@ -1,43 +1,24 @@
-import { Button, styled } from "@mui/material";
-import { useEffect, useState } from "react";
+import { useMemo } from "react";
+
+import RestStartButton from "@/shared/ui/time-recorder/RestStartButton";
 
 import { WorkStatus, WorkStatusCodes } from "../common";
 
-const RestStartButton = styled(Button)(({ theme }) => ({
-  color: theme.palette.rest.main,
-  "&:hover": {
-    color: theme.palette.rest.contrastText,
-    backgroundColor: theme.palette.rest.main,
-  },
-  "&:disabled": {
-    backgroundColor: "#E0E0E0",
-  },
-}));
+type RestStartItemProps = {
+  workStatus: WorkStatus | null;
+  onClick: () => void;
+};
 
 export default function RestStartItem({
   workStatus,
   onClick,
-}: {
-  workStatus: WorkStatus | null;
-  onClick: () => void;
-}) {
-  const [disabled, setDisabled] = useState(true);
-
-  useEffect(() => {
-    setDisabled(workStatus?.code !== WorkStatusCodes.WORKING);
-  }, [workStatus]);
+}: RestStartItemProps) {
+  const isWorking = useMemo(
+    () => workStatus?.code === WorkStatusCodes.WORKING,
+    [workStatus?.code]
+  );
 
   return (
-    <RestStartButton
-      fullWidth
-      onClick={() => {
-        setDisabled(true);
-        onClick();
-      }}
-      disabled={disabled}
-      data-testid="rest-start-button"
-    >
-      休憩開始
-    </RestStartButton>
+    <RestStartButton isWorking={Boolean(isWorking)} onRestStart={onClick} />
   );
 }

@@ -1,13 +1,15 @@
-import { AmplifyUser, AuthEventData, AuthStatus } from "@aws-amplify/ui";
+import { AuthEventData, AuthStatus } from "@aws-amplify/ui";
+import type { AuthUser } from "aws-amplify/auth";
 import { createContext } from "react";
-import { StaffRole } from "../hooks/useStaffs/useStaffs";
+
 import { CognitoUser } from "../hooks/useCognitoUser";
+import { StaffRole } from "../hooks/useStaffs/useStaffs";
 
 type AuthContextProps = {
   signOut: (data?: AuthEventData | undefined) => void;
   signIn: () => void;
   isCognitoUserRole: (role: StaffRole) => boolean;
-  user?: AmplifyUser;
+  user?: AuthUser;
   authStatus?: AuthStatus;
   cognitoUser?: CognitoUser | null;
 };

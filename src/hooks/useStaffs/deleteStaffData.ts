@@ -1,14 +1,18 @@
-import { GraphQLResult } from "@aws-amplify/api";
-import { API } from "aws-amplify";
+import { deleteStaff } from "@shared/api/graphql/documents/mutations";
+import {
+  DeleteStaffInput,
+  DeleteStaffMutation,
+  Staff,
+} from "@shared/api/graphql/types";
+import { GraphQLResult } from "aws-amplify/api";
 
-import { DeleteStaffInput, DeleteStaffMutation, Staff } from "../../API";
-import { deleteStaff } from "../../graphql/mutations";
+import { graphqlClient } from "@/lib/amplify/graphqlClient";
 
 export default async function deleteStaffData(input: DeleteStaffInput) {
-  const response = (await API.graphql({
+  const response = (await graphqlClient.graphql({
     query: deleteStaff,
     variables: { input },
-    authMode: "AMAZON_COGNITO_USER_POOLS",
+    authMode: "userPool",
   })) as GraphQLResult<DeleteStaffMutation>;
 
   if (response.errors) {

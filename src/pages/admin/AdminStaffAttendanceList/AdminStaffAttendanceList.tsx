@@ -1,11 +1,26 @@
 import "./styles.scss";
 
+import { useAppDispatchV2 } from "@app/hooks";
+import {
+  useListRecentAttendancesQuery,
+  useUpdateAttendanceMutation,
+} from "@entities/attendance/api/attendanceApi";
+import {
+  useGetCompanyHolidayCalendarsQuery,
+  useGetHolidayCalendarsQuery,
+} from "@entities/calendar/api/calendarApi";
+import handleApproveChangeRequest from "@features/attendance/edit/ChangeRequestDialog/handleApproveChangeRequest";
+import { AttendanceStatusTooltip } from "@features/attendance/list/AttendanceStatusTooltip";
 import EditIcon from "@mui/icons-material/Edit";
 import {
-  Badge,
+  Alert,
+  AlertTitle,
   Box,
+  Button,
+  Checkbox,
   Container,
   IconButton,
+  LinearProgress,
   Stack,
   Table,
   TableBody,
@@ -16,34 +31,36 @@ import {
   Typography,
 } from "@mui/material";
 import { DatePicker } from "@mui/x-date-pickers";
-import dayjs from "dayjs";
-import { useContext, useEffect, useState, useMemo, useCallback } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
-
 import {
   Attendance,
+  AttendanceChangeRequest,
   CompanyHolidayCalendar,
   HolidayCalendar,
   Staff,
-} from "@/API";
-import { AttendanceStatusTooltip } from "@/components/AttendanceList/AttendanceStatusTooltip";
-import CommonBreadcrumbs from "@/components/common/CommonBreadcrumbs";
+  UpdateAttendanceInput,
+} from "@shared/api/graphql/types";
+// Breadcrumbs removed per admin UI simplification
+import dayjs from "dayjs";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+
+import * as MESSAGE_CODE from "@/errors";
+import createOperationLogData from "@/hooks/useOperationLog/createOperationLogData";
 import fetchStaff from "@/hooks/useStaff/fetchStaff";
+import { mappingStaffRole, StaffType } from "@/hooks/useStaffs/useStaffs";
 import { AttendanceDate } from "@/lib/AttendanceDate";
 import { ChangeRequest } from "@/lib/ChangeRequest";
 import { CompanyHoliday } from "@/lib/CompanyHoliday";
 import { DayOfWeek, DayOfWeekString } from "@/lib/DayOfWeek";
 import { Holiday } from "@/lib/Holiday";
-import { calcTotalRestTime } from "@/pages/AttendanceEdit/DesktopEditor/RestTimeItem/RestTimeInput/RestTimeInput";
-import { calcTotalWorkTime } from "@/pages/AttendanceEdit/DesktopEditor/WorkTimeInput/WorkTimeInput";
+import { GenericMailSender } from "@/lib/mail/GenericMailSender";
+import {
+  setSnackbarError,
+  setSnackbarSuccess,
+} from "@/lib/reducers/snackbarReducer";
 
-import { useAppDispatchV2 } from "../../../app/hooks";
-import * as MESSAGE_CODE from "../../../errors";
-import useAttendances from "../../../hooks/useAttendances/useAttendances";
-import { AppContext } from "@/context/AppContext";
-import { setSnackbarError } from "../../../lib/reducers/snackbarReducer";
-import { ApprovalPendingMessage } from "./ApprovalPendingMessage";
 import { AttendanceGraph } from "./AttendanceGraph";
+import ChangeRequestQuickViewDialog from "./ChangeRequestQuickViewDialog";
 import { CreatedAtTableCell } from "./CreatedAtTableCell";
 import { RestTimeTableCell } from "./RestTimeTableCell";
 import { SummaryTableCell } from "./SummaryTableCell";
@@ -57,6 +74,7 @@ export function getTableRowClassName(
   companyHolidayCalendars: CompanyHolidayCalendar[]
 ) {
   const { workDate } = attendance;
+
   const today = dayjs().format(AttendanceDate.DataFormat);
   if (workDate === today) {
     return "table-row--today";
@@ -88,47 +106,106 @@ export default function AdminStaffAttendanceList() {
   const { staffId } = useParams();
   const navigate = useNavigate();
   const dispatch = useAppDispatchV2();
-
-  const { holidayCalendars, companyHolidayCalendars } = useContext(AppContext);
   const [staff, setStaff] = useState<Staff | undefined | null>(undefined);
 
-  const { attendances, getAttendances } = useAttendances();
+  const {
+    data: holidayCalendars = [],
+    isLoading: isHolidayCalendarsLoading,
+    isFetching: isHolidayCalendarsFetching,
+    error: holidayCalendarsError,
+  } = useGetHolidayCalendarsQuery();
+  const {
+    data: companyHolidayCalendars = [],
+    isLoading: isCompanyHolidayCalendarsLoading,
+    isFetching: isCompanyHolidayCalendarsFetching,
+    error: companyHolidayCalendarsError,
+  } = useGetCompanyHolidayCalendarsQuery();
+  const calendarLoading =
+    isHolidayCalendarsLoading ||
+    isHolidayCalendarsFetching ||
+    isCompanyHolidayCalendarsLoading ||
+    isCompanyHolidayCalendarsFetching;
+
+  const shouldFetchAttendances = Boolean(staffId);
+  const {
+    data: attendancesData,
+    isLoading: isAttendancesInitialLoading,
+    isFetching: isAttendancesFetching,
+    isUninitialized: isAttendancesUninitialized,
+    error: attendancesError,
+    refetch: refetchAttendances,
+  } = useListRecentAttendancesQuery(
+    { staffId: staffId ?? "" },
+    { skip: !shouldFetchAttendances }
+  );
+
+  const attendances = attendancesData ?? [];
+  const attendanceLoading =
+    !shouldFetchAttendances ||
+    isAttendancesInitialLoading ||
+    isAttendancesFetching ||
+    isAttendancesUninitialized;
+  const [quickViewAttendance, setQuickViewAttendance] =
+    useState<Attendance | null>(null);
+  const [quickViewChangeRequest, setQuickViewChangeRequest] =
+    useState<AttendanceChangeRequest | null>(null);
+  const [quickViewOpen, setQuickViewOpen] = useState(false);
+  const [updateAttendanceMutation] = useUpdateAttendanceMutation();
+  const staffForMail = useMemo<StaffType | null>(() => {
+    if (!staff) return null;
+    return {
+      id: staff.id,
+      cognitoUserId: staff.cognitoUserId,
+      familyName: staff.familyName,
+      givenName: staff.givenName,
+      mailAddress: staff.mailAddress,
+      owner: staff.owner ?? false,
+      role: mappingStaffRole(staff.role),
+      enabled: staff.enabled,
+      status: staff.status,
+      createdAt: staff.createdAt,
+      updatedAt: staff.updatedAt,
+      usageStartDate: staff.usageStartDate,
+      notifications: staff.notifications,
+      workType: staff.workType,
+      sortKey: staff.sortKey,
+      developer: (staff as unknown as Record<string, unknown>).developer as
+        | boolean
+        | undefined,
+      approverSetting: staff.approverSetting ?? null,
+      approverSingle: staff.approverSingle ?? null,
+      approverMultiple: staff.approverMultiple ?? null,
+      approverMultipleMode: staff.approverMultipleMode ?? null,
+      shiftGroup: staff.shiftGroup ?? null,
+    };
+  }, [staff]);
+  const [selectedAttendanceIds, setSelectedAttendanceIds] = useState<string[]>(
+    []
+  );
+  const [bulkApproving, setBulkApproving] = useState(false);
 
   useEffect(() => {
     if (!staffId) return;
-    getAttendances(staffId).catch(() =>
-      dispatch(setSnackbarError(MESSAGE_CODE.E02001))
-    );
 
     fetchStaff(staffId)
       .then(setStaff)
       .catch(() => {
         dispatch(setSnackbarError(MESSAGE_CODE.E00001));
       });
-  }, [staffId]);
+  }, [staffId, dispatch]);
 
-  const totalTime = useMemo(() => {
-    const totalWorkTime = attendances.reduce((acc, attendance) => {
-      if (!attendance.startTime || !attendance.endTime) return acc;
-      const workTime = calcTotalWorkTime(
-        attendance.startTime,
-        attendance.endTime
-      );
-      return acc + workTime;
-    }, 0);
+  useEffect(() => {
+    if (attendancesError) {
+      dispatch(setSnackbarError(MESSAGE_CODE.E02001));
+    }
+  }, [attendancesError, dispatch]);
 
-    const totalRestTime = attendances.reduce((acc, attendance) => {
-      if (!attendance.rests) return acc;
-      const restTime = attendance.rests
-        .filter((item): item is NonNullable<typeof item> => !!item)
-        .reduce((acc, rest) => {
-          if (!rest.startTime || !rest.endTime) return acc;
-          return acc + calcTotalRestTime(rest.startTime, rest.endTime);
-        }, 0);
-      return acc + restTime;
-    }, 0);
-    return totalWorkTime - totalRestTime;
-  }, [attendances]);
+  useEffect(() => {
+    if (holidayCalendarsError || companyHolidayCalendarsError) {
+      console.error(holidayCalendarsError ?? companyHolidayCalendarsError);
+      dispatch(setSnackbarError(MESSAGE_CODE.E00001));
+    }
+  }, [holidayCalendarsError, companyHolidayCalendarsError, dispatch]);
 
   const handleEdit = useCallback(
     (workDate: string) => {
@@ -141,18 +218,167 @@ export default function AdminStaffAttendanceList() {
     return new ChangeRequest(attendance.changeRequests).getUnapprovedCount();
   }, []);
 
+  const pendingAttendances = useMemo(() => {
+    return attendances.filter(
+      (a) => new ChangeRequest(a.changeRequests).getUnapprovedCount() > 0
+    );
+  }, [attendances]);
+
+  const getPendingChangeRequest = useCallback((attendance: Attendance) => {
+    return new ChangeRequest(attendance.changeRequests).getFirstUnapproved();
+  }, []);
+
+  const handleOpenQuickView = useCallback(
+    (attendance: Attendance) => {
+      const pendingRequest = getPendingChangeRequest(attendance);
+      if (!pendingRequest) return;
+
+      setQuickViewAttendance(attendance);
+      setQuickViewChangeRequest(pendingRequest);
+      setQuickViewOpen(true);
+    },
+    [getPendingChangeRequest]
+  );
+
+  const handleCloseQuickView = useCallback(() => {
+    setQuickViewOpen(false);
+    setQuickViewAttendance(null);
+    setQuickViewChangeRequest(null);
+  }, []);
+
+  const isAttendanceSelected = useCallback(
+    (attendanceId: string) => selectedAttendanceIds.includes(attendanceId),
+    [selectedAttendanceIds]
+  );
+
+  const toggleAttendanceSelection = useCallback((attendanceId: string) => {
+    setSelectedAttendanceIds((prev) => {
+      if (prev.includes(attendanceId)) {
+        return prev.filter((id) => id !== attendanceId);
+      }
+      return [...prev, attendanceId];
+    });
+  }, []);
+
+  const toggleSelectAllPending = useCallback(() => {
+    if (pendingAttendances.length === 0) return;
+    setSelectedAttendanceIds((prev) => {
+      if (prev.length === pendingAttendances.length) {
+        return [];
+      }
+      return pendingAttendances.map((attendance) => attendance.id);
+    });
+  }, [pendingAttendances]);
+
+  const handleBulkApprove = useCallback(async () => {
+    if (
+      selectedAttendanceIds.length === 0 ||
+      !staffId ||
+      !staff ||
+      !staffForMail
+    ) {
+      return;
+    }
+
+    const targetAttendances = pendingAttendances.filter((attendance) =>
+      selectedAttendanceIds.includes(attendance.id)
+    );
+    if (targetAttendances.length === 0) return;
+
+    let mailErrorOccurred = false;
+    setBulkApproving(true);
+    try {
+      for (const attendance of targetAttendances) {
+        // eslint-disable-next-line no-await-in-loop
+        const updatedAttendance = await handleApproveChangeRequest(
+          attendance,
+          (input: UpdateAttendanceInput) =>
+            updateAttendanceMutation(input).unwrap(),
+          undefined
+        );
+
+        try {
+          new GenericMailSender(
+            staffForMail,
+            updatedAttendance
+          ).approveChangeRequest(undefined);
+        } catch (mailError) {
+          console.error("Failed to send approval notification mail:", mailError);
+          mailErrorOccurred = true;
+        }
+
+        // eslint-disable-next-line no-await-in-loop
+        await createOperationLogData({
+          staffId: staffForMail.id,
+          action: "approve_change_request",
+          resource: "attendance",
+          resourceId: updatedAttendance.id,
+          timestamp: new Date().toISOString(),
+          details: JSON.stringify({
+            workDate: updatedAttendance.workDate,
+            applicantStaffId: updatedAttendance.staffId,
+            result: "approved",
+            comment: null,
+            bulk: true,
+          }),
+        }).catch((error) => {
+          console.error("Failed to create operation log:", error);
+        });
+      }
+
+      dispatch(setSnackbarSuccess(MESSAGE_CODE.S04006));
+      setSelectedAttendanceIds([]);
+      await refetchAttendances();
+      if (mailErrorOccurred) {
+        dispatch(setSnackbarError(MESSAGE_CODE.E00002));
+      }
+    } catch (error) {
+      console.error("Bulk approve failed", error);
+      dispatch(setSnackbarError(MESSAGE_CODE.E04006));
+    } finally {
+      setBulkApproving(false);
+    }
+  }, [
+    dispatch,
+    refetchAttendances,
+    pendingAttendances,
+    selectedAttendanceIds,
+    staff,
+    staffForMail,
+    staffId,
+    updateAttendanceMutation,
+  ]);
+
+  useEffect(() => {
+    setSelectedAttendanceIds((prev) =>
+      prev.filter((id) =>
+        pendingAttendances.some((attendance) => attendance.id === id)
+      )
+    );
+  }, [pendingAttendances]);
+
   const getTableRowClassNameMemo = useCallback(
     (
       attendance: Attendance,
       holidayCalendars: HolidayCalendar[],
       companyHolidayCalendars: CompanyHolidayCalendar[]
-    ) =>
-      getTableRowClassName(
+    ) => {
+      // 指定休日フラグが立っていれば日曜と同じスタイルにする
+      if (staff?.workType === "shift" && attendance.isDeemedHoliday) {
+        return "table-row--sunday";
+      }
+
+      // Shift勤務のスタッフは土日祝の色付けをしない
+      if (staff?.workType === "shift") {
+        return "table-row--default";
+      }
+      return getTableRowClassName(
         attendance,
         holidayCalendars,
         companyHolidayCalendars
-      ),
-    [holidayCalendars, companyHolidayCalendars]
+      );
+    },
+    [staff, holidayCalendars, companyHolidayCalendars]
   );
 
   if (staff === null || !staffId) {
@@ -163,24 +389,18 @@ export default function AdminStaffAttendanceList() {
     );
   }
 
+  if (attendanceLoading || calendarLoading) {
+    return (
+      <Container maxWidth="xl" sx={{ pt: 2 }}>
+        <LinearProgress />
+      </Container>
+    );
+  }
+
   return (
     <Container maxWidth="xl">
       <Stack spacing={1} sx={{ pt: 1 }}>
-        <Box>
-          <CommonBreadcrumbs
-            items={[
-              { label: "TOP", href: "/" },
-              { label: "勤怠管理", href: "/admin/attendances" },
-            ]}
-            current="勤怠一覧"
-          />
-        </Box>
-        <Typography variant="h4">
-          {`${staff?.familyName || "(不明)"} さんの勤怠(${totalTime.toFixed(
-            1
-          )}h)`}
-        </Typography>
-        <ApprovalPendingMessage attendances={attendances} />
+        {/* breadcrumbs and main heading removed */}
         <Box>
           <DatePicker
             value={dayjs()}
@@ -203,6 +423,212 @@ export default function AdminStaffAttendanceList() {
         <Box>
           <AttendanceGraph attendances={attendances} />
         </Box>
+        {pendingAttendances.length > 0 && (
+          <Box sx={{ pb: 2 }}>
+            {/* 目立たせるために枠と背景で囲む */}
+            <Box
+              sx={{
+                border: "1px solid",
+                borderColor: "warning.main",
+                borderRadius: 2,
+                p: 2,
+                backgroundColor: "rgba(255,243,205,0.12)",
+              }}
+            >
+              <Stack
+                direction={{ xs: "column", sm: "row" }}
+                spacing={1}
+                justifyContent="space-between"
+                alignItems={{ xs: "flex-start", sm: "center" }}
+                sx={{ mb: 1 }}
+              >
+                <Typography variant="h6">
+                  承認待ち一覧 ({pendingAttendances.length})
+                </Typography>
+                <Stack direction="row" spacing={1} alignItems="center">
+                  <Typography variant="body2" color="text.secondary">
+                    選択中: {selectedAttendanceIds.length} 件
+                  </Typography>
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    disabled={
+                      bulkApproving ||
+                      selectedAttendanceIds.length === 0 ||
+                      !staffForMail
+                    }
+                    onClick={handleBulkApprove}
+                    data-testid="bulk-approve-button"
+                  >
+                    {bulkApproving ? "承認処理中..." : "選択を一括承認"}
+                  </Button>
+                </Stack>
+              </Stack>
+              <Alert severity="warning">
+                <AlertTitle sx={{ fontWeight: "bold" }}>
+                  確認してください
+                </AlertTitle>
+                未承認の変更リクエストがあります
+              </Alert>
+              <TableContainer>
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell padding="checkbox">
+                        <Checkbox
+                          color="primary"
+                          indeterminate={
+                            selectedAttendanceIds.length > 0 &&
+                            selectedAttendanceIds.length <
+                              pendingAttendances.length
+                          }
+                          checked={
+                            pendingAttendances.length > 0 &&
+                            selectedAttendanceIds.length ===
+                              pendingAttendances.length
+                          }
+                          onChange={toggleSelectAllPending}
+                          inputProps={{
+                            "aria-label": "select all pending change requests",
+                          }}
+                        />
+                      </TableCell>
+                      <TableCell />
+                      <TableCell sx={{ whiteSpace: "nowrap" }}>
+                        勤務日
+                      </TableCell>
+                      <TableCell sx={{ whiteSpace: "nowrap" }}>
+                        勤務時間
+                      </TableCell>
+                      <TableCell sx={{ whiteSpace: "nowrap" }}>
+                        休憩時間(直近)
+                      </TableCell>
+                      <TableCell sx={{ whiteSpace: "nowrap" }}>摘要</TableCell>
+                      <TableCell sx={{ whiteSpace: "nowrap" }}>
+                        作成日時
+                      </TableCell>
+                      <TableCell sx={{ whiteSpace: "nowrap" }}>
+                        更新日時
+                      </TableCell>
+                      <TableCell />
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {pendingAttendances.map((attendance, index) => {
+                      const pendingCount = getBadgeContent(attendance);
+                      return (
+                        <TableRow
+                          key={`pending-${index}`}
+                          className={getTableRowClassNameMemo(
+                            attendance,
+                            holidayCalendars,
+                            companyHolidayCalendars
+                          )}
+                          data-testid={
+                            index === pendingAttendances.length - 1
+                              ? "last-row-pending"
+                              : undefined
+                          }
+                        >
+                          <TableCell padding="checkbox">
+                            <Checkbox
+                              color="primary"
+                              checked={isAttendanceSelected(attendance.id)}
+                              onChange={() =>
+                                toggleAttendanceSelection(attendance.id)
+                              }
+                              inputProps={{
+                                "aria-label": "select change request",
+                              }}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Stack
+                              direction="row"
+                              spacing={1}
+                              alignItems="center"
+                            >
+                              <AttendanceStatusTooltip
+                                staff={staff}
+                                attendance={attendance}
+                                holidayCalendars={holidayCalendars}
+                                companyHolidayCalendars={
+                                  companyHolidayCalendars
+                                }
+                              />
+                              <IconButton
+                                size="small"
+                                onClick={() =>
+                                  handleEdit(
+                                    dayjs(attendance.workDate).format(
+                                      AttendanceDate.QueryParamFormat
+                                    )
+                                  )
+                                }
+                                data-testid="edit-attendance"
+                              >
+                                <EditIcon fontSize="small" />
+                              </IconButton>
+                            </Stack>
+                          </TableCell>
+
+                          {/* 勤務日 */}
+                          <WorkDateTableCell
+                            workDate={attendance.workDate}
+                            holidayCalendars={holidayCalendars}
+                            companyHolidayCalendars={companyHolidayCalendars}
+                          />
+
+                          {/* 勤務時間 */}
+                          <WorkTimeTableCell attendance={attendance} />
+
+                          {/* 休憩時間(最近) */}
+                          <RestTimeTableCell attendance={attendance} />
+
+                          {/* 摘要 */}
+                          <SummaryTableCell
+                            substituteHolidayDate={
+                              attendance.substituteHolidayDate
+                            }
+                            remarks={attendance.remarks}
+                            specialHolidayFlag={attendance.specialHolidayFlag}
+                            paidHolidayFlag={attendance.paidHolidayFlag}
+                            absentFlag={attendance.absentFlag}
+                          />
+
+                          {/* 作成日時 */}
+                          <CreatedAtTableCell
+                            createdAt={attendance.createdAt}
+                          />
+
+                          {/* 更新日時 */}
+                          <UpdatedAtTableCell
+                            updatedAt={attendance.updatedAt}
+                          />
+
+                          <TableCell sx={{ width: 1 }} align="right">
+                            {pendingCount > 0 && (
+                              <Button
+                                size="small"
+                                variant="contained"
+                                color="warning"
+                                sx={{ fontWeight: "bold" }}
+                                onClick={() => handleOpenQuickView(attendance)}
+                                data-testid="quick-view-change-request"
+                              >
+                                申請確認
+                              </Button>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </Box>
+          </Box>
+        )}
         <Box sx={{ pb: 5 }}>
           <TableContainer>
             <Table size="small">
@@ -221,77 +647,103 @@ export default function AdminStaffAttendanceList() {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {attendances.map((attendance, index) => (
-                  <TableRow
-                    key={index}
-                    className={getTableRowClassNameMemo(
-                      attendance,
-                      holidayCalendars,
-                      companyHolidayCalendars
-                    )}
-                  >
-                    <TableCell>
-                      <Stack direction="row" spacing={1} alignItems="center">
-                        <AttendanceStatusTooltip
-                          staff={staff}
-                          attendance={attendance}
-                          holidayCalendars={holidayCalendars}
-                          companyHolidayCalendars={companyHolidayCalendars}
-                        />
-                        <IconButton
-                          size="small"
-                          onClick={() =>
-                            handleEdit(
-                              dayjs(attendance.workDate).format(
-                                AttendanceDate.QueryParamFormat
+                {attendances.map((attendance, index) => {
+                  const pendingCount = getBadgeContent(attendance);
+                  return (
+                    <TableRow
+                      key={index}
+                      className={getTableRowClassNameMemo(
+                        attendance,
+                        holidayCalendars,
+                        companyHolidayCalendars
+                      )}
+                      data-testid={
+                        index === attendances.length - 1
+                          ? "last-row"
+                          : undefined
+                      }
+                    >
+                      <TableCell>
+                        <Stack direction="row" spacing={1} alignItems="center">
+                          <AttendanceStatusTooltip
+                            staff={staff}
+                            attendance={attendance}
+                            holidayCalendars={holidayCalendars}
+                            companyHolidayCalendars={companyHolidayCalendars}
+                          />
+                          <IconButton
+                            size="small"
+                            onClick={() =>
+                              handleEdit(
+                                dayjs(attendance.workDate).format(
+                                  AttendanceDate.QueryParamFormat
+                                )
                               )
-                            )
-                          }
-                        >
-                          <Badge
-                            badgeContent={getBadgeContent(attendance)}
-                            color="primary"
+                            }
+                            data-testid="edit-attendance-button"
                           >
                             <EditIcon fontSize="small" />
-                          </Badge>
-                        </IconButton>
-                      </Stack>
-                    </TableCell>
+                          </IconButton>
+                        </Stack>
+                      </TableCell>
 
-                    {/* 勤務日 */}
-                    <WorkDateTableCell
-                      workDate={attendance.workDate}
-                      holidayCalendars={holidayCalendars}
-                      companyHolidayCalendars={companyHolidayCalendars}
-                    />
+                      {/* 勤務日 */}
+                      <WorkDateTableCell
+                        workDate={attendance.workDate}
+                        holidayCalendars={holidayCalendars}
+                        companyHolidayCalendars={companyHolidayCalendars}
+                      />
 
-                    {/* 勤務時間 */}
-                    <WorkTimeTableCell attendance={attendance} />
+                      {/* 勤務時間 */}
+                      <WorkTimeTableCell attendance={attendance} />
 
-                    {/* 休憩時間(最近) */}
-                    <RestTimeTableCell attendance={attendance} />
+                      {/* 休憩時間(最近) */}
+                      <RestTimeTableCell attendance={attendance} />
 
-                    {/* 摘要 */}
-                    <SummaryTableCell
-                      paidHolidayFlag={attendance.paidHolidayFlag}
-                      substituteHolidayDate={attendance.substituteHolidayDate}
-                      remarks={attendance.remarks}
-                    />
+                      {/* 摘要 */}
+                      <SummaryTableCell
+                        substituteHolidayDate={attendance.substituteHolidayDate}
+                        remarks={attendance.remarks}
+                        // 特別休暇フラグを渡す
+                        specialHolidayFlag={attendance.specialHolidayFlag}
+                        paidHolidayFlag={attendance.paidHolidayFlag}
+                        absentFlag={attendance.absentFlag}
+                      />
 
-                    {/* 作成日時 */}
-                    <CreatedAtTableCell createdAt={attendance.createdAt} />
+                      {/* 作成日時 */}
+                      <CreatedAtTableCell createdAt={attendance.createdAt} />
 
-                    {/* 更新日時 */}
-                    <UpdatedAtTableCell updatedAt={attendance.updatedAt} />
+                      {/* 更新日時 */}
+                      <UpdatedAtTableCell updatedAt={attendance.updatedAt} />
 
-                    <TableCell sx={{ width: 1 }} />
-                  </TableRow>
-                ))}
+                      <TableCell sx={{ width: 1 }} align="right">
+                        {pendingCount > 0 && (
+                          <Button
+                            size="small"
+                            variant="contained"
+                            color="warning"
+                            sx={{ fontWeight: "bold" }}
+                            onClick={() => handleOpenQuickView(attendance)}
+                            data-testid="quick-view-change-request"
+                          >
+                            申請確認
+                          </Button>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           </TableContainer>
         </Box>
       </Stack>
+      <ChangeRequestQuickViewDialog
+        open={quickViewOpen}
+        attendance={quickViewAttendance}
+        changeRequest={quickViewChangeRequest}
+        onClose={handleCloseQuickView}
+      />
     </Container>
   );
 }

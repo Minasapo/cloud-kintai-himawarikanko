@@ -6,7 +6,7 @@
 
 import * as React from "react";
 import { GridProps, SwitchFieldProps, TextFieldProps } from "@aws-amplify/ui-react";
-import { AppConfig } from "../API.ts";
+import { AppConfig } from "../shared/api/graphql/types.ts";
 export declare type EscapeHatchProps = {
     [elementHierarchy: string]: Record<string, unknown>;
 } | null;
@@ -32,9 +32,12 @@ export declare type AppConfigUpdateFormInputValues = {
     amHolidayEndTime?: string;
     pmHolidayStartTime?: string;
     pmHolidayEndTime?: string;
+    specialHolidayEnabled?: boolean;
     amPmHolidayEnabled?: boolean;
     officeMode?: boolean;
+    absentEnabled?: boolean;
     hourlyPaidHolidayEnabled?: boolean;
+    themeColor?: string;
 };
 export declare type AppConfigUpdateFormValidationValues = {
     name?: ValidationFunction<string>;
@@ -46,9 +49,12 @@ export declare type AppConfigUpdateFormValidationValues = {
     amHolidayEndTime?: ValidationFunction<string>;
     pmHolidayStartTime?: ValidationFunction<string>;
     pmHolidayEndTime?: ValidationFunction<string>;
+    specialHolidayEnabled?: ValidationFunction<boolean>;
     amPmHolidayEnabled?: ValidationFunction<boolean>;
     officeMode?: ValidationFunction<boolean>;
+    absentEnabled?: ValidationFunction<boolean>;
     hourlyPaidHolidayEnabled?: ValidationFunction<boolean>;
+    themeColor?: ValidationFunction<string>;
 };
 export declare type PrimitiveOverrideProps<T> = Partial<T> & React.DOMAttributes<HTMLDivElement>;
 export declare type AppConfigUpdateFormOverridesProps = {
@@ -62,9 +68,12 @@ export declare type AppConfigUpdateFormOverridesProps = {
     amHolidayEndTime?: PrimitiveOverrideProps<TextFieldProps>;
     pmHolidayStartTime?: PrimitiveOverrideProps<TextFieldProps>;
     pmHolidayEndTime?: PrimitiveOverrideProps<TextFieldProps>;
+    specialHolidayEnabled?: PrimitiveOverrideProps<SwitchFieldProps>;
     amPmHolidayEnabled?: PrimitiveOverrideProps<SwitchFieldProps>;
     officeMode?: PrimitiveOverrideProps<SwitchFieldProps>;
+    absentEnabled?: PrimitiveOverrideProps<SwitchFieldProps>;
     hourlyPaidHolidayEnabled?: PrimitiveOverrideProps<SwitchFieldProps>;
+    themeColor?: PrimitiveOverrideProps<TextFieldProps>;
 } & EscapeHatchProps;
 export declare type AppConfigUpdateFormProps = React.PropsWithChildren<{
     overrides?: AppConfigUpdateFormOverridesProps | undefined | null;

@@ -1,18 +1,18 @@
-import { GraphQLResult } from "@aws-amplify/api";
-import { API } from "aws-amplify";
-
+import { createCloseDate } from "@shared/api/graphql/documents/mutations";
 import {
   CloseDate,
   CreateCloseDateInput,
   CreateCloseDateMutation,
-} from "../../API";
-import { createCloseDate } from "../../graphql/mutations";
+} from "@shared/api/graphql/types";
+import { GraphQLResult } from "aws-amplify/api";
+
+import { graphqlClient } from "@/lib/amplify/graphqlClient";
 
 export default async function createCloseDateData(input: CreateCloseDateInput) {
-  const response = (await API.graphql({
+  const response = (await graphqlClient.graphql({
     query: createCloseDate,
     variables: { input },
-    authMode: "AMAZON_COGNITO_USER_POOLS",
+    authMode: "userPool",
   })) as GraphQLResult<CreateCloseDateMutation>;
 
   if (response.errors) {

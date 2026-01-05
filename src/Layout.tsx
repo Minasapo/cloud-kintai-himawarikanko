@@ -4,45 +4,32 @@
  */
 
 import { useAuthenticator } from "@aws-amplify/ui-react";
+import {
+  useBulkCreateCompanyHolidayCalendarsMutation,
+  useBulkCreateHolidayCalendarsMutation,
+  useCreateCompanyHolidayCalendarMutation,
+  useCreateHolidayCalendarMutation,
+  useDeleteCompanyHolidayCalendarMutation,
+  useDeleteHolidayCalendarMutation,
+  useGetCompanyHolidayCalendarsQuery,
+  useGetHolidayCalendarsQuery,
+  useUpdateCompanyHolidayCalendarMutation,
+  useUpdateHolidayCalendarMutation,
+} from "@entities/calendar/api/calendarApi";
 import { Box, LinearProgress, Stack } from "@mui/material";
+import { ThemeProvider } from "@mui/material/styles";
 import { useCallback, useEffect, useMemo } from "react";
 import { Outlet, useNavigate } from "react-router-dom";
 
-import SnackbarGroup from "./components/ snackbar/SnackbarGroup";
 import Footer from "./components/footer/Footer";
 import Header from "./components/header/Header";
+import SnackbarGroup from "./components/snackbar/SnackbarGroup";
 import { AppConfigContext } from "./context/AppConfigContext";
 import { AppContext } from "./context/AppContext";
 import { AuthContext } from "./context/AuthContext";
 import useAppConfig from "./hooks/useAppConfig/useAppConfig";
 import useCognitoUser from "./hooks/useCognitoUser";
-import useCompanyHolidayCalendar from "./hooks/useCompanyHolidayCalendars/useCompanyHolidayCalendars";
-import useHolidayCalendar from "./hooks/useHolidayCalendars/useHolidayCalendars";
-
-/**
- * cookieの有効期限を管理しつつ、指定したfetch関数を実行するユーティリティ関数。
- *
- * @param cookieName - 管理するcookie名
- * @param fetchFn - 実行するfetch関数
- * @param getCookie - cookie取得関数
- * @param setCookie - cookie設定関数
- * @param expireMinutes - cookieの有効期限（分）
- */
-export const fetchWithCookie = (
-  cookieName: string,
-  fetchFn: () => void,
-  getCookie: (name: string) => string | null,
-  setCookie: (name: string, value: string, minutes: number) => void,
-  expireMinutes: number = 2
-) => {
-  const lastFetchTime = getCookie(cookieName);
-  if (lastFetchTime) {
-    return;
-  }
-  setCookie(cookieName, String(Date.now()), expireMinutes);
-  fetchFn();
-};
-
+import { createAppTheme } from "./lib/theme";
 /**
  * アプリケーションのレイアウトコンポーネント。
  * 認証状態や各種設定・カレンダー情報の取得、各種コンテキストの提供を行う。
@@ -68,6 +55,7 @@ export default function Layout() {
     getOfficeMode,
     getQuickInputStartTimes,
     getQuickInputEndTimes,
+    getShiftGroups,
     getLunchRestStartTime,
     getLunchRestEndTime,
     loading: appConfigLoading,
@@ -77,25 +65,110 @@ export default function Layout() {
     getPmHolidayStartTime,
     getPmHolidayEndTime,
     getAmPmHolidayEnabled,
+    getSpecialHolidayEnabled,
+    getAbsentEnabled,
+    getThemeColor,
+    getThemeTokens,
   } = useAppConfig();
+  const isAuthenticated = authStatus === "authenticated";
+  const { data: holidayCalendars = [], isLoading: holidayCalendarLoading } =
+    useGetHolidayCalendarsQuery(undefined, { skip: !isAuthenticated });
   const {
-    fetchAllHolidayCalendars,
-    createHolidayCalendar,
-    bulkCreateHolidayCalendar,
-    updateHolidayCalendar,
-    deleteHolidayCalendar,
-    holidayCalendars,
-    loading: holidayCalendarLoading,
-  } = useHolidayCalendar();
-  const {
-    fetchAllCompanyHolidayCalendars,
-    companyHolidayCalendars,
-    loading: companyHolidayCalendarLoading,
-    createCompanyHolidayCalendar,
-    bulkCreateCompanyHolidayCalendar,
-    updateCompanyHolidayCalendar,
-    deleteCompanyHolidayCalendar,
-  } = useCompanyHolidayCalendar();
+    data: companyHolidayCalendars = [],
+    isLoading: companyHolidayCalendarLoading,
+  } = useGetCompanyHolidayCalendarsQuery(undefined, {
+    skip: !isAuthenticated,
+  });
+
+  const [createHolidayCalendarMutation] = useCreateHolidayCalendarMutation();
+  const [bulkCreateHolidayCalendarsMutation] =
+    useBulkCreateHolidayCalendarsMutation();
+  const [updateHolidayCalendarMutation] = useUpdateHolidayCalendarMutation();
+  const [deleteHolidayCalendarMutation] = useDeleteHolidayCalendarMutation();
+
+  const [createCompanyHolidayCalendarMutation] =
+    useCreateCompanyHolidayCalendarMutation();
+  const [bulkCreateCompanyHolidayCalendarsMutation] =
+    useBulkCreateCompanyHolidayCalendarsMutation();
+  const [updateCompanyHolidayCalendarMutation] =
+    useUpdateCompanyHolidayCalendarMutation();
+  const [deleteCompanyHolidayCalendarMutation] =
+    useDeleteCompanyHolidayCalendarMutation();
+
+  const createHolidayCalendar = useCallback(
+    async (input: Parameters<typeof createHolidayCalendarMutation>[0]) => {
+      const result = await createHolidayCalendarMutation(input).unwrap();
+      return result;
+    },
+    [createHolidayCalendarMutation]
+  );
+
+  const bulkCreateHolidayCalendar = useCallback(
+    async (
+      inputs: Parameters<typeof bulkCreateHolidayCalendarsMutation>[0]
+    ) => {
+      const result = await bulkCreateHolidayCalendarsMutation(inputs).unwrap();
+      return result;
+    },
+    [bulkCreateHolidayCalendarsMutation]
+  );
+
+  const updateHolidayCalendar = useCallback(
+    async (input: Parameters<typeof updateHolidayCalendarMutation>[0]) => {
+      const result = await updateHolidayCalendarMutation(input).unwrap();
+      return result;
+    },
+    [updateHolidayCalendarMutation]
+  );
+
+  const deleteHolidayCalendar = useCallback(
+    async (input: Parameters<typeof deleteHolidayCalendarMutation>[0]) => {
+      await deleteHolidayCalendarMutation(input).unwrap();
+    },
+    [deleteHolidayCalendarMutation]
+  );
+
+  const createCompanyHolidayCalendar = useCallback(
+    async (
+      input: Parameters<typeof createCompanyHolidayCalendarMutation>[0]
+    ) => {
+      const result = await createCompanyHolidayCalendarMutation(input).unwrap();
+      return result;
+    },
+    [createCompanyHolidayCalendarMutation]
+  );
+
+  const bulkCreateCompanyHolidayCalendar = useCallback(
+    async (
+      inputs: Parameters<typeof bulkCreateCompanyHolidayCalendarsMutation>[0]
+    ) => {
+      const result = await bulkCreateCompanyHolidayCalendarsMutation(
+        inputs
+      ).unwrap();
+      return result;
+    },
+    [bulkCreateCompanyHolidayCalendarsMutation]
+  );
+
+  const updateCompanyHolidayCalendar = useCallback(
+    async (
+      input: Parameters<typeof updateCompanyHolidayCalendarMutation>[0]
+    ) => {
+      const result = await updateCompanyHolidayCalendarMutation(input).unwrap();
+      return result;
+    },
+    [updateCompanyHolidayCalendarMutation]
+  );
+
+  const deleteCompanyHolidayCalendar = useCallback(
+    async (
+      input: Parameters<typeof deleteCompanyHolidayCalendarMutation>[0]
+    ) => {
+      const result = await deleteCompanyHolidayCalendarMutation(input).unwrap();
+      return result;
+    },
+    [deleteCompanyHolidayCalendarMutation]
+  );
 
   useEffect(() => {
     const url = new URL(window.location.href);
@@ -114,8 +187,13 @@ export default function Layout() {
       return;
     }
 
-    const isMailVerified = user.attributes?.email_verified ? true : false;
-    if (isMailVerified) return;
+    if (cognitoUserLoading || !cognitoUser) {
+      return;
+    }
+
+    if (cognitoUser.emailVerified) {
+      return;
+    }
 
     alert(
       "メール認証が完了していません。ログイン時にメール認証を行なってください。"
@@ -126,70 +204,11 @@ export default function Layout() {
     } catch (error) {
       console.error(error);
     }
-  }, [authStatus]);
-
-  /**
-   * cookieを設定する関数
-   *
-   * @param name - cookie名
-   * @param value - cookie値
-   * @param minutes - 有効期限（分）
-   */
-  const setCookie = useCallback(
-    (name: string, value: string, minutes: number) => {
-      const expires = new Date(Date.now() + minutes * 60 * 1000).toUTCString();
-      document.cookie = `${name}=${value}; expires=${expires}; path=/`;
-    },
-    []
-  );
-
-  /**
-   * cookieを取得する関数
-   *
-   * @param name - cookie名
-   * @returns cookie値またはnull
-   */
-  const getCookie = useCallback((name: string): string | null => {
-    const match = document.cookie.match(new RegExp(`(^| )${name}=([^;]+)`));
-    return match ? match[2] : null;
-  }, []);
-
-  /**
-   * 設定情報をcookie管理付きで取得する関数
-   */
-  const fetchConfigWithCookie = useCallback(() => {
-    fetchWithCookie("configLastFetchTime", fetchConfig, getCookie, setCookie);
-  }, [getCookie, setCookie, fetchConfig]);
-
-  /**
-   * 祝日カレンダーをcookie管理付きで取得する関数
-   */
-  const fetchHolidayCalendarsWithCookie = useCallback(() => {
-    fetchWithCookie(
-      "holidayCalendarsLastFetchTime",
-      fetchAllHolidayCalendars,
-      getCookie,
-      setCookie
-    );
-  }, [getCookie, setCookie, fetchAllHolidayCalendars]);
-
-  /**
-   * 会社祝日カレンダーをcookie管理付きで取得する関数
-   */
-  const fetchCompanyHolidayCalendarsWithCookie = useCallback(() => {
-    fetchWithCookie(
-      "companyHolidayCalendarsLastFetchTime",
-      fetchAllCompanyHolidayCalendars,
-      getCookie,
-      setCookie
-    );
-  }, [getCookie, setCookie, fetchAllCompanyHolidayCalendars]);
+  }, [authStatus, cognitoUser, cognitoUserLoading, navigate, signOut]);
 
   useEffect(() => {
-    fetchConfigWithCookie();
-    fetchHolidayCalendarsWithCookie();
-    fetchCompanyHolidayCalendarsWithCookie();
-  }, []);
+    void fetchConfig();
+  }, [fetchConfig]);
 
   const authContextValue = useMemo(
     () => ({
@@ -215,6 +234,7 @@ export default function Layout() {
       getOfficeMode,
       getQuickInputStartTimes,
       getQuickInputEndTimes,
+      getShiftGroups,
       getLunchRestStartTime,
       getLunchRestEndTime,
       getHourlyPaidHolidayEnabled,
@@ -223,6 +243,10 @@ export default function Layout() {
       getPmHolidayStartTime,
       getPmHolidayEndTime,
       getAmPmHolidayEnabled,
+      getSpecialHolidayEnabled,
+      getAbsentEnabled,
+      getThemeColor,
+      getThemeTokens,
     }),
     [
       fetchConfig,
@@ -235,6 +259,7 @@ export default function Layout() {
       getOfficeMode,
       getQuickInputStartTimes,
       getQuickInputEndTimes,
+      getShiftGroups,
       getLunchRestStartTime,
       getLunchRestEndTime,
       getHourlyPaidHolidayEnabled,
@@ -243,6 +268,10 @@ export default function Layout() {
       getPmHolidayStartTime,
       getPmHolidayEndTime,
       getAmPmHolidayEnabled,
+      getSpecialHolidayEnabled,
+      getAbsentEnabled,
+      getThemeColor,
+      getThemeTokens,
     ]
   );
 
@@ -273,34 +302,52 @@ export default function Layout() {
     ]
   );
 
+  const configuredThemeColor = useMemo(
+    () => (typeof getThemeColor === "function" ? getThemeColor() : undefined),
+    [getThemeColor]
+  );
+
+  const appTheme = useMemo(
+    () => createAppTheme(configuredThemeColor),
+    [configuredThemeColor]
+  );
+
   if (
+    authStatus === "configuring" ||
     cognitoUserLoading ||
     appConfigLoading ||
     holidayCalendarLoading ||
-    companyHolidayCalendarLoading ||
-    authStatus === "configuring"
+    companyHolidayCalendarLoading
   ) {
-    return <LinearProgress />;
+    return (
+      <ThemeProvider theme={appTheme}>
+        <LinearProgress data-testid="layout-linear-progress" />
+      </ThemeProvider>
+    );
   }
 
   return (
-    <AuthContext.Provider value={authContextValue}>
-      <AppConfigContext.Provider value={appConfigContextValue}>
-        <AppContext.Provider value={appContextValue}>
-          <Stack sx={{ height: "100vh" }}>
-            <Box>
-              <Header />
-            </Box>
-            <Box sx={{ flexGrow: 2 }}>
-              <Outlet />
-            </Box>
-            <Box>
-              <Footer />
-            </Box>
-            <SnackbarGroup />
-          </Stack>
-        </AppContext.Provider>
-      </AppConfigContext.Provider>
-    </AuthContext.Provider>
+    <ThemeProvider theme={appTheme}>
+      <AuthContext.Provider value={authContextValue}>
+        <AppConfigContext.Provider value={appConfigContextValue}>
+          <AppContext.Provider value={appContextValue}>
+            <Stack sx={{ minHeight: "100vh" }} data-testid="layout-stack">
+              <Box data-testid="layout-header">
+                <Header />
+              </Box>
+              <Box sx={{ flex: 1, overflow: "auto" }} data-testid="layout-main">
+                <Outlet />
+              </Box>
+              <Box data-testid="layout-footer">
+                <Footer />
+              </Box>
+              <Box data-testid="layout-snackbar">
+                <SnackbarGroup />
+              </Box>
+            </Stack>
+          </AppContext.Provider>
+        </AppConfigContext.Provider>
+      </AuthContext.Provider>
+    </ThemeProvider>
   );
 }

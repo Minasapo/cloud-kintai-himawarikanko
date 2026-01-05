@@ -6,7 +6,7 @@
 
 import * as React from "react";
 import { GridProps, SwitchFieldProps, TextFieldProps } from "@aws-amplify/ui-react";
-import { Attendance } from "../API.ts";
+import { Attendance } from "../shared/api/graphql/types.ts";
 export declare type EscapeHatchProps = {
     [elementHierarchy: string]: Record<string, unknown>;
 } | null;
@@ -29,8 +29,11 @@ export declare type AttendanceUpdateFormInputValues = {
     endTime?: string;
     goDirectlyFlag?: boolean;
     returnDirectlyFlag?: boolean;
+    absentFlag?: boolean;
     remarks?: string;
     paidHolidayFlag?: boolean;
+    specialHolidayFlag?: boolean;
+    isDeemedHoliday?: boolean;
     hourlyPaidHolidayHours?: number;
     substituteHolidayDate?: string;
     revision?: number;
@@ -42,8 +45,11 @@ export declare type AttendanceUpdateFormValidationValues = {
     endTime?: ValidationFunction<string>;
     goDirectlyFlag?: ValidationFunction<boolean>;
     returnDirectlyFlag?: ValidationFunction<boolean>;
+    absentFlag?: ValidationFunction<boolean>;
     remarks?: ValidationFunction<string>;
     paidHolidayFlag?: ValidationFunction<boolean>;
+    specialHolidayFlag?: ValidationFunction<boolean>;
+    isDeemedHoliday?: ValidationFunction<boolean>;
     hourlyPaidHolidayHours?: ValidationFunction<number>;
     substituteHolidayDate?: ValidationFunction<string>;
     revision?: ValidationFunction<number>;
@@ -57,8 +63,11 @@ export declare type AttendanceUpdateFormOverridesProps = {
     endTime?: PrimitiveOverrideProps<TextFieldProps>;
     goDirectlyFlag?: PrimitiveOverrideProps<SwitchFieldProps>;
     returnDirectlyFlag?: PrimitiveOverrideProps<SwitchFieldProps>;
+    absentFlag?: PrimitiveOverrideProps<SwitchFieldProps>;
     remarks?: PrimitiveOverrideProps<TextFieldProps>;
     paidHolidayFlag?: PrimitiveOverrideProps<SwitchFieldProps>;
+    specialHolidayFlag?: PrimitiveOverrideProps<SwitchFieldProps>;
+    isDeemedHoliday?: PrimitiveOverrideProps<SwitchFieldProps>;
     hourlyPaidHolidayHours?: PrimitiveOverrideProps<TextFieldProps>;
     substituteHolidayDate?: PrimitiveOverrideProps<TextFieldProps>;
     revision?: PrimitiveOverrideProps<TextFieldProps>;

@@ -1,11 +1,16 @@
-import { useEffect, useState } from "react";
-
 import {
+  ApproverMultipleMode,
+  ApproverSettingMode,
   CreateStaffInput,
   DeleteStaffInput,
   Staff,
   UpdateStaffInput,
-} from "../../API";
+} from "@shared/api/graphql/types";
+import { useContext, useEffect, useState } from "react";
+
+import { StaffExternalLink } from "@/entities/staff/externalLink";
+import { AuthContext } from "@/context/AuthContext";
+
 import createStaffData from "./createStaffData";
 import deleteStaffData from "./deleteStaffData";
 import fetchStaffs from "./fetchStaffs";
@@ -44,7 +49,15 @@ export type StaffType = {
   updatedAt: Staff["updatedAt"];
   usageStartDate?: Staff["usageStartDate"];
   notifications?: Staff["notifications"];
+  externalLinks?: (StaffExternalLink | null)[] | null;
   sortKey?: Staff["sortKey"];
+  workType?: string | null;
+  developer?: Staff["developer"];
+  approverSetting?: ApproverSettingMode | null;
+  approverSingle?: string | null;
+  approverMultiple?: (string | null)[] | null;
+  approverMultipleMode?: ApproverMultipleMode | null;
+  shiftGroup?: string | null;
 };
 
 export function mappingStaffRole(role: Staff["role"]): StaffRole {
@@ -68,8 +81,16 @@ export default function useStaffs() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const [staffs, setStaffs] = useState<StaffType[]>([]);
+  const { authStatus } = useContext(AuthContext);
+  const isAuthenticated = authStatus === "authenticated";
 
   useEffect(() => {
+    if (!isAuthenticated) {
+      setLoading(false);
+      setError(null);
+      setStaffs([]);
+      return;
+    }
     setLoading(true);
     setError(null);
     fetchStaffs()
@@ -89,7 +110,18 @@ export default function useStaffs() {
             createdAt: staff.createdAt,
             updatedAt: staff.updatedAt,
             notifications: staff.notifications,
+            externalLinks: staff.externalLinks ?? null,
             sortKey: staff.sortKey,
+            workType: (staff as unknown as Record<string, unknown>).workType as
+              | string
+              | null,
+            developer: (staff as unknown as Record<string, unknown>)
+              .developer as boolean | undefined,
+            approverSetting: staff.approverSetting ?? null,
+            approverSingle: staff.approverSingle ?? null,
+            approverMultiple: staff.approverMultiple ?? null,
+            approverMultipleMode: staff.approverMultipleMode ?? null,
+            shiftGroup: staff.shiftGroup ?? null,
           }))
         )
       )
@@ -99,10 +131,13 @@ export default function useStaffs() {
       .finally(() => {
         setLoading(false);
       });
-  }, []);
+  }, [isAuthenticated]);
 
-  const refreshStaff = () =>
-    fetchStaffs()
+  const refreshStaff = () => {
+    if (!isAuthenticated) {
+      return Promise.reject(new Error("User is not authenticated"));
+    }
+    return fetchStaffs()
       .then((res) => {
         setStaffs(
           res.map((staff) => ({
@@ -118,17 +153,34 @@ export default function useStaffs() {
             createdAt: staff.createdAt,
             updatedAt: staff.updatedAt,
             notifications: staff.notifications,
+            externalLinks: staff.externalLinks ?? null,
             sortKey: staff.sortKey,
             usageStartDate: staff.usageStartDate,
+            workType: staff.workType,
+            developer: (staff as unknown as Record<string, unknown>)
+              .developer as boolean | undefined,
+            approverSetting: staff.approverSetting ?? null,
+            approverSingle: staff.approverSingle ?? null,
+            approverMultiple: staff.approverMultiple ?? null,
+            approverMultipleMode: staff.approverMultipleMode ?? null,
+            shiftGroup: staff.shiftGroup ?? null,
           }))
         );
       })
       .catch((e: Error) => {
         throw e;
       });
+  };
 
-  const createStaff = async (input: CreateStaffInput) =>
-    createStaffData(input)
+  const ensureAuthenticated = () => {
+    if (!isAuthenticated) {
+      throw new Error("User is not authenticated");
+    }
+  };
+
+  const createStaff = async (input: CreateStaffInput) => {
+    ensureAuthenticated();
+    return createStaffData(input)
       .then((staff) => {
         setStaffs([
           ...staffs,
@@ -146,16 +198,27 @@ export default function useStaffs() {
             updatedAt: staff.updatedAt,
             usageStartDate: staff.usageStartDate,
             notifications: staff.notifications,
+            externalLinks: staff.externalLinks ?? null,
             sortKey: staff.sortKey,
+            workType: staff.workType,
+            developer: (staff as unknown as Record<string, unknown>)
+              .developer as boolean | undefined,
+            approverSetting: staff.approverSetting ?? null,
+            approverSingle: staff.approverSingle ?? null,
+            approverMultiple: staff.approverMultiple ?? null,
+            approverMultipleMode: staff.approverMultipleMode ?? null,
+            shiftGroup: staff.shiftGroup ?? null,
           },
         ]);
       })
       .catch((e: Error) => {
         throw e;
       });
+  };
 
-  const updateStaff = async (input: UpdateStaffInput) =>
-    updateStaffData(input)
+  const updateStaff = async (input: UpdateStaffInput) => {
+    ensureAuthenticated();
+    return updateStaffData(input)
       .then((staff) => {
         setStaffs(
           staffs.map((s) => {
@@ -174,48 +237,68 @@ export default function useStaffs() {
                 updatedAt: staff.updatedAt,
                 usageStartDate: staff.usageStartDate,
                 notifications: staff.notifications,
+                externalLinks: staff.externalLinks ?? null,
                 sortKey: staff.sortKey,
+                workType: staff.workType,
+                developer: (staff as unknown as Record<string, unknown>)
+                  .developer as boolean | undefined,
+                approverSetting: staff.approverSetting ?? null,
+                approverSingle: staff.approverSingle ?? null,
+                approverMultiple: staff.approverMultiple ?? null,
+                approverMultipleMode: staff.approverMultipleMode ?? null,
+                shiftGroup: staff.shiftGroup ?? null,
               };
             }
             return s;
           })
         );
+        return; // keep Promise<void> signature
       })
       .catch((e: Error) => {
         throw e;
       });
+  };
 
-  const deleteStaff = async (input: DeleteStaffInput) =>
-    deleteStaffData(input)
+  const deleteStaff = async (input: DeleteStaffInput) => {
+    ensureAuthenticated();
+    return deleteStaffData(input)
       .then((staff) => {
         setStaffs(staffs.filter((s) => s.id !== staff.id));
       })
       .catch((e: Error) => {
         throw e;
       });
+  };
 
   const getAllStaffs = async (): Promise<StaffType[]> => {
-    try {
-      const res = await fetchStaffs();
-      return res.map((staff) => ({
-        id: staff.id,
-        cognitoUserId: staff.cognitoUserId,
-        familyName: staff.familyName,
-        givenName: staff.givenName,
-        mailAddress: staff.mailAddress,
-        owner: staff.owner ?? false,
-        role: mappingStaffRole(staff.role),
-        enabled: staff.enabled,
-        status: staff.status,
-        usageStartDate: staff.usageStartDate,
-        createdAt: staff.createdAt,
-        updatedAt: staff.updatedAt,
-        notifications: staff.notifications,
-        sortKey: staff.sortKey,
-      }));
-    } catch (e) {
-      throw e;
-    }
+    ensureAuthenticated();
+    const res = await fetchStaffs();
+    return res.map((staff) => ({
+      id: staff.id,
+      cognitoUserId: staff.cognitoUserId,
+      familyName: staff.familyName,
+      givenName: staff.givenName,
+      mailAddress: staff.mailAddress,
+      owner: staff.owner ?? false,
+      role: mappingStaffRole(staff.role),
+      enabled: staff.enabled,
+      status: staff.status,
+      usageStartDate: staff.usageStartDate,
+      createdAt: staff.createdAt,
+      updatedAt: staff.updatedAt,
+      notifications: staff.notifications,
+      externalLinks: staff.externalLinks ?? null,
+      sortKey: staff.sortKey,
+      workType: staff.workType,
+      developer: (staff as unknown as Record<string, unknown>).developer as
+        | boolean
+        | undefined,
+      approverSetting: staff.approverSetting ?? null,
+      approverSingle: staff.approverSingle ?? null,
+      approverMultiple: staff.approverMultiple ?? null,
+      approverMultipleMode: staff.approverMultipleMode ?? null,
+      shiftGroup: staff.shiftGroup ?? null,
+    }));
   };
 
   return {

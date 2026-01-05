@@ -5,8 +5,8 @@
  **************************************************************************/
 
 import * as React from "react";
-import { GridProps, SwitchFieldProps, TextFieldProps } from "@aws-amplify/ui-react";
-import { Staff } from "../API.ts";
+import { GridProps, SelectFieldProps, SwitchFieldProps, TextFieldProps } from "@aws-amplify/ui-react";
+import { Staff } from "../shared/api/graphql/types.ts";
 export declare type EscapeHatchProps = {
     [elementHierarchy: string]: Record<string, unknown>;
 } | null;
@@ -33,6 +33,13 @@ export declare type StaffUpdateFormInputValues = {
     owner?: boolean;
     usageStartDate?: string;
     sortKey?: string;
+    workType?: string;
+    developer?: boolean;
+    approverSetting?: string;
+    approverSingle?: string;
+    approverMultiple?: string[];
+    approverMultipleMode?: string;
+    shiftGroup?: string;
 };
 export declare type StaffUpdateFormValidationValues = {
     cognitoUserId?: ValidationFunction<string>;
@@ -45,6 +52,13 @@ export declare type StaffUpdateFormValidationValues = {
     owner?: ValidationFunction<boolean>;
     usageStartDate?: ValidationFunction<string>;
     sortKey?: ValidationFunction<string>;
+    workType?: ValidationFunction<string>;
+    developer?: ValidationFunction<boolean>;
+    approverSetting?: ValidationFunction<string>;
+    approverSingle?: ValidationFunction<string>;
+    approverMultiple?: ValidationFunction<string>;
+    approverMultipleMode?: ValidationFunction<string>;
+    shiftGroup?: ValidationFunction<string>;
 };
 export declare type PrimitiveOverrideProps<T> = Partial<T> & React.DOMAttributes<HTMLDivElement>;
 export declare type StaffUpdateFormOverridesProps = {
@@ -59,6 +73,13 @@ export declare type StaffUpdateFormOverridesProps = {
     owner?: PrimitiveOverrideProps<SwitchFieldProps>;
     usageStartDate?: PrimitiveOverrideProps<TextFieldProps>;
     sortKey?: PrimitiveOverrideProps<TextFieldProps>;
+    workType?: PrimitiveOverrideProps<TextFieldProps>;
+    developer?: PrimitiveOverrideProps<SwitchFieldProps>;
+    approverSetting?: PrimitiveOverrideProps<SelectFieldProps>;
+    approverSingle?: PrimitiveOverrideProps<TextFieldProps>;
+    approverMultiple?: PrimitiveOverrideProps<TextFieldProps>;
+    approverMultipleMode?: PrimitiveOverrideProps<SelectFieldProps>;
+    shiftGroup?: PrimitiveOverrideProps<TextFieldProps>;
 } & EscapeHatchProps;
 export declare type StaffUpdateFormProps = React.PropsWithChildren<{
     overrides?: StaffUpdateFormOverridesProps | undefined | null;

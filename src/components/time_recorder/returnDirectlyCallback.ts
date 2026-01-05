@@ -1,18 +1,25 @@
 import { Dispatch } from "@reduxjs/toolkit";
-import { Logger } from "aws-amplify";
+import {
+  Attendance,
+  CreateOperationLogInput,
+  Staff,
+} from "@shared/api/graphql/types";
 
-import { Attendance, Staff } from "@/API";
 import * as MESSAGE_CODE from "@/errors";
-import { ReturnDirectlyFlag } from "@/hooks/useAttendance/useAttendance";
 import { CognitoUser } from "@/hooks/useCognitoUser";
+import createOperationLogData from "@/hooks/useOperationLog/createOperationLogData";
+import { ReturnDirectlyFlag } from "@/lib/attendance/attendanceActions";
 import { AttendanceDateTime } from "@/lib/AttendanceDateTime";
+import { Logger } from "@/lib/logger";
 import { TimeRecordMailSender } from "@/lib/mail/TimeRecordMailSender";
 import {
   setSnackbarError,
   setSnackbarSuccess,
 } from "@/lib/reducers/snackbarReducer";
 
-export function returnDirectlyCallback(
+import { getNowISOStringWithZeroSeconds } from "./util";
+
+export async function returnDirectlyCallback(
   cognitoUser: CognitoUser | null | undefined,
   today: string,
   staff: Staff | null | undefined,
@@ -23,21 +30,53 @@ export function returnDirectlyCallback(
     endTime: string,
     returnDirectlyFlag?: ReturnDirectlyFlag
   ) => Promise<Attendance>,
-  logger: Logger
-) {
+  logger: Logger,
+  // optional explicit ISO timestamp to use for work end (allows AppConfig-driven times)
+  endTimeIso?: string
+): Promise<void> {
   if (!cognitoUser) {
     return;
   }
 
-  const now = new AttendanceDateTime().setWorkEnd().toISOString();
+  const workEndTime =
+    endTimeIso ?? new AttendanceDateTime().setWorkEnd().toISOString();
 
-  clockOut(cognitoUser.id, today, now, ReturnDirectlyFlag.YES)
-    .then((res) => {
-      dispatch(setSnackbarSuccess(MESSAGE_CODE.S01004));
-      new TimeRecordMailSender(cognitoUser, res, staff).clockOut();
-    })
-    .catch((e) => {
-      logger.debug(e);
-      dispatch(setSnackbarError(MESSAGE_CODE.E01006));
-    });
+  try {
+    const attendance = await clockOut(
+      cognitoUser.id,
+      today,
+      workEndTime,
+      ReturnDirectlyFlag.YES
+    );
+    try {
+      const pressedAt = getNowISOStringWithZeroSeconds();
+      const input: CreateOperationLogInput = {
+        staffId: cognitoUser.id,
+        action: "return_directly",
+        resource: "attendance",
+        resourceId: attendance?.id ?? undefined,
+        // primary timestamp: when the user pressed the button
+        timestamp: pressedAt,
+        details: JSON.stringify({
+          workDate: today,
+          attendanceTime: workEndTime,
+          staffName: staff
+            ? `${staff.familyName ?? ""} ${staff.givenName ?? ""}`.trim()
+            : undefined,
+        }),
+        userAgent:
+          typeof navigator !== "undefined" ? navigator.userAgent : undefined,
+      };
+
+      await createOperationLogData(input);
+    } catch (logErr) {
+      logger.error("Failed to create operation log for returnDirectly", logErr);
+    }
+
+    dispatch(setSnackbarSuccess(MESSAGE_CODE.S01004));
+    new TimeRecordMailSender(cognitoUser, attendance, staff).clockOut();
+  } catch (error) {
+    logger.debug(error);
+    dispatch(setSnackbarError(MESSAGE_CODE.E01006));
+  }
 }

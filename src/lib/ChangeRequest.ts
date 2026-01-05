@@ -1,4 +1,4 @@
-import { Attendance, AttendanceChangeRequest } from "@/API";
+import { Attendance, AttendanceChangeRequest } from "@shared/api/graphql/types";
 
 export class ChangeRequest {
   private changeRequests: AttendanceChangeRequest[];
@@ -15,5 +15,12 @@ export class ChangeRequest {
     return this.changeRequests.filter(
       (changeRequest) => !changeRequest.completed
     ).length;
+  }
+
+  getFirstUnapproved(): AttendanceChangeRequest | null {
+    return (
+      this.changeRequests.find((changeRequest) => !changeRequest.completed) ??
+      null
+    );
   }
 }

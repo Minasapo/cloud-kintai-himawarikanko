@@ -1,7 +1,6 @@
 import "./styles.scss";
 
 import {
-  Box,
   Container,
   LinearProgress,
   Stack,
@@ -16,10 +15,7 @@ import {
 } from "@mui/material";
 import { useState } from "react";
 
-import CommonBreadcrumbs from "@/components/common/CommonBreadcrumbs";
-
 import { useAppDispatchV2 } from "../../../app/hooks";
-import Title from "../../../components/Title/Title";
 import * as MESSAGE_CODE from "../../../errors";
 import useStaffs from "../../../hooks/useStaffs/useStaffs";
 import { setSnackbarError } from "../../../lib/reducers/snackbarReducer";
@@ -33,6 +29,7 @@ import { StaffNameTableCell } from "./StaffNameTableCell";
 import { StatusTableCell } from "./StatusTableCell";
 import SyncCognitoUser from "./SyncCognitoUser";
 import { UpdatedAtTableCell } from "./UpdatedAtTableCell";
+import { WorkTypeTableCell } from "./WorkTypeTableCell";
 
 export default function AdminStaff() {
   const dispatch = useAppDispatchV2();
@@ -62,13 +59,6 @@ export default function AdminStaff() {
     <>
       <Container maxWidth="xl" sx={{ height: 1, pt: 2 }}>
         <Stack spacing={2}>
-          <Box>
-            <CommonBreadcrumbs
-              items={[{ label: "TOP", href: "/" }]}
-              current="スタッフ一覧"
-            />
-          </Box>
-          <Title>スタッフ一覧</Title>
           <Stack direction="row" spacing={2}>
             <CreateStaffDialog
               staffs={staffs}
@@ -103,6 +93,7 @@ export default function AdminStaff() {
                   <TableCell>名前</TableCell>
                   <TableCell>メールアドレス</TableCell>
                   <TableCell>権限</TableCell>
+                  <TableCell>勤務形態</TableCell>
                   <TableCell>汎用コード</TableCell>
                   <TableCell>作成日時</TableCell>
                   <TableCell>更新日時</TableCell>
@@ -138,6 +129,7 @@ export default function AdminStaff() {
                       <StaffNameTableCell staff={staff} />
                       <TableCell>{staff.mailAddress}</TableCell>
                       <RoleTableCell staff={staff} />
+                      <WorkTypeTableCell staff={staff} />
                       <TableCell>{staff.sortKey || ""}</TableCell>
                       <CreatedAtTableCell staff={staff} />
                       <UpdatedAtTableCell staff={staff} />

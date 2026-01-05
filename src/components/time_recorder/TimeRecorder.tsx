@@ -1,4 +1,14 @@
 import {
+  useCreateAttendanceMutation,
+  useGetAttendanceByStaffAndDateQuery,
+  useListRecentAttendancesQuery,
+  useUpdateAttendanceMutation,
+} from "@entities/attendance/api/attendanceApi";
+import {
+  useGetCompanyHolidayCalendarsQuery,
+  useGetHolidayCalendarsQuery,
+} from "@entities/calendar/api/calendarApi";
+import {
   Box,
   Button,
   Dialog,
@@ -9,34 +19,44 @@ import {
   FormControlLabel,
   Grid,
   LinearProgress,
+  SxProps,
   Typography,
 } from "@mui/material";
-import { Logger } from "aws-amplify";
+import { Theme } from "@mui/material/styles";
+import {
+  Attendance,
+  CreateAttendanceInput,
+  Staff,
+  UpdateAttendanceInput,
+} from "@shared/api/graphql/types";
 import dayjs from "dayjs";
 import { useCallback, useContext, useEffect, useMemo, useState } from "react";
 
-import { Staff } from "@/API";
-import { AppContext } from "@/context/AppContext";
+import { AppConfigContext } from "@/context/AppConfigContext";
 import { AuthContext } from "@/context/AuthContext";
+import {
+  clockInAction,
+  clockOutAction,
+  GoDirectlyFlag,
+  restEndAction,
+  restStartAction,
+  ReturnDirectlyFlag,
+} from "@/lib/attendance/attendanceActions";
+import { getWorkStatus } from "@/lib/attendance/workStatus";
 import { AttendanceDate } from "@/lib/AttendanceDate";
 import { AttendanceState, AttendanceStatus } from "@/lib/AttendanceState";
+import { Logger } from "@/lib/logger";
+import Clock from "@/shared/ui/clock/Clock";
+import AttendanceErrorAlert from "@/shared/ui/time-recorder/AttendanceErrorAlert";
+import DirectSwitch from "@/shared/ui/time-recorder/DirectSwitch";
 
 import { useAppDispatchV2 } from "../../app/hooks";
 import * as MESSAGE_CODE from "../../errors";
-import useAttendance from "../../hooks/useAttendance/useAttendance";
-import { getWorkStatus } from "../../hooks/useAttendance/WorkStatus";
-import useAttendances from "../../hooks/useAttendances/useAttendances";
 import fetchStaff from "../../hooks/useStaff/fetchStaff";
-import {
-  setSnackbarError,
-  setSnackbarSuccess,
-} from "../../lib/reducers/snackbarReducer";
-import Clock from "../clock/Clock";
-import { AttendanceErrorAlert } from "./AttendanceErrorAlert";
+import { setSnackbarError } from "../../lib/reducers/snackbarReducer";
 import { clockInCallback } from "./clockInCallback";
 import { clockOutCallback } from "./clockOutCallback";
 import { WorkStatus } from "./common";
-import { DirectSwitch } from "./DirectSwitch";
 import { goDirectlyCallback } from "./goDirectlyCallback";
 import ClockInItem from "./items/ClockInItem";
 import ClockOutItem from "./items/ClockOutItem";
@@ -44,11 +64,11 @@ import GoDirectlyItem from "./items/GoDirectlyItem";
 import RestEndItem from "./items/RestEndItem";
 import RestStartItem from "./items/RestStartItem";
 import ReturnDirectly from "./items/ReturnDirectlyItem";
+import QuickDailyReportCard from "./QuickDailyReportCard";
 import { restEndCallback } from "./restEndCallback";
 import { restStartCallback } from "./restStartCallback";
 import { RestTimeMessage } from "./RestTimeMessage";
 import { returnDirectlyCallback } from "./returnDirectlyCallback";
-import TimeRecorderRemarks from "./TimeRecorderRemarks";
 
 /**
  * 勤怠打刻用のメインコンポーネント。
@@ -60,24 +80,173 @@ export default function TimeRecorder(): JSX.Element {
 
   const dispatch = useAppDispatchV2();
 
-  const {
-    attendance,
-    loading: attendanceLoading,
-    getAttendance,
-    clockIn,
-    clockOut,
-    restStart,
-    restEnd,
-    updateRemarks,
-  } = useAttendance();
+  const { getStartTime, getEndTime } = useContext(AppConfigContext);
+
+  const today = useMemo(() => dayjs().format(AttendanceDate.DataFormat), []);
+
+  const shouldFetchAttendance = Boolean(cognitoUser?.id);
 
   const {
-    attendances,
-    getAttendances,
-    loading: attendancesLoading,
-  } = useAttendances();
+    data: holidayCalendars = [],
+    isLoading: isHolidayCalendarsLoading,
+    isFetching: isHolidayCalendarsFetching,
+    error: holidayCalendarsError,
+  } = useGetHolidayCalendarsQuery();
+  const {
+    data: companyHolidayCalendars = [],
+    isLoading: isCompanyHolidayCalendarsLoading,
+    isFetching: isCompanyHolidayCalendarsFetching,
+    error: companyHolidayCalendarsError,
+  } = useGetCompanyHolidayCalendarsQuery();
+  const calendarLoading =
+    isHolidayCalendarsLoading ||
+    isHolidayCalendarsFetching ||
+    isCompanyHolidayCalendarsLoading ||
+    isCompanyHolidayCalendarsFetching;
 
-  const { holidayCalendars, companyHolidayCalendars } = useContext(AppContext);
+  const {
+    data: attendanceData,
+    isLoading: isAttendanceInitialLoading,
+    isFetching: isAttendanceFetching,
+    isUninitialized: isAttendanceUninitialized,
+    error: attendanceError,
+    refetch: refetchAttendance,
+  } = useGetAttendanceByStaffAndDateQuery(
+    { staffId: cognitoUser?.id ?? "", workDate: today },
+    { skip: !shouldFetchAttendance }
+  );
+
+  const {
+    data: attendancesData,
+    isLoading: isAttendancesInitialLoading,
+    isFetching: isAttendancesFetching,
+    isUninitialized: isAttendancesUninitialized,
+    error: attendancesError,
+    refetch: refetchAttendances,
+  } = useListRecentAttendancesQuery(
+    { staffId: cognitoUser?.id ?? "" },
+    { skip: !shouldFetchAttendance }
+  );
+
+  const attendance = attendanceData;
+  const attendances: Attendance[] = attendancesData ?? [];
+
+  const attendanceLoading =
+    !shouldFetchAttendance ||
+    isAttendanceInitialLoading ||
+    isAttendanceFetching ||
+    isAttendanceUninitialized;
+
+  const attendancesLoading =
+    !shouldFetchAttendance ||
+    isAttendancesInitialLoading ||
+    isAttendancesFetching ||
+    isAttendancesUninitialized;
+
+  const [createAttendanceMutation] = useCreateAttendanceMutation();
+  const [updateAttendanceMutation] = useUpdateAttendanceMutation();
+
+  const createAttendance = useCallback(
+    (input: CreateAttendanceInput) => createAttendanceMutation(input).unwrap(),
+    [createAttendanceMutation]
+  );
+
+  const updateAttendance = useCallback(
+    (input: UpdateAttendanceInput) => updateAttendanceMutation(input).unwrap(),
+    [updateAttendanceMutation]
+  );
+
+  const refreshAttendanceData = useCallback(async () => {
+    if (!shouldFetchAttendance) {
+      return;
+    }
+
+    await Promise.allSettled([refetchAttendance(), refetchAttendances()]);
+  }, [refetchAttendance, refetchAttendances, shouldFetchAttendance]);
+
+  const clockIn = useCallback(
+    async (
+      staffId: string,
+      workDate: string,
+      startTime: string,
+      goDirectlyFlag = GoDirectlyFlag.NO
+    ) => {
+      const result = await clockInAction({
+        attendance,
+        staffId,
+        workDate,
+        startTime,
+        goDirectlyFlag,
+        createAttendance,
+        updateAttendance,
+      });
+
+      await refreshAttendanceData();
+
+      return result;
+    },
+    [attendance, createAttendance, updateAttendance, refreshAttendanceData]
+  );
+
+  const clockOut = useCallback(
+    async (
+      staffId: string,
+      workDate: string,
+      endTime: string,
+      returnDirectlyFlag = ReturnDirectlyFlag.NO
+    ) => {
+      const result = await clockOutAction({
+        attendance,
+        staffId,
+        workDate,
+        endTime,
+        returnDirectlyFlag,
+        createAttendance,
+        updateAttendance,
+      });
+
+      await refreshAttendanceData();
+
+      return result;
+    },
+    [attendance, createAttendance, updateAttendance, refreshAttendanceData]
+  );
+
+  const restStart = useCallback(
+    async (staffId: string, workDate: string, startTime: string) => {
+      const result = await restStartAction({
+        attendance,
+        staffId,
+        workDate,
+        time: startTime,
+        createAttendance,
+        updateAttendance,
+      });
+
+      await refreshAttendanceData();
+
+      return result;
+    },
+    [attendance, createAttendance, updateAttendance, refreshAttendanceData]
+  );
+
+  const restEnd = useCallback(
+    async (staffId: string, workDate: string, endTime: string) => {
+      const result = await restEndAction({
+        attendance,
+        staffId,
+        workDate,
+        time: endTime,
+        createAttendance,
+        updateAttendance,
+      });
+
+      await refreshAttendanceData();
+
+      return result;
+    },
+    [attendance, createAttendance, updateAttendance, refreshAttendanceData]
+  );
 
   const [workStatus, setWorkStatus] = useState<WorkStatus | null | undefined>(
     undefined
@@ -88,13 +257,48 @@ export default function TimeRecorder(): JSX.Element {
   const [directMode, setDirectMode] = useState(false);
   const [lastActiveTime, setLastActiveTime] = useState(dayjs());
 
-  const today = useMemo(() => dayjs().format(AttendanceDate.DataFormat), []);
+  const logger = useMemo(() => new Logger("TimeRecorder", "DEBUG"), []);
 
-  const logger = useMemo(
-    () => new Logger("TimeRecorder", "DEBUG"),
-    // () => new Logger("TimeRecorder", import.meta.env.DEV ? "DEBUG" : "ERROR"),
-    []
-  );
+  useEffect(() => {
+    if (holidayCalendarsError || companyHolidayCalendarsError) {
+      logger.debug(holidayCalendarsError ?? companyHolidayCalendarsError);
+      dispatch(setSnackbarError(MESSAGE_CODE.E00001));
+    }
+  }, [holidayCalendarsError, companyHolidayCalendarsError, dispatch, logger]);
+
+  const clockInDisplayText = useMemo(() => {
+    if (!attendance?.startTime) {
+      return null;
+    }
+    return `${dayjs(attendance.startTime).format("HH:mm")} 出勤`;
+  }, [attendance?.startTime]);
+
+  const clockOutDisplayText = useMemo(() => {
+    if (!attendance?.endTime) {
+      return null;
+    }
+    return `${dayjs(attendance.endTime).format("HH:mm")} 退勤`;
+  }, [attendance?.endTime]);
+
+  const clockInBadgeStyles: SxProps<Theme> = {
+    display: "inline-block",
+    px: 1.5,
+    py: 0.25,
+    borderRadius: 1,
+    bgcolor: "#E4F8C9",
+    color: (theme) => theme.palette.success.dark,
+    fontWeight: 700,
+  };
+
+  const clockOutBadgeStyles: SxProps<Theme> = {
+    display: "inline-block",
+    px: 1.5,
+    py: 0.25,
+    borderRadius: 1,
+    bgcolor: "#FDE0E0",
+    color: (theme) => theme.palette.error.dark,
+    fontWeight: 700,
+  };
 
   const handleClockIn = useCallback(
     () => clockInCallback(cognitoUser, today, clockIn, dispatch, staff, logger),
@@ -107,24 +311,45 @@ export default function TimeRecorder(): JSX.Element {
     [cognitoUser, clockOut, dispatch, staff]
   );
 
-  const handleGoDirectly = useCallback(
-    () =>
-      goDirectlyCallback(cognitoUser, today, staff, dispatch, clockIn, logger),
-    [cognitoUser, staff, dispatch, clockIn]
-  );
+  const handleGoDirectly = useCallback(() => {
+    const configured = getStartTime();
+    const startIso = dayjs()
+      .hour(configured.hour())
+      .minute(configured.minute())
+      .second(0)
+      .millisecond(0)
+      .toISOString();
 
-  const handleReturnDirectly = useCallback(
-    () =>
-      returnDirectlyCallback(
-        cognitoUser,
-        today,
-        staff,
-        dispatch,
-        clockOut,
-        logger
-      ),
-    [cognitoUser, staff, dispatch, clockOut]
-  );
+    goDirectlyCallback(
+      cognitoUser,
+      today,
+      staff,
+      dispatch,
+      clockIn,
+      logger,
+      startIso
+    );
+  }, [cognitoUser, clockIn, dispatch, staff, getStartTime, today, logger]);
+
+  const handleReturnDirectly = useCallback(() => {
+    const configured = getEndTime();
+    const endIso = dayjs()
+      .hour(configured.hour())
+      .minute(configured.minute())
+      .second(0)
+      .millisecond(0)
+      .toISOString();
+
+    returnDirectlyCallback(
+      cognitoUser,
+      today,
+      staff,
+      dispatch,
+      clockOut,
+      logger,
+      endIso
+    );
+  }, [cognitoUser, staff, dispatch, clockOut, getEndTime, today, logger]);
 
   const handleRestStart = useCallback(
     () => restStartCallback(cognitoUser, today, dispatch, restStart, logger),
@@ -159,28 +384,31 @@ export default function TimeRecorder(): JSX.Element {
   useEffect(() => {
     if (!cognitoUser) return;
 
-    getAttendance(cognitoUser.id, today).catch(() => {
-      dispatch(setSnackbarError(MESSAGE_CODE.E01001));
-    });
-
-    getAttendances(cognitoUser.id).catch(() =>
-      dispatch(setSnackbarError(MESSAGE_CODE.E02001))
-    );
-
     fetchStaff(cognitoUser.id)
       .then(setStaff)
       .catch(() => dispatch(setSnackbarError(MESSAGE_CODE.E00001)));
-  }, [cognitoUser]);
+  }, [cognitoUser, dispatch]);
 
   useEffect(() => {
-    if (!staff || attendanceLoading) {
+    if (!shouldFetchAttendance || !attendanceError) {
       return;
     }
 
-    logger.debug("Staff and attendance loading state:", {
-      staff,
-      attendanceLoading,
-    });
+    dispatch(setSnackbarError(MESSAGE_CODE.E01001));
+  }, [attendanceError, dispatch, shouldFetchAttendance]);
+
+  useEffect(() => {
+    if (!shouldFetchAttendance || !attendancesError) {
+      return;
+    }
+
+    dispatch(setSnackbarError(MESSAGE_CODE.E02001));
+  }, [attendancesError, dispatch, shouldFetchAttendance]);
+
+  useEffect(() => {
+    if (!staff || attendanceLoading || attendancesLoading || calendarLoading) {
+      return;
+    }
 
     const errorCount = attendances
       .map((attendance) => {
@@ -207,14 +435,9 @@ export default function TimeRecorder(): JSX.Element {
         holidayCalendars,
         companyHolidayCalendars
       ).get();
-      logger.debug("Attendance status for time elapsed error count:", {
-        workDate,
-        status,
-      });
       return status === AttendanceStatus.Error;
     }).length;
 
-    logger.debug("Total time elapsed error count:", timeElapsedErrorCount);
     setIsTimeElapsedError(timeElapsedErrorCount > 0);
   }, [
     attendanceLoading,
@@ -222,13 +445,15 @@ export default function TimeRecorder(): JSX.Element {
     staff,
     holidayCalendars,
     companyHolidayCalendars,
+    attendances,
+    calendarLoading,
   ]);
 
   useEffect(() => {
     setWorkStatus(getWorkStatus(attendance));
   }, [attendance]);
 
-  if (attendanceLoading || workStatus === undefined) {
+  if (attendanceLoading || calendarLoading || workStatus === undefined) {
     return (
       <Box
         sx={{
@@ -261,6 +486,30 @@ export default function TimeRecorder(): JSX.Element {
           >
             {workStatus.text || "読み込み中..."}
           </Typography>
+          {(clockInDisplayText || clockOutDisplayText) && (
+            <Box display="flex" justifyContent="center" gap={1} mt={0.5}>
+              {clockInDisplayText && (
+                <Typography
+                  variant="body2"
+                  textAlign="center"
+                  data-testid="clock-in-time-text"
+                  sx={clockInBadgeStyles}
+                >
+                  {clockInDisplayText}
+                </Typography>
+              )}
+              {clockOutDisplayText && (
+                <Typography
+                  variant="body2"
+                  textAlign="center"
+                  data-testid="clock-out-time-text"
+                  sx={clockOutBadgeStyles}
+                >
+                  {clockOutDisplayText}
+                </Typography>
+              )}
+            </Box>
+          )}
         </Grid>
         <Grid item xs={12}>
           <Clock />
@@ -309,7 +558,7 @@ export default function TimeRecorder(): JSX.Element {
           <RestEndItem workStatus={workStatus} onClick={handleRestEnd} />
         </Grid>
 
-        <Grid item xs={12}>
+        {/* <Grid item xs={12}>
           <TimeRecorderRemarks
             attendance={attendance}
             onSave={(remarks) => {
@@ -325,6 +574,9 @@ export default function TimeRecorder(): JSX.Element {
                 });
             }}
           />
+        </Grid> */}
+        <Grid item xs={12}>
+          <QuickDailyReportCard staffId={staff?.id ?? null} date={today} />
         </Grid>
         {isAttendanceError && (
           <Grid item xs={12}>

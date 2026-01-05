@@ -1,86 +1,96 @@
-import { ClickAwayListener } from "@mui/base/ClickAwayListener";
-import { Unstable_Popup as BasePopup } from "@mui/base/Unstable_Popup";
-import AppsIcon from "@mui/icons-material/Apps";
-import { Box, Grid, IconButton, Paper, useMediaQuery } from "@mui/material";
-import { useContext, useEffect, useState } from "react";
+import ExternalLinksView, {
+  ExternalLinkItem,
+} from "@shared/ui/header/ExternalLinks";
+import { useContext, useEffect, useMemo, useState } from "react";
 
-import { theme } from "../../../lib/theme";
-import { LinkGridItem } from "./LinkGridItem";
-import { AuthContext } from "@/context/AuthContext";
 import { AppConfigContext } from "@/context/AppConfigContext";
+import { AuthContext } from "@/context/AuthContext";
+import { StaffExternalLink } from "@/entities/staff/externalLink";
+import fetchStaff from "@/hooks/useStaff/fetchStaff";
 
-export function ExternalLinks({ pathName }: { pathName: string }) {
-  const { cognitoUser } = useContext(AuthContext);
+export function ExternalLinks() {
+  const { cognitoUser, authStatus } = useContext(AuthContext);
   const { getLinks } = useContext(AppConfigContext);
-
-  const [anchor, setAnchor] = useState<null | HTMLElement>(null);
-  const [links, setLinks] = useState<
-    { label: string; url: string; enabled: boolean; icon: string }[]
-  >([]);
-
-  const isMobileSize = useMediaQuery(theme.breakpoints.down("md"));
+  const [companyLinks, setCompanyLinks] = useState<ExternalLinkItem[]>([]);
+  const [personalLinks, setPersonalLinks] = useState<ExternalLinkItem[]>([]);
 
   useEffect(() => {
-    setLinks(getLinks);
+    const resolvedLinks =
+      typeof getLinks === "function" ? filterEnabledLinks(getLinks()) : [];
+    setCompanyLinks(resolvedLinks);
   }, [getLinks]);
 
-  if (!cognitoUser) {
+  useEffect(() => {
+    if (!cognitoUser) {
+      setPersonalLinks([]);
+      return;
+    }
+
+    let cancelled = false;
+    fetchStaff(cognitoUser.id)
+      .then((staff) => {
+        if (cancelled) return;
+        const links = normalizeStaffExternalLinks(staff?.externalLinks);
+        setPersonalLinks(links);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setPersonalLinks([]);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [cognitoUser?.id]);
+
+  const { familyName = "", givenName = "" } = cognitoUser ?? {};
+
+  const staffName = useMemo(() => {
+    const names = [familyName, givenName]
+      .map((name) => name.trim())
+      .filter(Boolean);
+    return names.join(" ");
+  }, [familyName, givenName]);
+
+  const mergedLinks = useMemo(
+    () => [...companyLinks, ...personalLinks],
+    [companyLinks, personalLinks]
+  );
+
+  if (authStatus !== "authenticated" || !cognitoUser) {
     return null;
   }
 
-  const { familyName, givenName } = cognitoUser;
-
-  const handleClick = (event: React.MouseEvent<HTMLElement>) => {
-    setAnchor(anchor ? null : event.currentTarget);
-  };
-
-  const open = Boolean(anchor);
-  const id = open ? "external-links-popup" : undefined;
-
-  const handleClickAway = () => {
-    setAnchor(null);
-  };
-
-  return (
-    <ClickAwayListener onClickAway={handleClickAway}>
-      <Box>
-        <IconButton onClick={handleClick}>
-          <AppsIcon
-            sx={{
-              color: "white",
-            }}
-          />
-        </IconButton>
-        <BasePopup
-          id={id}
-          open={open}
-          anchor={anchor}
-          placement={(() => (isMobileSize ? "bottom-end" : "bottom"))()}
-        >
-          <Paper
-            elevation={3}
-            sx={{
-              width: "300px",
-              height: "400px",
-              m: 2,
-              p: 2,
-              border: `5px solid ${theme.palette.primary.main}`,
-            }}
-          >
-            <Grid container spacing={1}>
-              {links.map((link, index) => (
-                <LinkGridItem
-                  key={index}
-                  url={link.url}
-                  title={link.label}
-                  iconType={link.icon}
-                  staffName={`${familyName} ${givenName}`}
-                />
-              ))}
-            </Grid>
-          </Paper>
-        </BasePopup>
-      </Box>
-    </ClickAwayListener>
-  );
+  return <ExternalLinksView links={mergedLinks} staffName={staffName} />;
 }
+
+const filterEnabledLinks = (links: ExternalLinkItem[]) =>
+  links.filter(
+    (link) =>
+      Boolean(link.enabled) &&
+      typeof link.label === "string" &&
+      link.label.trim() !== "" &&
+      typeof link.url === "string" &&
+      link.url.trim() !== ""
+  );
+
+const normalizeStaffExternalLinks = (
+  links?: (StaffExternalLink | null)[] | null
+): ExternalLinkItem[] => {
+  if (!links) {
+    return [];
+  }
+
+  return filterEnabledLinks(
+    links
+      .filter((link): link is NonNullable<typeof link> => Boolean(link))
+      .map((link) => ({
+        label: link.label.trim(),
+        url: link.url.trim(),
+        enabled: link.enabled,
+        icon: link.icon || "LinkIcons",
+        isPersonal: true,
+      }))
+  );
+};

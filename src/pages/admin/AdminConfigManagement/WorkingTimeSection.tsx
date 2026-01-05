@@ -11,7 +11,6 @@ interface WorkingTimeSectionProps {
   setEndTime: (value: Dayjs | null) => void;
   setLunchRestStartTime: (value: Dayjs | null) => void;
   setLunchRestEndTime: (value: Dayjs | null) => void;
-  renderTimeViewClock: any;
 }
 
 const WorkingTimeSection = ({
@@ -23,10 +22,8 @@ const WorkingTimeSection = ({
   setEndTime,
   setLunchRestStartTime,
   setLunchRestEndTime,
-  renderTimeViewClock,
 }: WorkingTimeSectionProps) => (
   <>
-    <Typography variant="h6">勤務時間</Typography>
     <Typography variant="body2" color="textSecondary">
       所定の勤務時間を設定してください。
     </Typography>
@@ -34,10 +31,6 @@ const WorkingTimeSection = ({
       <TimePicker
         label="開始時間"
         ampm={false}
-        viewRenderers={{
-          hours: renderTimeViewClock,
-          minutes: renderTimeViewClock,
-        }}
         value={startTime}
         views={["hours", "minutes"]}
         format="HH:mm"
@@ -51,10 +44,6 @@ const WorkingTimeSection = ({
       <TimePicker
         label="終了時間"
         ampm={false}
-        viewRenderers={{
-          hours: renderTimeViewClock,
-          minutes: renderTimeViewClock,
-        }}
         value={endTime}
         views={["hours", "minutes"]}
         format="HH:mm"
@@ -65,7 +54,6 @@ const WorkingTimeSection = ({
         onChange={setEndTime}
       />
     </Stack>
-    <Typography variant="h6">昼休憩時間</Typography>
     <Typography variant="body2" color="textSecondary">
       昼休憩時間を設定してください。
     </Typography>
@@ -73,10 +61,6 @@ const WorkingTimeSection = ({
       <TimePicker
         label="開始時間"
         ampm={false}
-        viewRenderers={{
-          hours: renderTimeViewClock,
-          minutes: renderTimeViewClock,
-        }}
         value={lunchRestStartTime}
         views={["hours", "minutes"]}
         format="HH:mm"
@@ -90,10 +74,6 @@ const WorkingTimeSection = ({
       <TimePicker
         label="終了時間"
         ampm={false}
-        viewRenderers={{
-          hours: renderTimeViewClock,
-          minutes: renderTimeViewClock,
-        }}
         value={lunchRestEndTime}
         views={["hours", "minutes"]}
         format="HH:mm"

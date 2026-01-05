@@ -1,18 +1,18 @@
-import { GraphQLResult } from "@aws-amplify/api";
-import { API } from "aws-amplify";
+import { staffByCognitoUserId } from "@shared/api/graphql/documents/queries";
+import { Staff, StaffByCognitoUserIdQuery } from "@shared/api/graphql/types";
+import { GraphQLResult } from "aws-amplify/api";
 
-import { ListStaffQuery, Staff, StaffByCognitoUserIdQuery } from "../../API";
-import { listStaff, staffByCognitoUserId } from "../../graphql/queries";
+import { graphqlClient } from "@/lib/amplify/graphqlClient";
 
 export default async function fetchStaff(
   cognitoUserId: Staff["cognitoUserId"]
 ) {
-  const response = (await API.graphql({
+  const response = (await graphqlClient.graphql({
     query: staffByCognitoUserId,
     variables: {
       cognitoUserId,
     },
-    authMode: "AMAZON_COGNITO_USER_POOLS",
+    authMode: "userPool",
   })) as GraphQLResult<StaffByCognitoUserIdQuery>;
 
   if (response.errors) {

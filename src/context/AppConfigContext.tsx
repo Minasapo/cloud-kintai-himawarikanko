@@ -1,7 +1,11 @@
+import {
+  CreateAppConfigInput,
+  UpdateAppConfigInput,
+} from "@shared/api/graphql/types";
 import dayjs from "dayjs";
 import { createContext } from "react";
 
-import { CreateAppConfigInput, UpdateAppConfigInput } from "@/API";
+import { DESIGN_TOKENS, type DesignTokens } from "@/constants/designTokens";
 import { DEFAULT_CONFIG } from "@/hooks/useAppConfig/useAppConfig";
 
 type AppConfigContextProps = {
@@ -31,6 +35,13 @@ type AppConfigContextProps = {
     time: string;
     enabled: boolean;
   }[];
+  getShiftGroups: () => {
+    label: string;
+    description?: string | null;
+    min?: number | null;
+    max?: number | null;
+    fixed?: number | null;
+  }[];
   getLunchRestStartTime: () => dayjs.Dayjs;
   getLunchRestEndTime: () => dayjs.Dayjs;
   getHourlyPaidHolidayEnabled: () => boolean;
@@ -39,6 +50,10 @@ type AppConfigContextProps = {
   getPmHolidayStartTime: () => dayjs.Dayjs;
   getPmHolidayEndTime: () => dayjs.Dayjs;
   getAmPmHolidayEnabled: () => boolean;
+  getSpecialHolidayEnabled?: () => boolean;
+  getAbsentEnabled?: () => boolean;
+  getThemeColor: () => string;
+  getThemeTokens: (brandPrimaryOverride?: string) => DesignTokens;
 };
 
 export const AppConfigContext = createContext<AppConfigContextProps>({
@@ -56,6 +71,7 @@ export const AppConfigContext = createContext<AppConfigContextProps>({
   getOfficeMode: () => false,
   getQuickInputStartTimes: () => [],
   getQuickInputEndTimes: () => [],
+  getShiftGroups: () => [],
   getLunchRestStartTime: () =>
     dayjs(DEFAULT_CONFIG.lunchRestStartTime, "HH:mm"),
   getLunchRestEndTime: () => dayjs(DEFAULT_CONFIG.lunchRestEndTime, "HH:mm"),
@@ -65,4 +81,9 @@ export const AppConfigContext = createContext<AppConfigContextProps>({
   getPmHolidayStartTime: () => dayjs("13:00", "HH:mm"),
   getPmHolidayEndTime: () => dayjs("18:00", "HH:mm"),
   getAmPmHolidayEnabled: () => false,
+  getSpecialHolidayEnabled: () => false,
+  getAbsentEnabled: () => false,
+  // Ensure a string is always returned to satisfy the context type
+  getThemeColor: () => DEFAULT_CONFIG.themeColor ?? "",
+  getThemeTokens: () => DESIGN_TOKENS,
 });

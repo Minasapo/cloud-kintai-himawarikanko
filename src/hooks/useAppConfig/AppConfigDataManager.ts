@@ -1,22 +1,26 @@
 import {
+  createAppConfig,
+  updateAppConfig,
+} from "@shared/api/graphql/documents/mutations";
+import { listAppConfigs } from "@shared/api/graphql/documents/queries";
+import {
   AppConfig,
   CreateAppConfigInput,
   CreateAppConfigMutation,
   ListAppConfigsQuery,
   UpdateAppConfigInput,
   UpdateAppConfigMutation,
-} from "@/API";
-import { createAppConfig, updateAppConfig } from "@/graphql/mutations";
-import { listAppConfigs } from "@/graphql/queries";
-import { GraphQLResult } from "@aws-amplify/api";
-import { API } from "aws-amplify";
+} from "@shared/api/graphql/types";
+import { GraphQLResult } from "aws-amplify/api";
+
+import { graphqlClient } from "@/lib/amplify/graphqlClient";
 
 export class AppConfigDataManager {
   async fetch(name: string = "default") {
-    const response = (await API.graphql({
+    const response = (await graphqlClient.graphql({
       query: listAppConfigs,
       variables: { filter: { name: { eq: name } } },
-      authMode: "API_KEY",
+      authMode: "apiKey",
     })) as GraphQLResult<ListAppConfigsQuery>;
 
     if (response.errors) {
@@ -40,10 +44,10 @@ export class AppConfigDataManager {
   }
 
   async create(input: CreateAppConfigInput) {
-    const response = (await API.graphql({
+    const response = (await graphqlClient.graphql({
       query: createAppConfig,
       variables: { input },
-      authMode: "API_KEY",
+      authMode: "apiKey",
     })) as GraphQLResult<CreateAppConfigMutation>;
 
     if (response.errors) {
@@ -59,10 +63,10 @@ export class AppConfigDataManager {
   }
 
   async update(input: UpdateAppConfigInput) {
-    const response = (await API.graphql({
+    const response = (await graphqlClient.graphql({
       query: updateAppConfig,
       variables: { input },
-      authMode: "API_KEY",
+      authMode: "apiKey",
     })) as GraphQLResult<UpdateAppConfigMutation>;
 
     if (response.errors) {

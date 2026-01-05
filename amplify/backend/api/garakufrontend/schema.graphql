@@ -20,12 +20,38 @@ type Staff @model @auth(rules: [{ allow: private }]) {
   owner: Boolean
   usageStartDate: String
   notifications: Notification
+  externalLinks: [StaffExternalLink]
   sortKey: String
+  workType: String
+  developer: Boolean
+  approverSetting: ApproverSettingMode
+  approverSingle: String
+  approverMultiple: [String]
+  approverMultipleMode: ApproverMultipleMode
+  shiftGroup: String
+}
+
+enum ApproverSettingMode {
+  ADMINS
+  SINGLE
+  MULTIPLE
+}
+
+enum ApproverMultipleMode {
+  ANY
+  ORDER
 }
 
 type Notification {
   workStart: Boolean
   workEnd: Boolean
+}
+
+type StaffExternalLink {
+  label: String!
+  url: String!
+  enabled: Boolean!
+  icon: String!
 }
 
 type HolidayCalendar @model @auth(rules: [{ allow: private }]) {
@@ -66,10 +92,13 @@ type Attendance @model @auth(rules: [{ allow: private }]) {
   endTime: String
   goDirectlyFlag: Boolean
   returnDirectlyFlag: Boolean
+  absentFlag: Boolean
   rests: [Rest]
   hourlyPaidHolidayTimes: [HourlyPaidHolidayTime]
   remarks: String
   paidHolidayFlag: Boolean
+  specialHolidayFlag: Boolean
+  isDeemedHoliday: Boolean
   hourlyPaidHolidayHours: Int
   substituteHolidayDate: String
   histories: [AttendanceHistory]
@@ -103,11 +132,13 @@ type AttendanceHistory {
   startTime: String
   endTime: String
   goDirectlyFlag: Boolean
+  absentFlag: Boolean
   returnDirectlyFlag: Boolean
   rests: [Rest]
   hourlyPaidHolidayTimes: [HourlyPaidHolidayTime]
   remarks: String
   paidHolidayFlag: Boolean
+  specialHolidayFlag: Boolean
   hourlyPaidHolidayHours: Int
   substituteHolidayFlag: Boolean
   substituteHolidayDate: String
@@ -118,11 +149,13 @@ type AttendanceChangeRequest {
   startTime: String
   endTime: String
   goDirectlyFlag: Boolean
+  absentFlag: Boolean
   returnDirectlyFlag: Boolean
   rests: [Rest]
   hourlyPaidHolidayTimes: [HourlyPaidHolidayTime]
   remarks: String
   paidHolidayFlag: Boolean
+  specialHolidayFlag: Boolean
   hourlyPaidHolidayHours: Int
   substituteHolidayFlag: Boolean
   substituteHolidayDate: String
@@ -148,6 +181,84 @@ type QuickInputTime {
   enabled: Boolean!
 }
 
+type ShiftGroup {
+  label: String!
+  description: String
+  min: Int
+  max: Int
+  fixed: Int
+}
+
+enum ShiftRequestStatus {
+  WORK
+  FIXED_OFF
+  REQUESTED_OFF
+  AUTO
+}
+
+type ShiftRequestDayPreference {
+  date: String!
+  status: ShiftRequestStatus!
+}
+
+type ShiftRequestSummary {
+  workDays: Int
+  fixedOffDays: Int
+  requestedOffDays: Int
+}
+
+type ShiftRequestHistory {
+  version: Int!
+  note: String
+  entries: [ShiftRequestDayPreference]
+  summary: ShiftRequestSummary
+  submittedAt: String
+  updatedAt: String
+  recordedAt: String!
+  recordedByStaffId: String
+  changeReason: String
+}
+
+type ShiftRequest @model @auth(rules: [{ allow: private }]) {
+  id: ID!
+  staffId: String!
+    @index(
+      name: "shiftRequestsByStaffId"
+      sortKeyFields: ["targetMonth"]
+      queryField: "shiftRequestsByStaffId"
+    )
+  targetMonth: String!
+  note: String
+  entries: [ShiftRequestDayPreference]
+  summary: ShiftRequestSummary
+  submittedAt: String
+  updatedAt: String
+  # 変更履歴（最新が先頭になるようクライアントで整列）
+  histories: [ShiftRequestHistory]
+}
+
+type ShiftPlanMonthSetting {
+  month: Int!
+  editStart: String
+  editEnd: String
+  enabled: Boolean
+  dailyCapacities: [Int]
+}
+
+type ShiftPlanYear @model @auth(rules: [{ allow: private }]) {
+  id: ID!
+  targetYear: Int!
+    @index(
+      name: "shiftPlanYearByTargetYear"
+      sortKeyFields: ["id"]
+      queryField: "shiftPlanYearByTargetYear"
+    )
+  plans: [ShiftPlanMonthSetting]
+  notes: String
+  createdBy: String
+  updatedBy: String
+}
+
 type AppConfig @model {
   id: ID!
   name: String!
@@ -159,13 +270,17 @@ type AppConfig @model {
   amHolidayEndTime: String
   pmHolidayStartTime: String
   pmHolidayEndTime: String
+  specialHolidayEnabled: Boolean
   amPmHolidayEnabled: Boolean
   officeMode: Boolean
+  absentEnabled: Boolean
   hourlyPaidHolidayEnabled: Boolean
   links: [Link]
   reasons: [Reason]
   quickInputStartTimes: [QuickInputTime]
   quickInputEndTimes: [QuickInputTime]
+  themeColor: String
+  shiftGroups: [ShiftGroup]
 }
 
 type EmailResult {
@@ -187,4 +302,141 @@ type Query {
 type HourlyPaidHolidayTime {
   startTime: String!
   endTime: String!
+}
+
+enum WorkflowCategory {
+  PAID_LEAVE
+  ABSENCE
+  OVERTIME
+  CUSTOM
+}
+
+enum WorkflowStatus {
+  DRAFT
+  SUBMITTED
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+type OverTimeWorkflow {
+  date: String!
+  startTime: String!
+  endTime: String!
+  reason: String!
+}
+
+type WorkflowComment {
+  id: ID!
+  staffId: String!
+  text: String!
+  createdAt: String!
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  SKIPPED
+}
+
+type ApprovalStep {
+  id: ID!
+  approverStaffId: String!
+  decisionStatus: ApprovalStatus!
+  approverComment: String
+  decisionTimestamp: String
+  stepOrder: Int
+}
+
+type Workflow @model @auth(rules: [{ allow: private }]) {
+  id: ID!
+  approvedStaffIds: [String]
+  rejectedStaffIds: [String]
+  finalDecisionTimestamp: String
+  category: WorkflowCategory
+  staffId: String! @index(name: "byStaffId", queryField: "workflowsByStaffId")
+  status: WorkflowStatus!
+  assignedApproverStaffIds: [String]
+  approvalSteps: [ApprovalStep]
+  nextApprovalStepIndex: Int
+  submitterApproverSetting: ApproverSettingMode
+  submitterApproverId: String
+  submitterApproverIds: [String]
+  submitterApproverMultipleMode: ApproverMultipleMode
+  overTimeDetails: OverTimeWorkflow
+  comments: [WorkflowComment]
+}
+
+type OperationLog @model @auth(rules: [{ allow: private }]) {
+  id: ID!
+  staffId: String
+    @index(
+      name: "byStaffId"
+      sortKeyFields: ["timestamp"]
+      queryField: "operationLogsByStaffId"
+    )
+  # 行った操作の種類（例: "LOGIN", "ATTENDANCE_UPDATE"）
+  action: String!
+  # 対象リソースの種類（例: "Attendance", "Workflow", "AppConfig"）
+  resource: String
+  # 対象リソースの ID（あれば）
+  resourceId: String
+  # ISO 8601 形式のタイムスタンプ
+  timestamp: String!
+  # 操作の詳細を JSON 文字列などで保存
+  details: String
+  # オプション: 発生元 IP
+  ipAddress: String
+  # オプション: ユーザーエージェント
+  userAgent: String
+  # 任意の追加メタデータ（JSON 文字列）
+  metadata: String
+  # 重大度レベル（例: INFO, WARN, ERROR）
+  severity: String
+}
+
+enum DailyReportStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+}
+
+enum DailyReportReactionType {
+  CHEER
+  CHECK
+  THANKS
+  LOOK
+}
+
+type DailyReportReaction {
+  staffId: String!
+  type: DailyReportReactionType!
+  createdAt: String!
+}
+
+type DailyReportComment {
+  id: ID!
+  staffId: String!
+  authorName: String
+  body: String!
+  createdAt: String!
+}
+
+type DailyReport @model @auth(rules: [{ allow: private }]) {
+  id: ID!
+  staffId: String!
+    @index(
+      name: "dailyReportsByStaffId"
+      sortKeyFields: ["reportDate"]
+      queryField: "dailyReportsByStaffId"
+    )
+  reportDate: String!
+  title: String!
+  content: String
+  status: DailyReportStatus!
+  updatedAt: String
+  reactions: [DailyReportReaction]
+  comments: [DailyReportComment]
 }

@@ -1,14 +1,18 @@
-import { GraphQLResult } from "@aws-amplify/api";
-import { API } from "aws-amplify";
+import { updateStaff } from "@shared/api/graphql/documents/mutations";
+import {
+  Staff,
+  UpdateStaffInput,
+  UpdateStaffMutation,
+} from "@shared/api/graphql/types";
+import { GraphQLResult } from "aws-amplify/api";
 
-import { Staff, UpdateStaffInput, UpdateStaffMutation } from "../../API";
-import { updateStaff } from "../../graphql/mutations";
+import { graphqlClient } from "@/lib/amplify/graphqlClient";
 
 export default async function updateStaffData(input: UpdateStaffInput) {
-  const response = (await API.graphql({
+  const response = (await graphqlClient.graphql({
     query: updateStaff,
     variables: { input },
-    authMode: "AMAZON_COGNITO_USER_POOLS",
+    authMode: "userPool",
   })) as GraphQLResult<UpdateStaffMutation>;
 
   if (response.errors) {

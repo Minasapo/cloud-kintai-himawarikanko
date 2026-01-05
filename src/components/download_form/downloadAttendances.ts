@@ -1,12 +1,12 @@
-import { GraphQLResult } from "@aws-amplify/api";
-import { API } from "aws-amplify";
-
+import { listAttendances } from "@shared/api/graphql/documents/queries";
 import {
   Attendance,
   ListAttendancesQuery,
   ModelAttendanceFilterInput,
-} from "../../API";
-import { listAttendances } from "../../graphql/queries";
+} from "@shared/api/graphql/types";
+import { GraphQLResult } from "aws-amplify/api";
+
+import { graphqlClient } from "@/lib/amplify/graphqlClient";
 
 export default async function downloadAttendances(
   $orCondition: ModelAttendanceFilterInput[]
@@ -15,7 +15,7 @@ export default async function downloadAttendances(
   let nextToken: string | null = null;
   const isLooping = true;
   while (isLooping) {
-    const response = (await API.graphql({
+    const response = (await graphqlClient.graphql({
       query: listAttendances,
       variables: {
         filter: {
@@ -23,7 +23,7 @@ export default async function downloadAttendances(
         },
         nextToken,
       },
-      authMode: "AMAZON_COGNITO_USER_POOLS",
+      authMode: "userPool",
     })) as GraphQLResult<ListAttendancesQuery>;
 
     if (response.errors) {

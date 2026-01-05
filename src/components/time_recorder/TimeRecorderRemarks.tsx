@@ -1,71 +1,60 @@
-// cspell: ignore testid
-import CheckIcon from "@mui/icons-material/Check";
-import ClearIcon from "@mui/icons-material/Clear";
-import { Box, IconButton, Stack, TextField } from "@mui/material";
-import { useEffect, useState } from "react";
+import type { Attendance } from "@shared/api/graphql/types";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { Attendance } from "../../API";
+import TimeRecorderRemarksView from "@/shared/ui/time-recorder/TimeRecorderRemarks";
 
 export interface TimeRecorderRemarksProps {
   attendance: Attendance | undefined | null;
   onSave: (remarks: Attendance["remarks"]) => void;
 }
 
+/**
+ * @deprecated このコンポーネントは非推奨です。
+ * 可能であれば代替の Remarks コンポーネントまたは新しい実装へ移行してください。
+ * - 理由: UI/仕様の変更により置き換え予定です。
+ *
+ * 開発環境ではコンソールに警告が表示されます。
+ */
 export default function TimeRecorderRemarks({
   attendance,
   onSave,
 }: TimeRecorderRemarksProps) {
-  const [formState, setFormState] = useState<Attendance["remarks"]>(undefined);
-  const [isChanged, setIsChanged] = useState(false);
+  // 非推奨マークは JSDoc の @deprecated のみで表現します（ランタイムの警告は表示しません）
+  const [formState, setFormState] = useState<Attendance["remarks"]>(
+    attendance?.remarks
+  );
 
   useEffect(() => {
     setFormState(attendance?.remarks);
   }, [attendance]);
 
-  useEffect(() => {
-    setIsChanged(attendance?.remarks !== formState);
-  }, [formState]);
+  const isChanged = useMemo(
+    () => attendance?.remarks !== formState,
+    [attendance?.remarks, formState]
+  );
+
+  const handleChange = useCallback((value: string) => {
+    setFormState(value);
+  }, []);
+
+  const handleSave = useCallback(() => {
+    onSave(formState);
+  }, [formState, onSave]);
+
+  const handleClear = useCallback(() => {
+    setFormState(attendance?.remarks);
+  }, [attendance?.remarks]);
+
+  const textFieldValue = formState ?? "";
 
   return (
-    <Stack>
-      <Box>
-        <TextField
-          data-testid="remarks-text"
-          multiline
-          minRows={2}
-          fullWidth
-          value={formState ?? undefined}
-          placeholder="労務担当より指示された時のみ(例：客先名やイベント名など)"
-          onChange={(event) => {
-            setFormState(event.target.value);
-          }}
-        />
-      </Box>
-      <Box>
-        {isChanged && (
-          <Stack
-            direction="row"
-            justifyContent="flex-end"
-            alignItems="center"
-            spacing={0}
-          >
-            <Box>
-              <IconButton onClick={() => onSave(formState)}>
-                <CheckIcon color="success" data-testid="remarksSave" />
-              </IconButton>
-            </Box>
-            <Box>
-              <IconButton
-                onClick={() => {
-                  setFormState(attendance?.remarks);
-                }}
-              >
-                <ClearIcon color="error" data-testid="remarksClear" />
-              </IconButton>
-            </Box>
-          </Stack>
-        )}
-      </Box>
-    </Stack>
+    <TimeRecorderRemarksView
+      value={textFieldValue}
+      placeholder="労務担当より指示された時のみ(例：客先名やイベント名など)"
+      isChanged={isChanged}
+      onChange={handleChange}
+      onSave={handleSave}
+      onClear={handleClear}
+    />
   );
 }

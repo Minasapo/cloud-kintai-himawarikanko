@@ -1,11 +1,10 @@
-import dayjs from "dayjs";
-
 import {
   Attendance,
   CompanyHolidayCalendar,
   HolidayCalendar,
   Staff,
-} from "@/API";
+} from "@shared/api/graphql/types";
+import dayjs from "dayjs";
 
 import { AttendanceDate } from "./AttendanceDate";
 import { CompanyHoliday } from "./CompanyHoliday";
@@ -37,7 +36,12 @@ export class AttendanceState {
     private companyHolidayCalendars: CompanyHolidayCalendar[]
   ) {}
 
-  get() {
+  get(): AttendanceStatus {
+    // 当日の勤怠は確定前のためステータス判定から除外する
+    if (this.isToday()) {
+      return AttendanceStatus.None;
+    }
+
     if (this.isEnabledStartDate()) {
       return AttendanceStatus.None;
     }
@@ -46,7 +50,11 @@ export class AttendanceState {
       return AttendanceStatus.Ok;
     }
 
-    if (this.isHoliday() || this.isCompanyHoliday()) {
+    if (
+      (this.staff.workType === "shift" && this.attendance.isDeemedHoliday) ||
+      (this.staff.workType !== "shift" &&
+        (this.isHoliday() || this.isCompanyHoliday()))
+    ) {
       return AttendanceStatus.None;
     }
 
@@ -54,17 +62,15 @@ export class AttendanceState {
       return AttendanceStatus.Requesting;
     }
 
-    const isWeekday = new DayOfWeek(this.holidayCalendars).isWeekday(
-      this.attendance.workDate
-    );
+    // Shift の場合は土日関係なく判定する（週末判定を無視して常に平日扱いにする）
+    const isShift = this.staff.workType === "shift" && !this.isDeemedHoliday();
+    const isWeekday = isShift
+      ? true
+      : new DayOfWeek(this.holidayCalendars).isWeekday(
+          this.attendance.workDate
+        );
 
     if (isWeekday) {
-      if (this.isToday()) {
-        if (this.isLate()) return AttendanceStatus.Late;
-        if (this.isWorking()) return AttendanceStatus.Working;
-        return AttendanceStatus.Ok;
-      }
-
       return this.isLate() || this.isWorking()
         ? AttendanceStatus.Error
         : AttendanceStatus.Ok;
@@ -75,6 +81,10 @@ export class AttendanceState {
     }
 
     return AttendanceStatus.Ok;
+  }
+
+  private isDeemedHoliday() {
+    return !!this.attendance.isDeemedHoliday;
   }
 
   private isEnabledStartDate() {

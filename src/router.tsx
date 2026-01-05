@@ -1,31 +1,42 @@
-import { createBrowserRouter } from "react-router-dom";
+import { lazy } from "react";
+import { createBrowserRouter, Navigate } from "react-router-dom";
 
 import Layout from "./Layout";
-import AdminAttendance from "./pages/admin/AdminAttendance";
-import AdminAttendanceEditor from "./pages/admin/AdminAttendanceEditor";
-import AdminAttendancePrint from "./pages/admin/AdminAttendancePrint";
-import AdminConfigManagement from "./pages/admin/AdminConfigManagement/AdminConfigManagement";
-import AdminHolidayCalendar from "./pages/admin/AdminHolidayCalendar/HolidayCalendar/AdminHolidayCalendar";
-import AdminLayout from "./pages/admin/AdminLayout";
-import AdminMasterLayout from "./pages/admin/AdminMasterLayout";
-import AdminStaff from "./pages/admin/AdminStaff/AdminStaff";
-import AdminStaffAttendanceList from "./pages/admin/AdminStaffAttendanceList/AdminStaffAttendanceList";
-import AdminStaffEditor from "./pages/admin/AdminStaffEditor/AdminStaffEditor";
-import JobTerm from "./pages/admin/JobTerm/JobTerm";
-import AttendanceEdit from "./pages/AttendanceEdit/AttendanceEdit";
-import Document from "./pages/Document/Document";
-import DocumentEditor from "./pages/Document/DocumentEditor/DocumentEditor";
-import DocumentPoster from "./pages/Document/DocumentPoster";
-import DocumentView from "./pages/Document/DocumentView/DocumentView";
-import ListDocument from "./pages/Document/ListDocument/ListDocument";
-import List from "./pages/List";
-import Login from "./pages/Login/Login";
-import OfficeLayout from "./pages/office/OfficeLayout";
-import OfficePage from "./pages/office/OfficePage";
-import OfficeQRRegister from "./pages/office/qr/OfficeQRRegister";
-import OfficeQRView from "./pages/office/qr/OfficeQRView";
-import Profile from "./pages/Profile";
-import Register from "./pages/Register";
+import { adminChildRoutes } from "./router/adminChildRoutes";
+import { withSuspense } from "./router/withSuspense";
+
+const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
+const AdminLayout = lazy(() => import("./pages/admin/AdminLayout"));
+const DailyReport = lazy(() => import("./pages/attendance/daily-report/DailyReport"));
+const AttendanceEdit = lazy(() => import("./pages/attendance/edit/AttendanceEdit"));
+const AttendanceListPage = lazy(
+  () => import("./pages/attendance/list/AttendanceListPage")
+);
+const Login = lazy(() => import("./pages/Login/Login"));
+const OfficeHomePage = lazy(() => import("./pages/office/home/OfficeHomePage"));
+const OfficeLayoutPage = lazy(
+  () => import("./pages/office/layout/OfficeLayoutPage")
+);
+const OfficeQrPage = lazy(() => import("./pages/office/qr/OfficeQrPage"));
+const OfficeQrRegisterPage = lazy(
+  () => import("./pages/office/qr-register/OfficeQrRegisterPage")
+);
+const DesignTokenPreviewPage = lazy(
+  () => import("./pages/preview/DesignTokenPreviewPage")
+);
+const Profile = lazy(() => import("./pages/Profile"));
+const Register = lazy(() => import("./pages/Register"));
+const ShiftRequestPage = lazy(() => import("./pages/shift/request"));
+const WorkflowDetailPage = lazy(
+  () => import("./pages/workflow/detail/WorkflowDetailPage")
+);
+const WorkflowEditPage = lazy(
+  () => import("./pages/workflow/edit/WorkflowEditPage")
+);
+const WorkflowListPage = lazy(
+  () => import("./pages/workflow/list/WorkflowListPage")
+);
+const NewWorkflowPage = lazy(() => import("./pages/workflow/new/NewWorkflowPage"));
 
 const router = createBrowserRouter([
   {
@@ -34,157 +45,107 @@ const router = createBrowserRouter([
     children: [
       {
         index: true,
-        element: <Register />,
+        element: withSuspense(Register),
       },
       {
         path: "register",
-        element: <Register />,
+        element: withSuspense(Register),
+      },
+      {
+        path: "preview/design-tokens",
+        element: withSuspense(DesignTokenPreviewPage),
       },
       {
         path: "attendance",
         children: [
           {
             path: "list",
-            element: <List />,
+            element: withSuspense(AttendanceListPage),
+          },
+          {
+            path: "report",
+            element: withSuspense(DailyReport),
           },
           {
             path: ":targetWorkDate/edit",
-            element: <AttendanceEdit />,
+            element: withSuspense(AttendanceEdit),
           },
           {
             path: "*",
-            element: <List />,
+            element: withSuspense(AttendanceListPage),
           },
         ],
       },
       {
         path: "login",
-        element: <Login />,
+        element: withSuspense(Login),
       },
       {
-        path: "docs",
-        element: <Document />,
+        path: "workflow",
         children: [
           {
             index: true,
-            element: <ListDocument />,
+            element: withSuspense(WorkflowListPage),
           },
           {
-            path: "post",
-            element: <DocumentPoster />,
+            path: ":id",
+            element: withSuspense(WorkflowDetailPage),
           },
           {
-            path: ":documentId",
-            children: [
-              {
-                index: true,
-                element: <DocumentView />,
-              },
-              {
-                path: "edit",
-                element: <DocumentEditor />,
-              },
-            ],
+            path: ":id/edit",
+            element: withSuspense(WorkflowEditPage),
+          },
+          {
+            path: "new",
+            element: withSuspense(NewWorkflowPage),
+          },
+        ],
+      },
+      {
+        path: "shift",
+        children: [
+          {
+            index: true,
+            element: withSuspense(ShiftRequestPage),
           },
         ],
       },
       {
         path: "profile",
-        element: <Profile />,
+        element: withSuspense(Profile),
       },
       {
         path: "/admin",
-        element: <AdminLayout />,
+        element: withSuspense(AdminLayout),
         children: [
           {
-            index: true,
-          },
-          {
-            path: "staff",
+            path: "",
+            element: withSuspense(AdminDashboard),
             children: [
               {
                 index: true,
-                element: <AdminStaff />,
+                element: <Navigate to="attendances" replace />,
               },
-              {
-                path: ":staffId",
-                children: [
-                  {
-                    index: true,
-                    element: <AdminStaff />,
-                  },
-                  {
-                    path: "attendance",
-                    element: <AdminStaffAttendanceList />,
-                  },
-                  {
-                    path: "edit",
-                    element: <AdminStaffEditor />,
-                  },
-                ],
-              },
-            ],
-          },
-          {
-            path: "attendances",
-            children: [
-              {
-                index: true,
-                element: <AdminAttendance />,
-              },
-              {
-                path: ":targetWorkDate",
-                element: <AdminAttendance />,
-              },
-              {
-                path: "edit/:targetWorkDate/:staffId",
-                element: <AdminAttendanceEditor />,
-              },
-              {
-                path: "print",
-                element: <AdminAttendancePrint />,
-              },
-            ],
-          },
-          {
-            path: "master",
-            element: <AdminMasterLayout />,
-            children: [
-              {
-                index: true,
-                element: <JobTerm />,
-              },
-              {
-                path: "job_term",
-                element: <JobTerm />,
-              },
-              {
-                path: "holiday_calendar",
-                element: <AdminHolidayCalendar />,
-              },
-              {
-                path: "feature_management",
-                element: <AdminConfigManagement />,
-              },
+              ...adminChildRoutes,
             ],
           },
         ],
       },
       {
         path: "office",
-        element: <OfficeLayout />,
+        element: withSuspense(OfficeLayoutPage),
         children: [
           {
             index: true,
-            element: <OfficePage />,
+            element: withSuspense(OfficeHomePage),
           },
           {
             path: "qr",
-            element: <OfficeQRView />,
+            element: withSuspense(OfficeQrPage),
           },
           {
             path: "qr/register",
-            element: <OfficeQRRegister />,
+            element: withSuspense(OfficeQrRegisterPage),
           },
         ],
       },

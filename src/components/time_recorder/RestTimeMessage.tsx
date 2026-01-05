@@ -1,12 +1,17 @@
-import { Alert, AlertTitle, Typography } from "@mui/material";
+import RestTimeMessageView from "@shared/ui/time-recorder/RestTimeMessage";
+
+import useAppConfig from "@/hooks/useAppConfig/useAppConfig";
 
 export function RestTimeMessage() {
+  const { getLunchRestStartTime, getLunchRestEndTime } = useAppConfig();
+
+  const lunchRestStartTime = getLunchRestStartTime().format("HH:mm");
+  const lunchRestEndTime = getLunchRestEndTime().format("HH:mm");
+
   return (
-    <Alert severity="info">
-      <AlertTitle>昼休憩は退勤時に自動打刻されます</AlertTitle>
-      <Typography variant="body2">
-        修正する際は、変更リクエストまたは、管理者へ問い合わせてください。
-      </Typography>
-    </Alert>
+    <RestTimeMessageView
+      lunchRestStartTime={lunchRestStartTime}
+      lunchRestEndTime={lunchRestEndTime}
+    />
   );
 }

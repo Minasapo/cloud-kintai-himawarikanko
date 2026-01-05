@@ -10,11 +10,15 @@ import {
   TableCell,
   Tooltip,
 } from "@mui/material";
-import { useContext, useEffect, useState } from "react";
+import {
+  Attendance,
+  CompanyHolidayCalendar,
+  HolidayCalendar,
+  Staff,
+} from "@shared/api/graphql/types";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { Attendance, CompanyHolidayCalendar, Staff } from "@/API";
-import { AppContext } from "@/context/AppContext";
 import { useAppDispatchV2 } from "@/app/hooks";
 import fetchStaff from "@/hooks/useStaff/fetchStaff";
 import { AttendanceState, AttendanceStatus } from "@/lib/AttendanceState";
@@ -22,7 +26,7 @@ import { setSnackbarError } from "@/lib/reducers/snackbarReducer";
 
 import * as MESSAGE_CODE from "../../errors";
 import { AttendanceDaily } from "../../hooks/useAttendanceDaily/useAttendanceDaily";
-import useAttendances from "../../hooks/useAttendances/useAttendances";
+// attendances are provided by parent (AttendanceDailyList)
 
 function getBadgeContent(attendances: Attendance[]) {
   const changeRequestCount = attendances.filter((attendance) =>
@@ -39,14 +43,14 @@ function getBadgeContent(attendances: Attendance[]) {
 function AttendanceTotalStatus({
   attendances,
   companyHolidayCalendars,
+  holidayCalendars,
   staff,
 }: {
   attendances: Attendance[];
   companyHolidayCalendars: CompanyHolidayCalendar[];
+  holidayCalendars: HolidayCalendar[];
   staff: Staff;
 }) {
-  const { holidayCalendars } = useContext(AppContext);
-
   const judgedStatus = attendances.map((attendance) =>
     new AttendanceState(
       staff,
@@ -55,6 +59,20 @@ function AttendanceTotalStatus({
       companyHolidayCalendars
     ).get()
   );
+
+  const hasSystemComment = attendances.some(
+    (attendance) =>
+      Array.isArray(attendance.systemComments) &&
+      attendance.systemComments.length > 0
+  );
+
+  if (hasSystemComment) {
+    return (
+      <Tooltip title="システムコメントがあります">
+        <ErrorIcon color="error" />
+      </Tooltip>
+    );
+  }
 
   const validDataCount = judgedStatus.filter(
     (status) => status !== AttendanceStatus.None
@@ -82,24 +100,31 @@ function AttendanceTotalStatus({
   );
 }
 
-export function ActionsTableCell({ row }: { row: AttendanceDaily }) {
+export function ActionsTableCell({
+  row,
+  attendances,
+  attendanceLoading,
+  attendanceError,
+  holidayCalendars,
+  companyHolidayCalendars,
+  calendarLoading,
+}: {
+  row: AttendanceDaily;
+  attendances: Attendance[];
+  attendanceLoading: boolean;
+  attendanceError: Error | null;
+  holidayCalendars: HolidayCalendar[];
+  companyHolidayCalendars: CompanyHolidayCalendar[];
+  calendarLoading: boolean;
+}) {
   const navigate = useNavigate();
   const dispatch = useAppDispatchV2();
 
-  const { companyHolidayCalendars } = useContext(AppContext);
   const [staff, setStaff] = useState<Staff | null | undefined>(undefined);
   const [staffLoading, setStaffLoading] = useState(true);
 
-  const {
-    attendances,
-    getAttendances,
-    loading: attendanceLoading,
-    error: attendanceError,
-  } = useAttendances();
-
   useEffect(() => {
-    getAttendances(row.sub);
-
+    // still fetch staff info here
     fetchStaff(row.sub)
       .then((res) => {
         setStaff(res);
@@ -110,9 +135,9 @@ export function ActionsTableCell({ row }: { row: AttendanceDaily }) {
       .finally(() => {
         setStaffLoading(false);
       });
-  }, [row]);
+  }, [row, dispatch]);
 
-  if (attendanceLoading || staffLoading || attendanceError)
+  if (attendanceLoading || staffLoading || attendanceError || calendarLoading)
     return (
       <TableCell>
         <Box sx={{ width: 24, height: 24 }} />
@@ -130,10 +155,12 @@ export function ActionsTableCell({ row }: { row: AttendanceDaily }) {
         <AttendanceTotalStatus
           attendances={attendances}
           companyHolidayCalendars={companyHolidayCalendars}
+          holidayCalendars={holidayCalendars}
           staff={staff}
         />
         <IconButton
           size="small"
+          data-testid="attendance-open-button"
           onClick={() => {
             const { sub: staffId } = row;
             navigate(`/admin/staff/${staffId}/attendance`);
