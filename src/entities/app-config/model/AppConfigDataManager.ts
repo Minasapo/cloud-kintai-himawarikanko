@@ -1,3 +1,8 @@
+import { graphqlClient } from "@shared/api/amplify/graphqlClient";
+import {
+  buildVersionOrUpdatedAtCondition,
+  getNextVersion,
+} from "@shared/api/graphql/concurrency";
 import {
   createAppConfig,
   updateAppConfig,
@@ -8,12 +13,11 @@ import {
   CreateAppConfigInput,
   CreateAppConfigMutation,
   ListAppConfigsQuery,
+  ModelAppConfigConditionInput,
   UpdateAppConfigInput,
   UpdateAppConfigMutation,
 } from "@shared/api/graphql/types";
 import { GraphQLResult } from "aws-amplify/api";
-
-import { graphqlClient } from "@/shared/api/amplify/graphqlClient";
 
 export class AppConfigDataManager {
   async fetch(name: string = "default") {
@@ -32,7 +36,7 @@ export class AppConfigDataManager {
     }
 
     const appConfigs: AppConfig[] = response.data.listAppConfigs.items.filter(
-      (item): item is NonNullable<typeof item> => item !== null
+      (item): item is NonNullable<typeof item> => item !== null,
     );
 
     // 1件以上のデータがある場合は、エラーを投げる
@@ -62,10 +66,25 @@ export class AppConfigDataManager {
     return appConfig;
   }
 
-  async update(input: UpdateAppConfigInput) {
+  async update(input: Omit<UpdateAppConfigInput, "id">) {
+    const current = await this.fetch(input.name ?? "default");
+    if (!current?.id) {
+      throw new Error("Failed to fetch current app config");
+    }
+
+    const condition: ModelAppConfigConditionInput | undefined =
+      buildVersionOrUpdatedAtCondition(current?.version, current?.updatedAt);
+
     const response = (await graphqlClient.graphql({
       query: updateAppConfig,
-      variables: { input },
+      variables: {
+        input: {
+          id: current.id,
+          ...input,
+          version: getNextVersion(current?.version),
+        },
+        condition,
+      },
       authMode: "apiKey",
     })) as GraphQLResult<UpdateAppConfigMutation>;
 

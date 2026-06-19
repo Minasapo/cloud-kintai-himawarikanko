@@ -1,11 +1,10 @@
 import type { ShiftGroupConfig } from "@entities/app-config/model/shiftGroupTypes";
-
-import { SHIFT_GROUP_VALIDATION_TEXTS } from "@/shared/config/shiftGroupTexts";
+import { SHIFT_GROUP_VALIDATION_TEXTS } from "@shared/config/shiftGroupTexts";
 import {
   type FieldRule,
   type FieldState,
   resolveFieldState,
-} from "@/shared/lib/validation/fieldState";
+} from "@shared/lib/validation/fieldState";
 
 export type ShiftGroupFormValue = {
   id: string;
@@ -43,7 +42,7 @@ export type NumberFieldKey = "min" | "max" | "fixed";
 
 export type NumberFieldState = FieldState;
 
-const isNonNegativeIntegerString = (value: string) => {
+export const isOptionalNonNegativeIntegerString = (value: string) => {
   const trimmed = value.trim();
   return trimmed === "" || /^\d+$/.test(trimmed);
 };
@@ -59,9 +58,9 @@ export const getGroupValidation = (
   group: ShiftGroupFormValue,
 ): GroupValidationResult => {
   const labelError = group.label.trim() === "";
-  const minInputError = !isNonNegativeIntegerString(group.min);
-  const maxInputError = !isNonNegativeIntegerString(group.max);
-  const fixedInputError = !isNonNegativeIntegerString(group.fixed);
+  const minInputError = !isOptionalNonNegativeIntegerString(group.min);
+  const maxInputError = !isOptionalNonNegativeIntegerString(group.max);
+  const fixedInputError = !isOptionalNonNegativeIntegerString(group.fixed);
 
   const minValue = minInputError ? null : parseOptionalInteger(group.min);
   const maxValue = maxInputError ? null : parseOptionalInteger(group.max);

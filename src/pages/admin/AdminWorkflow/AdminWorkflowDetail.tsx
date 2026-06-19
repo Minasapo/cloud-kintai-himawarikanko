@@ -8,19 +8,14 @@ export default function AdminWorkflowDetail() {
   const navigate = useNavigate();
 
   return (
-    <Page
-      title="申請内容（管理者）"
-      breadcrumbs={[
-        { label: "TOP", href: "/" },
-        { label: "ワークフロー管理", href: "/admin/workflow" },
-      ]}
-      maxWidth="lg"
-    >
-      <WorkflowDetailPanel
-        workflowId={id}
-        showBackButton
-        onBack={() => navigate(-1)}
-      />
+    <Page title="申請内容（管理者）" maxWidth={false} showDefaultHeader={false}>
+      <div style={{ width: "100%" }}>
+        <WorkflowDetailPanel
+          workflowId={id}
+          showBackButton
+          onBack={() => navigate("/admin/workflow")}
+        />
+      </div>
     </Page>
   );
 }

@@ -1,11 +1,24 @@
+import { graphqlClient } from "@shared/api/amplify/graphqlClient";
+import {
+  buildVersionOrUpdatedAtCondition,
+  getNextVersion,
+} from "@shared/api/graphql/concurrency";
+import {
+  onCreateCloseDate,
+  onDeleteCloseDate,
+  onUpdateCloseDate,
+} from "@shared/api/graphql/documents/subscriptions";
 import {
   CloseDate,
   CreateCloseDateInput,
   DeleteCloseDateInput,
+  OnCreateCloseDateSubscription,
+  OnDeleteCloseDateSubscription,
+  OnUpdateCloseDateSubscription,
   UpdateCloseDateInput,
 } from "@shared/api/graphql/types";
 import dayjs from "dayjs";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import createCloseDateData from "./closeDates/createCloseDateData";
 import deleteCloseDateData from "./closeDates/deleteCloseDateData";
@@ -17,22 +30,83 @@ export default function useCloseDates() {
   const [error, setError] = useState<Error | null>(null);
   const [closeDates, setCloseDates] = useState<CloseDate[]>([]);
 
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+  const reloadCloseDates = useCallback(async () => {
     setLoading(true);
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setError(null);
-    fetchCloseDates()
-      .then((res) => {
-        setCloseDates(res);
-      })
-      .catch((e: Error) => {
-        setError(e);
-      })
-      .finally(() => {
-        setLoading(false);
-      });
+    try {
+      const res = await fetchCloseDates();
+      setCloseDates(res);
+    } catch (e) {
+      setError(e as Error);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    void reloadCloseDates();
+  }, [reloadCloseDates]);
+
+  useEffect(() => {
+    let isMounted = true;
+    let reloadTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const scheduleReload = () => {
+      if (reloadTimer) {
+        clearTimeout(reloadTimer);
+      }
+
+      reloadTimer = setTimeout(() => {
+        if (!isMounted) {
+          return;
+        }
+        void reloadCloseDates();
+      }, 300);
+    };
+
+    const createSubscription = graphqlClient
+      .graphql({ query: onCreateCloseDate, authMode: "userPool" })
+      .subscribe({
+        next: ({ data }: { data?: OnCreateCloseDateSubscription }) => {
+          if (!data?.onCreateCloseDate) {
+            return;
+          }
+          scheduleReload();
+        },
+      });
+
+    const updateSubscription = graphqlClient
+      .graphql({ query: onUpdateCloseDate, authMode: "userPool" })
+      .subscribe({
+        next: ({ data }: { data?: OnUpdateCloseDateSubscription }) => {
+          if (!data?.onUpdateCloseDate) {
+            return;
+          }
+          scheduleReload();
+        },
+      });
+
+    const deleteSubscription = graphqlClient
+      .graphql({ query: onDeleteCloseDate, authMode: "userPool" })
+      .subscribe({
+        next: ({ data }: { data?: OnDeleteCloseDateSubscription }) => {
+          if (!data?.onDeleteCloseDate) {
+            return;
+          }
+          scheduleReload();
+        },
+      });
+
+    return () => {
+      isMounted = false;
+      if (reloadTimer) {
+        clearTimeout(reloadTimer);
+      }
+      createSubscription.unsubscribe();
+      updateSubscription.unsubscribe();
+      deleteSubscription.unsubscribe();
+    };
+  }, [reloadCloseDates]);
 
   const createCloseDate = async (input: CreateCloseDateInput) =>
     createCloseDateData(input)
@@ -44,7 +118,17 @@ export default function useCloseDates() {
       });
 
   const updateCloseDate = async (input: UpdateCloseDateInput) => {
-    const updated = await updateCloseDateData(input);
+    const currentCloseDate = closeDates.find((item) => item.id === input.id);
+    const updated = await updateCloseDateData({
+      input: {
+        ...input,
+        version: getNextVersion(currentCloseDate?.version),
+      },
+      condition: buildVersionOrUpdatedAtCondition(
+        currentCloseDate?.version,
+        currentCloseDate?.updatedAt,
+      ),
+    });
 
     // Replace the target term with the updated one first
     const afterPrimaryUpdate = closeDates.map((item) =>
@@ -70,10 +154,17 @@ export default function useCloseDates() {
       if (gapDays > 0) {
         try {
           const adjustedNext = await updateCloseDateData({
-            id: nextTerm.id,
-            closeDate: nextTerm.closeDate,
-            startDate: desiredNextStart.toISOString(),
-            endDate: nextTerm.endDate,
+            input: {
+              id: nextTerm.id,
+              closeDate: nextTerm.closeDate,
+              startDate: desiredNextStart.toISOString(),
+              endDate: nextTerm.endDate,
+              version: getNextVersion(nextTerm.version),
+            },
+            condition: buildVersionOrUpdatedAtCondition(
+              nextTerm.version,
+              nextTerm.updatedAt,
+            ),
           });
 
           // Slide the next term's start date forward to fill the gap

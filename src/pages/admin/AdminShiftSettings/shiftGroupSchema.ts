@@ -1,13 +1,14 @@
+import { SHIFT_GROUP_VALIDATION_TEXTS } from "@shared/config/shiftGroupTexts";
 import { z } from "zod";
 
-import { SHIFT_GROUP_VALIDATION_TEXTS } from "@/shared/config/shiftGroupTexts";
-
-import { parseOptionalInteger } from "./shiftGroupValidation";
+import {
+  getGroupValidation,
+  isOptionalNonNegativeIntegerString,
+} from "./shiftGroupValidation";
 
 const optionalNonNegativeIntegerString = (message: string) =>
   z.string().refine((value) => {
-    const trimmed = value.trim();
-    return trimmed === "" || /^\d+$/.test(trimmed);
+    return isOptionalNonNegativeIntegerString(value);
   }, { message });
 
 export const shiftGroupSchema = z
@@ -29,15 +30,9 @@ export const shiftGroupSchema = z
     ),
   })
   .superRefine((values, ctx) => {
-    const minValue = parseOptionalInteger(values.min);
-    const maxValue = parseOptionalInteger(values.max);
-    const fixedValue = parseOptionalInteger(values.fixed);
+    const validation = getGroupValidation(values);
 
-    if (
-      minValue !== null &&
-      maxValue !== null &&
-      minValue > maxValue
-    ) {
+    if (validation.rangeError) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["max"],
@@ -45,11 +40,7 @@ export const shiftGroupSchema = z
       });
     }
 
-    if (
-      fixedValue !== null &&
-      minValue !== null &&
-      fixedValue < minValue
-    ) {
+    if (validation.fixedBelowMin) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["fixed"],
@@ -57,11 +48,7 @@ export const shiftGroupSchema = z
       });
     }
 
-    if (
-      fixedValue !== null &&
-      maxValue !== null &&
-      fixedValue > maxValue
-    ) {
+    if (validation.fixedAboveMax) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["fixed"],
@@ -69,10 +56,7 @@ export const shiftGroupSchema = z
       });
     }
 
-    if (
-      fixedValue !== null &&
-      (minValue !== null || maxValue !== null)
-    ) {
+    if (validation.fixedWithRangeConflict) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["min"],

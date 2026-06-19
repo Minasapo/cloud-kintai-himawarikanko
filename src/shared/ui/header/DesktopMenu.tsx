@@ -1,8 +1,6 @@
-import { Box, Stack } from "@mui/material";
+import { designTokenVar } from "@shared/designSystem";
 import Link from "@shared/ui/link/Link";
 import { CSSProperties } from "react";
-
-import { designTokenVar } from "@/shared/designSystem";
 
 export type DesktopMenuItem = {
   label: string;
@@ -14,6 +12,7 @@ export interface DesktopMenuProps {
   menuItems: DesktopMenuItem[];
   adminLink?: DesktopMenuItem | null;
   showAdminMenu: boolean;
+  onItemPreload?: (href: string) => void;
 }
 
 const DesktopMenu = ({
@@ -21,47 +20,48 @@ const DesktopMenu = ({
   menuItems,
   adminLink,
   showAdminMenu,
+  onItemPreload,
 }: DesktopMenuProps) => {
   const MENU_GAP = designTokenVar("component.headerMenu.gap", "8px");
   const MENU_ITEM_HEIGHT = designTokenVar(
     "component.headerMenu.itemHeight",
-    "32px"
+    "32px",
   );
   const MENU_ITEM_PADDING_X = designTokenVar(
     "component.headerMenu.paddingX",
-    "8px"
+    "8px",
   );
   const MENU_ITEM_PADDING_Y = designTokenVar(
     "component.headerMenu.paddingY",
-    "4px"
+    "4px",
   );
   const MENU_ITEM_RADIUS = designTokenVar(
     "component.headerMenu.borderRadius",
-    "8px"
+    "2px",
   );
   const MENU_ITEM_FONT_WEIGHT = designTokenVar(
     "component.headerMenu.fontWeight",
-    "500"
+    "500",
   );
   const MENU_ITEM_COLOR = designTokenVar(
     "component.headerMenu.color",
-    "#FFFFFF"
+    "rgb(69 87 79)",
   );
   const MENU_ITEM_ACTIVE_COLOR = designTokenVar(
     "component.headerMenu.activeColor",
-    "#0FA85E"
+    "rgb(6 95 70)",
   );
   const MENU_ITEM_ACTIVE_BACKGROUND = designTokenVar(
     "component.headerMenu.activeBackground",
-    "#FFFFFF"
+    "rgb(236 253 243)",
   );
   const MENU_ITEM_HOVER_BACKGROUND = designTokenVar(
     "component.headerMenu.hoverBackground",
-    "rgba(255, 255, 255, 0.16)"
+    "rgba(15, 168, 94, 0.1)",
   );
   const MENU_ITEM_TRANSITION = designTokenVar(
     "component.headerMenu.transitionMs",
-    "160ms"
+    "160ms",
   );
   const menuVars: CSSProperties & Record<`--${string}`, string> = {
     "--menu-gap": MENU_GAP,
@@ -85,29 +85,36 @@ const DesktopMenu = ({
     }`;
 
   return (
-    <Box className="hidden w-full items-center lg:flex" style={menuVars}>
-      <Stack direction="row" className="w-auto gap-[var(--menu-gap)]">
+    <div className="hidden w-full items-center lg:flex" style={menuVars}>
+      <div className="flex w-auto gap-[var(--menu-gap)]">
         {menuItems.map((menu) => (
-          <Box key={menu.href}>
+          <div
+            key={menu.href}
+            onMouseEnter={() => onItemPreload?.(menu.href)}
+            onFocus={() => onItemPreload?.(menu.href)}
+          >
             <Link
               label={menu.label}
               href={menu.href}
               className={buildLinkClassName(pathName === menu.href)}
             />
-          </Box>
+          </div>
         ))}
 
         {showAdminMenu && adminLink && (
-          <Box>
+          <div
+            onMouseEnter={() => onItemPreload?.(adminLink.href)}
+            onFocus={() => onItemPreload?.(adminLink.href)}
+          >
             <Link
               label={adminLink.label}
               href={adminLink.href}
               className={buildLinkClassName(pathName === adminLink.href)}
             />
-          </Box>
+          </div>
         )}
-      </Stack>
-    </Box>
+      </div>
+    </div>
   );
 };
 

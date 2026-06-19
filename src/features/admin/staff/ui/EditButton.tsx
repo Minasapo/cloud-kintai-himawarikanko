@@ -1,6 +1,5 @@
 import { StaffType } from "@entities/staff/model/useStaffs/useStaffs";
-import EditIcon from "@mui/icons-material/Edit";
-import { IconButton } from "@mui/material";
+import { AppEditIconButton } from "@shared/ui/button/AppActionIconButton";
 import { useNavigate } from "react-router-dom";
 
 export function EditButton({ staff }: { staff: StaffType }) {
@@ -11,8 +10,10 @@ export function EditButton({ staff }: { staff: StaffType }) {
     navigate(`/admin/staff/${cognitoUserId}/edit`);
   };
   return (
-    <IconButton size="small" onClick={handleClick}>
-      <EditIcon fontSize="small" />
-    </IconButton>
+    <AppEditIconButton
+      aria-label="スタッフを編集"
+      size="sm"
+      onClick={handleClick}
+    />
   );
 }

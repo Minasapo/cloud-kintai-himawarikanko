@@ -1,29 +1,39 @@
+import { normalizeAttendanceManagementEnabled } from "@entities/staff/lib/attendanceManagement";
+import { graphqlClient } from "@shared/api/amplify/graphqlClient";
 import { listStaff } from "@shared/api/graphql/documents/queries";
 import { ListStaffQuery, Staff } from "@shared/api/graphql/types";
 import { GraphQLResult } from "aws-amplify/api";
 
-import { graphqlClient } from "@/shared/api/amplify/graphqlClient";
-
 export default async function fetchStaffs() {
   const staffs: Staff[] = [];
-  const response = (await graphqlClient.graphql({
-    query: listStaff,
-    authMode: "userPool",
-  })) as GraphQLResult<ListStaffQuery>;
+  let nextToken: string | null = null;
 
-  if (response.errors) {
-    throw new Error(response.errors[0].message);
-  }
+  do {
+    const response = (await graphqlClient.graphql({
+      query: listStaff,
+      variables: {
+        limit: 100,
+        nextToken,
+      },
+      authMode: "userPool",
+    })) as GraphQLResult<ListStaffQuery>;
 
-  if (!response.data?.listStaff) {
-    throw new Error("No data returned");
-  }
+    if (response.errors) {
+      throw new Error(response.errors[0].message);
+    }
 
-  staffs.push(
-    ...response.data.listStaff.items.filter(
-      (item): item is NonNullable<typeof item> => !!item
-    )
-  );
+    if (!response.data?.listStaff) {
+      throw new Error("No data returned");
+    }
+
+    staffs.push(
+      ...response.data.listStaff.items
+        .filter((item): item is NonNullable<typeof item> => !!item)
+        .map(normalizeAttendanceManagementEnabled),
+    );
+
+    nextToken = response.data.listStaff.nextToken ?? null;
+  } while (nextToken);
 
   return staffs;
 }

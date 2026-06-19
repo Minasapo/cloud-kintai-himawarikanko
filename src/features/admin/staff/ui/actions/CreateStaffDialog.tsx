@@ -1,50 +1,72 @@
+import { useAppDispatchV2 } from "@app/hooks";
+import { AuthContext } from "@app/providers/auth/AuthContext";
+import { AppConfigContext } from "@entities/app-config/model/AppConfigContext";
+import WORK_TYPE_OPTIONS from "@entities/staff/lib/workTypeOptions";
+import addUserToGroup from "@entities/staff/model/cognito/addUserToGroup";
+import createCognitoUser from "@entities/staff/model/cognito/createCognitoUser";
+import { CognitoUser } from "@entities/staff/model/useCognitoUser";
+import fetchStaffs from "@entities/staff/model/useStaffs/fetchStaffs";
+import { StaffType } from "@entities/staff/model/useStaffs/useStaffs";
+import { handleSyncCognitoUser } from "@features/admin/staff/model/handleSyncCognitoUser";
 import {
-  StaffRole,
-  StaffType,
-} from "@entities/staff/model/useStaffs/useStaffs";
-import AddCircleIcon from "@mui/icons-material/AddCircle";
-import { Autocomplete, Box, CircularProgress, Stack } from "@mui/material";
-import Button from "@mui/material/Button";
-import Dialog from "@mui/material/Dialog";
-import DialogActions from "@mui/material/DialogActions";
-import DialogContent from "@mui/material/DialogContent";
-import DialogContentText from "@mui/material/DialogContentText";
-import DialogTitle from "@mui/material/DialogTitle";
-import TextField from "@mui/material/TextField";
-import { CreateStaffInput, UpdateStaffInput } from "@shared/api/graphql/types";
-import { useState } from "react";
-import { Controller, useForm } from "react-hook-form";
+  buildCreateStaffUpdatePayload,
+  CREATE_STAFF_DEFAULT_VALUES,
+  CreateStaffFormValues,
+  ROLE_OPTIONS,
+  toShiftGroupOptions,
+} from "@features/admin/staff/model/staffForm";
+import { ApproverSettingTableRows } from "@features/admin/staff/ui/shared/ApproverSettingTableRows";
+import { zodResolver } from "@hookform/resolvers/zod";
+import {
+  Autocomplete,
+  Checkbox,
+  FormControlLabel,
+  Radio,
+  RadioGroup,} from "@mui/material";
+import { DatePicker } from "@mui/x-date-pickers";
+import {
+  ApproverMultipleMode,
+  ApproverSettingMode,
+  CreateStaffInput,
+  UpdateStaffInput,
+} from "@shared/api/graphql/types";
+import { pushNotification } from "@shared/lib/store/notificationSlice";
+import { AppButton } from "@shared/ui/button";
+import { useDialogCloseGuard } from "@shared/ui/feedback/useDialogCloseGuard";
+import { AppTextField } from "@shared/ui/form";
+import { SectionTitle } from "@shared/ui/typography";
+import dayjs from "dayjs";
+import { useContext, useMemo, useState } from "react";
+import { type Control, Controller, useForm, type UseFormRegister, type UseFormSetValue, type UseFormWatch } from "react-hook-form";
+import { z } from "zod";
 
-import { useAppDispatchV2 } from "@/app/hooks";
 import * as MESSAGE_CODE from "@/errors";
-import { handleSyncCognitoUser } from "@/features/admin/staff/model/handleSyncCognitoUser";
-import addUserToGroup from "@/hooks/common/addUserToGroup";
-import createCognitoUser from "@/hooks/common/createCognitoUser";
-import {
-  setSnackbarError,
-  setSnackbarSuccess,
-} from "@/shared/lib/store/snackbarSlice";
 
-type Inputs = {
-  familyName?: string;
-  givenName?: string;
-  mailAddress?: string;
-  role: string;
-};
+const createStaffSchema = z.object({
+  familyName: z.string().min(1, "姓を入力してください"),
+  givenName: z.string().min(1, "名を入力してください"),
+  mailAddress: z.string().email("有効なメールアドレスを入力してください"),
+  role: z.string().min(1, "ロールを選択してください"),
+  owner: z.boolean(),
+  sortKey: z.string().nullable().optional(),
+  usageStartDate: z.string().nullable().optional(),
+  workType: z.string().nullable().optional(),
+  shiftGroup: z.string().nullable().optional(),
+  attendanceManagementEnabled: z.boolean().optional(),
+  approverSetting: z.nativeEnum(ApproverSettingMode).nullable().optional(),
+  approverSingle: z.string().nullable().optional(),
+  approverMultiple: z.array(z.string()).nullable().optional(),
+  approverMultipleMode: z
+    .nativeEnum(ApproverMultipleMode)
+    .nullable()
+    .optional(),
+  developer: z.boolean().optional(),
+});
 
-const defaultValues: Inputs = {
-  familyName: undefined,
-  givenName: undefined,
-  mailAddress: undefined,
-  role: StaffRole.STAFF,
-};
-
-export const ROLE_OPTIONS = [
-  { value: StaffRole.ADMIN, label: "管理者" },
-  { value: StaffRole.STAFF, label: "スタッフ" },
-  { value: StaffRole.OPERATOR, label: "オペレーター" },
-];
-
+type Inputs = CreateStaffFormValues & z.infer<typeof createStaffSchema>;
+const LABEL_CELL_CLASS =
+  "w-[220px] min-w-[180px] border-b border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-900";
+const VALUE_CELL_CLASS = "border-b border-slate-200 px-4 py-3 align-middle";
 export default function CreateStaffDialog({
   staffs,
   refreshStaff,
@@ -57,150 +79,442 @@ export default function CreateStaffDialog({
   updateStaff: (input: UpdateStaffInput) => Promise<void>;
 }) {
   const dispatch = useAppDispatchV2();
+  const { getShiftGroups } = useContext(AppConfigContext);
+  const { cognitoUser } = useContext(AuthContext);
   const [open, setOpen] = useState(false);
-
   const {
     register,
     control,
+    watch,
     handleSubmit,
     reset,
     setValue,
     formState: { isDirty, isValid, isSubmitting },
   } = useForm<Inputs>({
     mode: "onChange",
-    defaultValues,
+    defaultValues: CREATE_STAFF_DEFAULT_VALUES,
+    resolver: zodResolver(createStaffSchema),
   });
-
+  const { dialog, requestClose, closeWithoutGuard } = useDialogCloseGuard({
+    isDirty,
+    isBusy: isSubmitting,
+    onClose: () => {
+      reset(CREATE_STAFF_DEFAULT_VALUES);
+      setOpen(false);
+    },
+  });
+  const shiftGroupOptions = useMemo(
+    () => toShiftGroupOptions(getShiftGroups()),
+    [getShiftGroups],
+  );
   const handleClickOpen = () => {
-    reset();
+    reset(CREATE_STAFF_DEFAULT_VALUES);
     setOpen(true);
   };
-
-  const handleClose = () => {
-    setOpen(false);
-  };
-
   const onSubmit = async (data: Inputs) => {
     const { familyName, givenName, mailAddress, role } = data;
     if (!familyName || !givenName || !mailAddress || !role) {
       throw new Error("Invalid data");
     }
-
-    await createCognitoUser(mailAddress, familyName, givenName).catch(() => {
-      dispatch(setSnackbarError(MESSAGE_CODE.E10002));
-    });
-
-    await addUserToGroup(mailAddress, role).catch(() => {
-      dispatch(setSnackbarError(MESSAGE_CODE.E10002));
-    });
-
-    await handleSyncCognitoUser(
-      staffs,
-      refreshStaff,
-      createStaff,
-      updateStaff,
-    ).catch(() => {
-      dispatch(setSnackbarError(MESSAGE_CODE.E10001));
-    });
-
-    dispatch(setSnackbarSuccess(MESSAGE_CODE.S10002));
-    handleClose();
+    try {
+      await createCognitoUser(mailAddress, familyName, givenName);
+    } catch {
+      dispatch(
+        pushNotification({
+          tone: "error",
+          message: MESSAGE_CODE.E10002,
+        }),
+      );
+      return;
+    }
+    try {
+      await addUserToGroup(mailAddress, role);
+    } catch {
+      dispatch(
+        pushNotification({
+          tone: "error",
+          message: MESSAGE_CODE.E10002,
+        }),
+      );
+      return;
+    }
+    try {
+      await handleSyncCognitoUser(
+        staffs,
+        refreshStaff,
+        createStaff,
+        updateStaff,
+      );
+    } catch {
+      dispatch(
+        pushNotification({
+          tone: "error",
+          message: MESSAGE_CODE.E10001,
+        }),
+      );
+      return;
+    }
+    try {
+      const latestStaffs = await fetchStaffs();
+      const targetStaff = latestStaffs.find(
+        (staff) =>
+          (staff.mailAddress ?? "").toLowerCase() === mailAddress.toLowerCase(),
+      );
+      if (!targetStaff) {
+        dispatch(
+          pushNotification({
+            tone: "error",
+            message: "作成したスタッフが見つかりません",
+          }),
+        );
+        return;
+      }
+      const updatePayload: UpdateStaffInput = buildCreateStaffUpdatePayload({
+        id: targetStaff.id,
+        data,
+        canEditDeveloper: Boolean(cognitoUser?.owner),
+      });
+      await updateStaff(updatePayload);
+      await refreshStaff();
+      dispatch(
+        pushNotification({
+          tone: "success",
+          message: MESSAGE_CODE.S10002,
+        }),
+      );
+      closeWithoutGuard();
+    } catch {
+      dispatch(
+        pushNotification({
+          tone: "error",
+          message: MESSAGE_CODE.E05002,
+        }),
+      );
+    }
   };
-
   return (
     <>
-      <Button
-        variant="contained"
-        size="medium"
-        startIcon={<AddCircleIcon />}
+      <AppButton
+        size="sm"
         onClick={handleClickOpen}
+        startIcon={
+          <svg
+            className="h-4 w-4"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M12 5v14" />
+            <path d="M5 12h14" />
+          </svg>
+        }
       >
         スタッフ登録
-      </Button>
-      <Dialog open={open} onClose={handleClose} fullWidth maxWidth="md">
-        <DialogTitle>スタッフ登録</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            登録するスタッフの情報を入力してください。
-          </DialogContentText>
-          <Stack spacing={2}>
-            <Stack direction="row" spacing={2}>
-              <TextField
-                {...register("familyName", { required: true })}
-                label="名前(姓)"
-                type="text"
-                fullWidth
-                variant="standard"
+      </AppButton>
+
+      {dialog}
+      {open ? (
+        <div
+          className="fixed inset-0 z-[1400] flex items-center justify-center bg-slate-900/35 p-4"
+          onClick={requestClose}
+        >
+          <div
+            className="w-full max-w-5xl rounded-2xl bg-slate-50 p-3 shadow-2xl sm:p-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="space-y-2.5">
+              <section className="rounded-[18px] border border-emerald-200 bg-gradient-to-br from-emerald-50 to-teal-50 px-5 py-4">
+                <div className="flex flex-col items-start justify-between gap-2 sm:flex-row sm:items-center">
+                  <div>
+                    <SectionTitle className="text-xl font-extrabold tracking-[0.01em] text-emerald-950">
+                      スタッフ作成
+                    </SectionTitle>
+                    <p className="text-sm text-emerald-800">
+                      登録するスタッフの情報と承認設定を入力してください。
+                    </p>
+                  </div>
+                  <span className="inline-flex items-center rounded-full border border-emerald-200 bg-white px-2.5 py-1 text-xs font-bold text-slate-700">
+                    新規作成
+                  </span>
+                </div>
+              </section>
+
+              <CreateStaffFormTable
+                register={register}
+                control={control}
+                watch={watch}
+                setValue={setValue}
+                cognitoUser={cognitoUser}
+                staffs={staffs}
+                shiftGroupOptions={shiftGroupOptions}
               />
-              <TextField
-                {...register("givenName", { required: true })}
-                label="名前(名)"
-                type="text"
-                fullWidth
-                variant="standard"
-              />
-            </Stack>
-            <TextField
-              {...register("mailAddress", { required: true })}
-              label="メールアドレス"
-              type="email"
-              fullWidth
-              variant="standard"
+
+              <div className="flex justify-end gap-2 pb-1 pt-1">
+                <AppButton
+                  type="button"
+                  variant="ghost"
+                  tone="neutral"
+                  onClick={requestClose}
+                >
+                  キャンセル
+                </AppButton>
+                <AppButton
+                  type="button"
+                  variant="solid"
+                  disabled={!isDirty || !isValid || isSubmitting}
+                  loading={isSubmitting}
+                  onClick={handleSubmit(onSubmit)}
+                >
+                  登録
+                </AppButton>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </>
+  );
+}
+
+type ShiftGroupOption = { value: string; label: string };
+type FormTableProps = {
+  register: UseFormRegister<Inputs>;
+  control: Control<Inputs>;
+  watch: UseFormWatch<Inputs>;
+  setValue: UseFormSetValue<Inputs>;
+  cognitoUser: CognitoUser | null | undefined;
+  staffs: StaffType[];
+  shiftGroupOptions: ShiftGroupOption[];
+};
+function OwnerCheckboxRow({ control, setValue }: Pick<FormTableProps, "control" | "setValue">) {
+  return (
+    <tr>
+      <td className={LABEL_CELL_CLASS}>オーナー権限</td>
+      <td className={VALUE_CELL_CLASS}>
+        <Controller
+          name="owner"
+          control={control}
+          render={({ field }) => (
+            <Checkbox
+              checked={Boolean(field.value)}
+              onChange={(e) => {
+                setValue("owner", e.target.checked, { shouldDirty: true });
+                field.onChange(e.target.checked);
+              }}
             />
-            <Box>
+          )}
+        />
+      </td>
+    </tr>
+  );
+}
+
+function CreateStaffFormTable({ register, control, watch, setValue, cognitoUser, staffs, shiftGroupOptions }: FormTableProps) {
+  return (
+    <section className="overflow-x-auto rounded-2xl border border-emerald-100 bg-white/95">
+      <table className="w-full min-w-[860px]">
+        <tbody>
+          <tr>
+            <td className={LABEL_CELL_CLASS}>汎用コード</td>
+            <td className={VALUE_CELL_CLASS}>
+              <AppTextField {...register("sortKey")} size="small" sx={{ width: { xs: "100%", sm: 400 } }} placeholder="例：1、2、3...やZZ001、ZZ002...など" />
+            </td>
+          </tr>
+          <tr>
+            <td className={LABEL_CELL_CLASS}>スタッフ名</td>
+            <td className={VALUE_CELL_CLASS}>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <AppTextField {...register("familyName")} size="small" label="姓" sx={{ width: { xs: "100%", sm: 200 } }} />
+                <AppTextField {...register("givenName")} size="small" label="名" sx={{ width: { xs: "100%", sm: 200 } }} />
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td className={LABEL_CELL_CLASS}>メールアドレス</td>
+            <td className={VALUE_CELL_CLASS}>
+              <AppTextField {...register("mailAddress")} type="email" size="small" sx={{ width: { xs: "100%", sm: 400 } }} />
+            </td>
+          </tr>
+          <tr>
+            <td className={LABEL_CELL_CLASS}>権限</td>
+            <td className={VALUE_CELL_CLASS}>
               <Controller
                 name="role"
                 control={control}
-                rules={{ required: true }}
                 render={({ field }) => (
                   <Autocomplete
                     {...field}
-                    value={
-                      ROLE_OPTIONS.find(
-                        (option) => String(option.value) === field.value,
-                      ) ?? null
-                    }
-                    disablePortal
-                    id="combo-box-demo"
+                    value={ROLE_OPTIONS.find((option) => String(option.value) === field.value) ?? null}
                     options={ROLE_OPTIONS}
                     getOptionLabel={(option) => option.label}
-                    sx={{ width: 300 }}
-                    renderInput={(params) => (
-                      <TextField
-                        {...params}
-                        label="権限"
-                        required
-                        variant="standard"
-                      />
-                    )}
+                    renderInput={(params) => <AppTextField {...params} size="small" sx={{ width: { xs: "100%", sm: 400 } }} />}
                     onChange={(_, data) => {
                       if (!data) return;
-                      setValue("role", data.value);
+                      setValue("role", data.value, { shouldDirty: true, shouldValidate: true });
+                      field.onChange(data.value);
                     }}
                   />
                 )}
               />
-            </Box>
-          </Stack>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleClose}>キャンセル</Button>
-          <Button
-            disabled={!isDirty || !isValid || isSubmitting}
-            onClick={handleSubmit(onSubmit)}
-            startIcon={
-              isSubmitting ? (
-                <CircularProgress
-                  size={15}
-                  sx={{ color: "rgba(0, 0, 0, 0.26)" }}
+            </td>
+          </tr>
+          {cognitoUser?.owner && <OwnerCheckboxRow control={control} setValue={setValue} />}
+          <tr>
+            <td className={LABEL_CELL_CLASS}>利用開始日</td>
+            <td className={VALUE_CELL_CLASS}>
+              <Controller
+                name="usageStartDate"
+                control={control}
+                render={({ field }) => (
+                  <DatePicker
+                    value={field.value ? dayjs(field.value) : null}
+                    onChange={(v) => {
+                      const next = v ? v.format("YYYY-MM-DD") : null;
+                      setValue("usageStartDate", next, { shouldDirty: true, shouldValidate: true });
+                      field.onChange(next);
+                    }}
+                    format="YYYY/M/D"
+                    slotProps={{ textField: { onBlur: field.onBlur, size: "small" } }}
+                  />
+                )}
+              />
+            </td>
+          </tr>
+          <tr>
+            <td className={LABEL_CELL_CLASS}>勤怠管理対象</td>
+            <td className={VALUE_CELL_CLASS}>
+              <Controller
+                name="attendanceManagementEnabled"
+                control={control}
+                render={({ field }) => (
+                  <div className="space-y-1">
+                    <Checkbox
+                      checked={field.value ?? true}
+                      onChange={(e) => {
+                        setValue("attendanceManagementEnabled", e.target.checked, { shouldDirty: true, shouldValidate: true });
+                        field.onChange(e.target.checked);
+                      }}
+                    />
+                    <p className="text-xs text-slate-500">オフにすると勤怠チェックでエラーとして扱われなくなります</p>
+                  </div>
+                )}
+              />
+            </td>
+          </tr>
+          <tr>
+            <td className={LABEL_CELL_CLASS}>勤務形態</td>
+            <td className={VALUE_CELL_CLASS}>
+              <Controller
+                name="workType"
+                control={control}
+                render={({ field }) => (
+                  <Autocomplete
+                    {...field}
+                    value={WORK_TYPE_OPTIONS.find((option) => option.value === field.value) ?? null}
+                    options={WORK_TYPE_OPTIONS}
+                    getOptionLabel={(option) => option.label}
+                    renderInput={(params) => <AppTextField {...params} size="small" sx={{ width: { xs: "100%", sm: 400 } }} />}
+                    onChange={(_, data) => {
+                      if (!data) return;
+                      setValue("workType", data.value, { shouldDirty: true, shouldValidate: true });
+                      field.onChange(data.value);
+                    }}
+                  />
+                )}
+              />
+            </td>
+          </tr>
+          <tr>
+            <td className={LABEL_CELL_CLASS}>シフトグループ</td>
+            <td className={VALUE_CELL_CLASS}>
+              {shiftGroupOptions.length === 0 ? (
+                <p className="text-sm text-slate-500">
+                  利用可能なシフトグループがありません。管理画面の「シフト設定」で登録してください。
+                </p>
+              ) : (
+                <Controller
+                  name="shiftGroup"
+                  control={control}
+                  render={({ field }) => {
+                    const selectedOption = shiftGroupOptions.find((option) => option.value === field.value) ?? null;
+                    return (
+                      <Autocomplete
+                        value={selectedOption}
+                        options={shiftGroupOptions}
+                        onChange={(_, newValue) => {
+                          setValue("shiftGroup", newValue?.value ?? null, { shouldDirty: true, shouldValidate: true });
+                          field.onChange(newValue?.value ?? null);
+                        }}
+                        isOptionEqualToValue={(option, value) => option.value === value.value}
+                        renderInput={(params) => (
+                          <AppTextField {...params} size="small" sx={{ width: { xs: "100%", sm: 400 } }} placeholder="所属させるシフトグループを選択" onBlur={field.onBlur} />
+                        )}
+                      />
+                    );
+                  }}
                 />
-              ) : null
-            }
-          >
-            登録
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </>
+              )}
+            </td>
+          </tr>
+          <tr>
+            <td className={LABEL_CELL_CLASS}>承認者設定</td>
+            <td className={VALUE_CELL_CLASS}>
+              <Controller
+                name="approverSetting"
+                control={control}
+                render={({ field }) => (
+                  <RadioGroup
+                    row
+                    value={field.value}
+                    onChange={(e) => {
+                      const v = e.target.value as ApproverSettingMode;
+                      setValue("approverSetting", v, { shouldDirty: true, shouldValidate: true });
+                      field.onChange(v);
+                    }}
+                  >
+                    <FormControlLabel value={ApproverSettingMode.ADMINS} control={<Radio />} label="管理者全員 (デフォルト)" />
+                    <FormControlLabel value={ApproverSettingMode.SINGLE} control={<Radio />} label="特定の承認者を1名に限定" />
+                    <FormControlLabel value={ApproverSettingMode.MULTIPLE} control={<Radio />} label="特定の承認者を複数選択" />
+                  </RadioGroup>
+                )}
+              />
+            </td>
+          </tr>
+          <ApproverSettingTableRows
+            control={control}
+            watch={watch}
+            staffs={staffs}
+            currentCognitoUserId={cognitoUser?.id}
+            labelCellClassName={LABEL_CELL_CLASS}
+            valueCellClassName={VALUE_CELL_CLASS}
+          />
+          {cognitoUser?.owner && (
+            <tr>
+              <td className={LABEL_CELL_CLASS}>開発者フラグ</td>
+              <td className={VALUE_CELL_CLASS}>
+                <Controller
+                  name="developer"
+                  control={control}
+                  render={({ field }) => (
+                    <Checkbox
+                      checked={Boolean(field.value)}
+                      onChange={(e) => {
+                        setValue("developer", e.target.checked, { shouldDirty: true, shouldValidate: true });
+                        field.onChange(e.target.checked);
+                      }}
+                    />
+                  )}
+                />
+                <p className="text-sm text-slate-500">開発用の機能を表示するための設定です。</p>
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+    </section>
   );
 }

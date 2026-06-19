@@ -1,56 +1,207 @@
-import { useStaffs } from "@entities/staff/model/useStaffs/useStaffs";
-import useWorkflows from "@entities/workflow/model/useWorkflows";
-import {
-  Box,
-  Button,
-  Grid,
-  Paper,
-  Typography,
-  useMediaQuery,
-  useTheme,
-} from "@mui/material";
-import { GetWorkflowQuery, WorkflowStatus } from "@shared/api/graphql/types";
-import { useContext } from "react";
-
-import { useAppDispatchV2 } from "@/app/hooks";
-import { AppConfigContext } from "@/context/AppConfigContext";
-import { AuthContext } from "@/context/AuthContext";
+import { useAppDispatchV2 } from "@app/hooks";
+import { AuthContext } from "@app/providers/auth/AuthContext";
+import { AppConfigContext } from "@entities/app-config/model/AppConfigContext";
 import {
   useCreateAttendanceMutation,
   useLazyGetAttendanceByStaffAndDateQuery,
   useUpdateAttendanceMutation,
-} from "@/entities/attendance/api/attendanceApi";
-import { getWorkflowCategoryLabel } from "@/entities/workflow/lib/workflowLabels";
-import WorkflowMetadataPanel from "@/features/workflow/detail-panel/ui/WorkflowMetadataPanel";
-import { createLogger } from "@/shared/lib/logger";
+} from "@entities/attendance/api/attendanceApi";
+import { useStaffs } from "@entities/staff/model/useStaffs/useStaffs";
 import {
-  setSnackbarError,
-  setSnackbarSuccess,
-} from "@/shared/lib/store/snackbarSlice";
+  getWorkflowCategoryLabel,
+  STATUS_LABELS,
+} from "@entities/workflow/lib/workflowLabels";
+import useWorkflows from "@entities/workflow/model/useWorkflows";
+import { WorkflowMetadataPanelBase } from "@features/workflow/detail-panel/ui/WorkflowMetadataPanel";
+import { GetWorkflowQuery, WorkflowStatus } from "@shared/api/graphql/types";
+import { designTokenVar } from "@shared/designSystem";
+import { createLogger } from "@shared/lib/logger";
+import { pushNotification } from "@shared/lib/store/notificationSlice";
+import { useAppNotification } from "@shared/lib/useAppNotification";
+import { AppButton } from "@shared/ui/button";
+import { SectionTitle, SubsectionTitle } from "@shared/ui/typography";
+import { useCallback, useContext, useMemo } from "react";
 
 import { useWorkflowApprovalActions } from "../hooks/useWorkflowApprovalActions";
 import { useWorkflowDetailData } from "../hooks/useWorkflowDetailData";
 import { useWorkflowDetailViewModel } from "../hooks/useWorkflowDetailViewModel";
 import WorkflowCommentSection from "./WorkflowCommentSection";
 
+const PANEL_BACKGROUND = designTokenVar("color.surface.primary", "rgb(255 255 255)");
+const PANEL_BORDER = designTokenVar("color.border.subtle", "rgb(215 224 219)");
+const PANEL_RADIUS = designTokenVar("radius.lg", "12px");
+const HERO_BACKGROUND = designTokenVar(
+  "component.adminWorkflow.detail.hero.background",
+  "linear-gradient(135deg, rgba(15, 168, 94, 0.10), rgba(11, 109, 83, 0.04))",
+);
+const HERO_BORDER = designTokenVar(
+  "component.adminWorkflow.detail.hero.border",
+  "rgba(15, 168, 94, 0.18)",
+);
+const HERO_LABEL = designTokenVar("color.text.muted", "rgb(94 114 104)");
+const HERO_TITLE = designTokenVar("color.text.primary", "rgb(30 42 37)");
+const SECTION_TITLE = designTokenVar("color.text.primary", "rgb(30 42 37)");
+const LOADING_TEXT = designTokenVar("color.text.muted", "rgb(94 114 104)");
+const ERROR_TEXT = designTokenVar("color.feedback.danger.base", "rgb(215 68 62)");
 const logger = createLogger("WorkflowDetailPanel");
+
+type WorkflowDetailHeroProps = {
+  statusLabel: string;
+  approvalStepsCount: number;
+  commentsCount: number;
+  showBackButton: boolean;
+  onBack?: () => void;
+  handleApprove: () => void;
+  isApproveDisabled: boolean;
+  handleReject: () => void;
+  isRejectDisabled: boolean;
+};
+
+function WorkflowDetailHero({
+  statusLabel,
+  approvalStepsCount,
+  commentsCount,
+  showBackButton,
+  onBack,
+  handleApprove,
+  isApproveDisabled,
+  handleReject,
+  isRejectDisabled,
+}: WorkflowDetailHeroProps) {
+  return (
+    <div
+      className="mb-6 flex flex-col gap-4 rounded-2xl p-4 sm:p-5"
+      style={{
+        border: `1px solid ${HERO_BORDER}`,
+        background: HERO_BACKGROUND,
+      }}
+    >
+      <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+        <div className="min-w-0 space-y-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <SectionTitle
+              className="m-0 text-2xl font-extrabold leading-tight"
+              style={{ color: HERO_TITLE }}
+            >
+              申請内容の確認
+            </SectionTitle>
+          </div>
+        </div>
+
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:justify-end">
+          {showBackButton && onBack && (
+            <AppButton
+              variant="outline"
+              tone="secondary"
+              size="sm"
+              onClick={onBack}
+              className="min-w-0"
+              style={{
+                backgroundColor: "rgba(255,255,255,0.72)",
+              }}
+              startIcon={<BackArrowIcon />}
+            >
+              ワークフロー一覧へ戻る
+            </AppButton>
+          )}
+
+          <AppButton
+            onClick={handleApprove}
+            disabled={isApproveDisabled}
+            className="min-w-24"
+          >
+            承認
+          </AppButton>
+
+          <AppButton
+            tone="danger"
+            onClick={handleReject}
+            disabled={isRejectDisabled}
+            className="min-w-24"
+          >
+            却下
+          </AppButton>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <div
+          className="rounded-xl p-4"
+          style={{ backgroundColor: "rgba(255,255,255,0.72)" }}
+        >
+          <p className="m-0 text-xs" style={{ color: HERO_LABEL }}>
+            現在ステータス
+          </p>
+          <p
+            className="m-0 mt-1 text-sm font-bold"
+            style={{ color: HERO_TITLE }}
+          >
+            {statusLabel}
+          </p>
+        </div>
+
+        <div
+          className="rounded-xl p-4"
+          style={{ backgroundColor: "rgba(255,255,255,0.72)" }}
+        >
+          <p className="m-0 text-xs" style={{ color: HERO_LABEL }}>
+            承認ステップ
+          </p>
+          <p
+            className="m-0 mt-1 text-sm font-bold"
+            style={{ color: HERO_TITLE }}
+          >
+            {approvalStepsCount} 件
+          </p>
+        </div>
+
+        <div
+          className="rounded-xl p-4"
+          style={{ backgroundColor: "rgba(255,255,255,0.72)" }}
+        >
+          <p className="m-0 text-xs" style={{ color: HERO_LABEL }}>
+            コメント件数
+          </p>
+          <p
+            className="m-0 mt-1 text-sm font-bold"
+            style={{ color: HERO_TITLE }}
+          >
+            {commentsCount} 件
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 interface WorkflowDetailPanelProps {
   workflowId?: string;
   onBack?: () => void;
   showBackButton?: boolean;
 }
-
+function BackArrowIcon() {
+  return (
+    <svg viewBox="0 0 20 20" aria-hidden="true" className="h-4 w-4">
+      <path
+        d="M12.5 4.5 7 10l5.5 5.5"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
 export default function WorkflowDetailPanel({
   workflowId,
   onBack,
   showBackButton = false,
 }: WorkflowDetailPanelProps) {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const { cognitoUser, authStatus } = useContext(AuthContext);
   const isAuthenticated = authStatus === "authenticated";
   const { staffs } = useStaffs({ isAuthenticated });
+  const { notify } = useAppNotification();
   const {
     getStartTime,
     getEndTime,
@@ -62,16 +213,45 @@ export default function WorkflowDetailPanel({
   const [getAttendanceByStaffAndDate] =
     useLazyGetAttendanceByStaffAndDateQuery();
   const [updateAttendance] = useUpdateAttendanceMutation();
-  const { workflow, setWorkflow, loading, error } =
-    useWorkflowDetailData(workflowId);
+  const currentStaffId = useMemo(() => {
+    if (!cognitoUser?.id) return null;
+    return (
+      staffs.find((staff) => staff.cognitoUserId === cognitoUser.id)?.id ?? null
+    );
+  }, [cognitoUser, staffs]);
+  const handleNewCommentNotification = useCallback(() => {
+    notify({
+      title: "新着コメントがあります",
+      description: "ワークフローに新しいコメントが投稿されました",
+      tone: "info",
+      dedupeKey: `workflow-comment-${workflowId ?? "unknown"}`,
+    });
+  }, [notify, workflowId]);
+  const { workflow, setWorkflow, loading, error } = useWorkflowDetailData(
+    workflowId,
+    {
+      currentStaffId,
+      onNewComment: handleNewCommentNotification,
+    },
+  );
   const dispatch = useAppDispatchV2();
-
   const { staffName, applicationDate, approvalSteps } =
     useWorkflowDetailViewModel({
       workflow,
       staffs,
     });
-
+  const categoryLabel = getWorkflowCategoryLabel(workflow);
+  const statusLabel = workflow?.status
+    ? (STATUS_LABELS[workflow.status] ?? workflow.status)
+    : "—";
+  const isApproveDisabled =
+    !workflow?.id ||
+    workflow.status === WorkflowStatus.APPROVED ||
+    workflow.status === WorkflowStatus.CANCELLED;
+  const isRejectDisabled =
+    !workflow?.id ||
+    workflow.status === WorkflowStatus.REJECTED ||
+    workflow.status === WorkflowStatus.CANCELLED;
   const { handleApprove, handleReject } = useWorkflowApprovalActions({
     workflow,
     cognitoUser,
@@ -81,8 +261,29 @@ export default function WorkflowDetailPanel({
         NonNullable<GetWorkflowQuery["getWorkflow"]>
       >,
     setWorkflow,
-    notifySuccess: (message) => dispatch(setSnackbarSuccess(message)),
-    notifyError: (message) => dispatch(setSnackbarError(message)),
+    notifySuccess: (message) =>
+      dispatch(
+        pushNotification({
+          tone: "success",
+          message: message,
+        }),
+      ),
+    notifyError: (message) =>
+      dispatch(
+        pushNotification({
+          tone: "error",
+          message: message,
+        }),
+      ),
+    notifyInfo: (title, description) =>
+      dispatch(
+        pushNotification({
+          tone: "info",
+          message: title,
+          description: description,
+          autoHideMs: null,
+        }),
+      ),
     getStartTime,
     getEndTime,
     getLunchRestStartTime,
@@ -91,80 +292,54 @@ export default function WorkflowDetailPanel({
     createAttendance,
     updateAttendance,
   });
-
   return (
-    <Paper sx={{ p: { xs: 2, sm: 3 } }}>
-      <Box
-        sx={{
-          display: "flex",
-          flexDirection: { xs: "column", sm: "row" },
-          justifyContent: "space-between",
-          alignItems: { xs: "stretch", sm: "center" },
-          gap: 1,
-          mb: 2,
-        }}
-      >
-        <Box>
-          {showBackButton && onBack && (
-            <Button
-              size="small"
-              sx={{ mr: { sm: 1 }, width: { xs: 1, sm: "auto" } }}
-              onClick={onBack}
-            >
-              一覧に戻る
-            </Button>
-          )}
-        </Box>
-        <Box
-          sx={{
-            display: "flex",
-            gap: 1,
-            flexDirection: { xs: "column", sm: "row" },
-          }}
-        >
-          <Button
-            size={isMobile ? "medium" : "small"}
-            variant="contained"
-            color="success"
-            sx={{ width: { xs: 1, sm: "auto" } }}
-            onClick={handleApprove}
-            disabled={
-              !workflow?.id ||
-              workflow?.status === WorkflowStatus.APPROVED ||
-              workflow?.status === WorkflowStatus.CANCELLED
-            }
-          >
-            承認
-          </Button>
+    <section
+      className="w-full p-4 sm:p-6"
+      style={{
+        borderRadius: PANEL_RADIUS,
+        border: `1px solid ${PANEL_BORDER}`,
+        backgroundColor: PANEL_BACKGROUND,
+        boxShadow: "0 18px 40px rgba(15, 23, 42, 0.08)",
+      }}
+    >
+      <WorkflowDetailHero
+        statusLabel={statusLabel}
+        approvalStepsCount={approvalSteps.length}
+        commentsCount={workflow?.comments?.filter(Boolean).length ?? 0}
+        showBackButton={showBackButton}
+        onBack={onBack}
+        handleApprove={handleApprove}
+        isApproveDisabled={isApproveDisabled}
+        handleReject={handleReject}
+        isRejectDisabled={isRejectDisabled}
+      />
 
-          <Button
-            size={isMobile ? "medium" : "small"}
-            variant="contained"
-            color="error"
-            sx={{ width: { xs: 1, sm: "auto" } }}
-            onClick={handleReject}
-            disabled={
-              !workflow?.id ||
-              workflow?.status === WorkflowStatus.REJECTED ||
-              workflow?.status === WorkflowStatus.CANCELLED
-            }
-          >
-            却下
-          </Button>
-        </Box>
-      </Box>
+      {loading && (
+        <p className="m-0 text-sm" style={{ color: LOADING_TEXT }}>
+          読み込み中...
+        </p>
+      )}
 
-      {loading && <Typography>読み込み中...</Typography>}
-      {error && <Typography color="error">{error}</Typography>}
+      {error && (
+        <p className="m-0 text-sm" style={{ color: ERROR_TEXT }}>
+          {error}
+        </p>
+      )}
 
       {!loading && !error && (
-        <Grid container spacing={2}>
-          <Grid item xs={12} md={7}>
-            <WorkflowMetadataPanel
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
+          <div className="min-w-0 xl:col-span-7">
+            <SubsectionTitle
+              className="mb-2 text-base font-bold"
+              style={{ color: SECTION_TITLE }}
+            >
+              申請情報
+            </SubsectionTitle>
+            <WorkflowMetadataPanelBase
               workflowId={workflow?.id ?? undefined}
               fallbackId={workflowId}
               category={workflow?.category ?? null}
-              categoryLabel={getWorkflowCategoryLabel(workflow)}
+              categoryLabel={categoryLabel}
               staffName={staffName}
               applicationDate={applicationDate}
               status={workflow?.status ?? null}
@@ -173,28 +348,41 @@ export default function WorkflowDetailPanel({
               customWorkflowContent={workflow?.customWorkflowContent ?? null}
               approvalSteps={approvalSteps}
             />
-          </Grid>
+          </div>
 
-          <Grid item xs={12} md={5}>
+          <div className="min-w-0 xl:col-span-5">
+            <SubsectionTitle
+              className="mb-2 text-base font-bold"
+              style={{ color: SECTION_TITLE }}
+            >
+              コメントと対応履歴
+            </SubsectionTitle>
             <WorkflowCommentSection
               workflow={workflow}
               staffs={staffs}
               cognitoUser={cognitoUser}
-              updateWorkflow={(input) =>
-                updateWorkflow(input) as Promise<
-                  NonNullable<GetWorkflowQuery["getWorkflow"]>
-                >
-              }
               onWorkflowUpdated={setWorkflow}
-              onSuccess={(message) => dispatch(setSnackbarSuccess(message))}
+              onSuccess={(message) =>
+                dispatch(
+                  pushNotification({
+                    tone: "success",
+                    message: message,
+                  }),
+                )
+              }
               onError={(message) => {
                 logger.error("Failed to send comment:", message);
-                dispatch(setSnackbarError(message));
+                dispatch(
+                  pushNotification({
+                    tone: "error",
+                    message: message,
+                  }),
+                );
               }}
             />
-          </Grid>
-        </Grid>
+          </div>
+        </div>
       )}
-    </Paper>
+    </section>
   );
 }

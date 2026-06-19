@@ -1,14 +1,9 @@
-import {
-  useGetCompanyHolidayCalendarsQuery,
-  useGetHolidayCalendarsQuery,
-} from "@entities/calendar/api/calendarApi";
-import { useStaffs } from "@entities/staff/model/useStaffs/useStaffs";
+import { AuthContext } from "@app/providers/auth/AuthContext";
 import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
 import {
   Box,
   Chip,
   Container,
-  LinearProgress,
   Paper,
   Stack,
   Table,
@@ -22,111 +17,164 @@ import {
   Typography,
 } from "@mui/material";
 import CommonBreadcrumbs from "@shared/ui/breadcrumbs/CommonBreadcrumbs";
+import { EmptyState, ProgressBar } from "@shared/ui/feedback";
 import dayjs from "dayjs";
-import { useContext, useEffect, useMemo, useState } from "react";
-import { useDispatch } from "react-redux";
+import { useContext } from "react";
 import { useParams } from "react-router-dom";
 
-import { AuthContext } from "@/context/AuthContext";
-import * as MESSAGE_CODE from "@/errors";
-import { setSnackbarError } from "@/shared/lib/store/snackbarSlice";
+import { useStaffShiftListData } from "../model/useStaffShiftListData";
+
+type StaffShiftTableRowProps = {
+  dayKey: string;
+  dateLabel: string;
+  weekdayLabel: string;
+  state: "work" | "off" | undefined;
+  isPublicHoliday: boolean;
+  isCompanyHoliday: boolean;
+  isSunday: boolean;
+  isSaturday: boolean;
+  workType: string | null | undefined;
+  disabled?: boolean;
+  onShiftChange: (key: string, value: string | null) => void;
+};
+
+function StaffShiftTableRow({
+  dayKey,
+  dateLabel,
+  weekdayLabel,
+  state,
+  isPublicHoliday,
+  isCompanyHoliday,
+  isSunday,
+  isSaturday,
+  workType,
+  disabled,
+  onShiftChange,
+}: StaffShiftTableRowProps) {
+  const todayKey = dayjs().format("YYYY-MM-DD");
+  let rowBg = "transparent";
+  let rowFontWeight: number | undefined = undefined;
+
+  if (workType === "shift") {
+    rowBg = "transparent";
+  } else if (dayKey === todayKey) {
+    rowBg = "rgb(255 255 147)";
+    rowFontWeight = 700;
+  } else if (isPublicHoliday || isCompanyHoliday) {
+    rowBg = "rgb(255 147 147)";
+  } else if (isSunday) {
+    rowBg = "rgb(255 147 147)";
+  } else if (isSaturday) {
+    rowBg = "rgb(147 255 255)";
+  }
+
+  return (
+    <TableRow
+      sx={{
+        alignItems: "center",
+        bgcolor: rowBg,
+        fontWeight: rowFontWeight,
+      }}
+    >
+      <TableCell
+        sx={{
+          pr: 2,
+          borderBottom: "1px solid",
+          borderColor: "divider",
+          py: 1,
+        }}
+      >
+        <Stack direction="row" spacing={2} alignItems="center">
+          <Tooltip title={dayKey}>
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                px: 1,
+                py: 0.5,
+                borderRadius: 1,
+              }}
+            >
+              <CalendarTodayIcon sx={{ mr: 1 }} fontSize="small" />
+              <Box sx={{ display: "flex", flexDirection: "column" }}>
+                <Typography sx={{ fontWeight: 600 }}>{dateLabel}</Typography>
+                <Typography sx={{ fontSize: 12, color: "text.secondary" }}>
+                  {weekdayLabel}
+                </Typography>
+              </Box>
+            </Box>
+          </Tooltip>
+
+          {(isPublicHoliday || isCompanyHoliday) && (
+            <Chip
+              label={isPublicHoliday ? "祝日" : "会社休日"}
+              color="error"
+              size="small"
+            />
+          )}
+        </Stack>
+      </TableCell>
+
+      <TableCell
+        align="right"
+        sx={{
+          borderBottom: "1px solid",
+          borderColor: "divider",
+          py: 1,
+        }}
+      >
+        <Stack
+          direction="row"
+          spacing={1}
+          justifyContent="flex-end"
+          alignItems="center"
+        >
+          <ToggleButtonGroup
+            value={state ?? ""}
+            exclusive
+            size="small"
+            disabled={disabled}
+            onChange={(_, val) => onShiftChange(dayKey, val)}
+          >
+            <ToggleButton value="">未登録</ToggleButton>
+            <ToggleButton value="work">出勤</ToggleButton>
+            <ToggleButton value="off">休み</ToggleButton>
+          </ToggleButtonGroup>
+        </Stack>
+      </TableCell>
+    </TableRow>
+  );
+}
 
 export default function StaffShiftList() {
-  const dispatch = useDispatch();
   const { staffId } = useParams();
-  const { authStatus } = useContext(AuthContext);
+  const { authStatus, cognitoUser } = useContext(AuthContext);
   const isAuthenticated = authStatus === "authenticated";
-  const { staffs } = useStaffs({ isAuthenticated });
-
-  const staff = staffs.find((s) => String(s.id) === String(staffId));
-
-  const [currentMonth, setCurrentMonth] = useState(dayjs());
-  const monthStart = currentMonth.startOf("month");
-  const daysInMonth = monthStart.daysInMonth();
-  const monthYear = monthStart.year();
-  const monthMonth = monthStart.month();
-
-  const days = useMemo(
-    () =>
-      Array.from({ length: daysInMonth }).map((_, i) =>
-        monthStart.add(i, "day")
-      ),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [monthYear, monthMonth, daysInMonth]
-  );
+  const currentUserId = cognitoUser?.id ?? "unknown";
 
   const {
-    data: holidayCalendars = [],
-    isLoading: isHolidayCalendarsLoading,
-    isFetching: isHolidayCalendarsFetching,
-    error: holidayCalendarsError,
-  } = useGetHolidayCalendarsQuery();
-  const {
-    data: companyHolidayCalendars = [],
-    isLoading: isCompanyHolidayCalendarsLoading,
-    isFetching: isCompanyHolidayCalendarsFetching,
-    error: companyHolidayCalendarsError,
-  } = useGetCompanyHolidayCalendarsQuery();
-  const calendarLoading =
-    isHolidayCalendarsLoading ||
-    isHolidayCalendarsFetching ||
-    isCompanyHolidayCalendarsLoading ||
-    isCompanyHolidayCalendarsFetching;
-
-  useEffect(() => {
-    if (holidayCalendarsError || companyHolidayCalendarsError) {
-      console.error(holidayCalendarsError ?? companyHolidayCalendarsError);
-      dispatch(setSnackbarError(MESSAGE_CODE.E00001));
-    }
-  }, [holidayCalendarsError, companyHolidayCalendarsError, dispatch]);
-
-  const publicHolidaySet = useMemo(
-    () => new Set(holidayCalendars.map((h) => h.holidayDate)),
-    [holidayCalendars]
-  );
-
-  const companyHolidaySet = useMemo(
-    () => new Set(companyHolidayCalendars.map((h) => h.holidayDate)),
-    [companyHolidayCalendars]
-  );
-
-  // モックデータ: 未登録 / 出勤 / 休み を表示・編集できるよう state にする
-  const [shifts, setShifts] = useState<
-    Record<string, "work" | "off" | undefined>
-  >(() => {
-    const map: Record<string, "work" | "off" | undefined> = {};
-    days.forEach((d) => {
-      const r = Math.random();
-      if (r < 0.2) map[d.format("YYYY-MM-DD")] = undefined; // 未登録
-      else map[d.format("YYYY-MM-DD")] = r > 0.6 ? "work" : "off";
-    });
-    return map;
+    staff,
+    monthStart,
+    days,
+    shiftStates,
+    publicHolidaySet,
+    companyHolidaySet,
+    isSaving,
+    calendarLoading,
+    shiftRequestLoading,
+    shiftRequestFetching,
+    shiftRequest,
+    prevMonth,
+    nextMonth,
+    handleShiftChange,
+  } = useStaffShiftListData({
+    staffId,
+    isAuthenticated,
+    currentUserId,
   });
 
-  // 月が切り替わったらモックデータを再生成する
-  useEffect(() => {
-    const map: Record<string, "work" | "off" | undefined> = {};
-    days.forEach((d) => {
-      const r = Math.random();
-      if (r < 0.2) map[d.format("YYYY-MM-DD")] = undefined;
-      else map[d.format("YYYY-MM-DD")] = r > 0.6 ? "work" : "off";
-    });
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setShifts(map);
-  }, [monthStart.year(), monthStart.month(), daysInMonth]);
-
-  const handleShiftChange = (key: string, value: string | null) => {
-    setShifts((prev) => ({
-      ...prev,
-      [key]: value === "work" ? "work" : value === "off" ? "off" : undefined,
-    }));
-  };
-
-  const prevMonth = () => setCurrentMonth((m) => m.subtract(1, "month"));
-  const nextMonth = () => setCurrentMonth((m) => m.add(1, "month"));
-
-  if (calendarLoading) {
-    return <LinearProgress sx={{ width: "100%" }} />;
+  if (calendarLoading || (shiftRequestLoading && !shiftRequest)) {
+    return <ProgressBar className="w-full" />;
   }
 
   return (
@@ -137,7 +185,7 @@ export default function StaffShiftList() {
             { label: "TOP", href: "/" },
             { label: "シフト管理", href: "/admin/shift" },
           ]}
-          current={"シフト詳細"}
+          current="シフト詳細"
         />
       </Box>
 
@@ -155,11 +203,28 @@ export default function StaffShiftList() {
             : "スタッフが見つかりません"}
         </Typography>
         <Box>
-          <Chip label="前月" onClick={prevMonth} sx={{ mr: 1 }} clickable />
+          <Chip
+            label="前月"
+            onClick={prevMonth}
+            sx={{ mr: 1 }}
+            clickable
+            disabled={isSaving}
+          />
           <Chip label={monthStart.format("YYYY年 M月")} sx={{ mr: 1 }} />
-          <Chip label="翌月" onClick={nextMonth} clickable />
+          <Chip
+            label="翌月"
+            onClick={nextMonth}
+            clickable
+            disabled={isSaving}
+          />
         </Box>
       </Box>
+
+      {staff && !shiftRequest && (
+        <Box sx={{ mb: 2 }}>
+          <EmptyState message="この月のシフトは未登録です" />
+        </Box>
+      )}
 
       {staff && (
         <Paper
@@ -200,117 +265,25 @@ export default function StaffShiftList() {
             <TableBody>
               {days.map((d) => {
                 const key = d.format("YYYY-MM-DD");
-                const state = shifts[key];
-                const isSunday = d.day() === 0;
-                const isSaturday = d.day() === 6;
-                const isCompanyHoliday = companyHolidaySet.has(key);
-                const isPublicHoliday = publicHolidaySet.has(key);
-
-                // 勤怠一覧のスタイルに合わせる:
-                // today -> #FFFF93, saturday -> #93FFFF, sunday/holiday -> #FF9393
-                const todayKey = dayjs().format("YYYY-MM-DD");
-
-                let rowBg = "transparent";
-                let rowFontWeight: number | undefined = undefined;
-
-                // 管理画面の判定を踏襲: shift 勤務タイプの場合は色付けしない
-                if (staff?.workType === "shift") {
-                  rowBg = "transparent";
-                } else if (key === todayKey) {
-                  rowBg = "#FFFF93"; // today
-                  rowFontWeight = 700;
-                } else if (isPublicHoliday || isCompanyHoliday) {
-                  rowBg = "#FF9393"; // holiday -> use sunday color
-                } else if (isSunday) {
-                  rowBg = "#FF9393"; // sunday
-                } else if (isSaturday) {
-                  rowBg = "#93FFFF"; // saturday
-                }
+                const dateLabel = d.format("M月D日");
+                const weekdayLabel = d.format("dddd");
+                const state = shiftStates[key];
 
                 return (
-                  <TableRow
+                  <StaffShiftTableRow
                     key={key}
-                    sx={{
-                      alignItems: "center",
-                      bgcolor: rowBg,
-                      fontWeight: rowFontWeight,
-                    }}
-                  >
-                    <TableCell
-                      sx={{
-                        pr: 2,
-                        borderBottom: "1px solid",
-                        borderColor: "divider",
-                        py: 1,
-                      }}
-                    >
-                      <Stack direction="row" spacing={2} alignItems="center">
-                        <Tooltip title={key}>
-                          <Box
-                            sx={{
-                              display: "flex",
-                              alignItems: "center",
-                              px: 1,
-                              py: 0.5,
-                              borderRadius: 1,
-                            }}
-                          >
-                            <CalendarTodayIcon
-                              sx={{ mr: 1 }}
-                              fontSize="small"
-                            />
-                            <Box
-                              sx={{ display: "flex", flexDirection: "column" }}
-                            >
-                              <Typography sx={{ fontWeight: 600 }}>
-                                {d.format("M月D日")}
-                              </Typography>
-                              <Typography
-                                sx={{ fontSize: 12, color: "text.secondary" }}
-                              >
-                                {d.format("dddd")}
-                              </Typography>
-                            </Box>
-                          </Box>
-                        </Tooltip>
-
-                        {(isPublicHoliday || isCompanyHoliday) && (
-                          <Chip
-                            label={isPublicHoliday ? "祝日" : "会社休日"}
-                            color="error"
-                            size="small"
-                          />
-                        )}
-                      </Stack>
-                    </TableCell>
-
-                    <TableCell
-                      align="right"
-                      sx={{
-                        borderBottom: "1px solid",
-                        borderColor: "divider",
-                        py: 1,
-                      }}
-                    >
-                      <Stack
-                        direction="row"
-                        spacing={1}
-                        justifyContent="flex-end"
-                        alignItems="center"
-                      >
-                        <ToggleButtonGroup
-                          value={state ?? ""}
-                          exclusive
-                          size="small"
-                          onChange={(_, val) => handleShiftChange(key, val)}
-                        >
-                          <ToggleButton value="">未登録</ToggleButton>
-                          <ToggleButton value="work">出勤</ToggleButton>
-                          <ToggleButton value="off">休み</ToggleButton>
-                        </ToggleButtonGroup>
-                      </Stack>
-                    </TableCell>
-                  </TableRow>
+                    dayKey={key}
+                    dateLabel={dateLabel}
+                    weekdayLabel={weekdayLabel}
+                    state={state}
+                    isPublicHoliday={publicHolidaySet.has(key)}
+                    isCompanyHoliday={companyHolidaySet.has(key)}
+                    isSunday={d.day() === 0}
+                    isSaturday={d.day() === 6}
+                    workType={staff?.workType}
+                    disabled={isSaving || shiftRequestFetching}
+                    onShiftChange={handleShiftChange}
+                  />
                 );
               })}
             </TableBody>

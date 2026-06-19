@@ -1,3 +1,4 @@
+import { logOperationEvent } from "@entities/operation-log/model/canonicalOperationLog";
 import { createApi } from "@reduxjs/toolkit/query/react";
 import {
   createAppConfig,
@@ -5,14 +6,19 @@ import {
 } from "@shared/api/graphql/documents/mutations";
 import { listAppConfigs } from "@shared/api/graphql/documents/queries";
 import { graphqlBaseQuery } from "@shared/api/graphql/graphqlBaseQuery";
+import { buildListAndItemTags } from "@shared/api/graphql/tagBuilder";
 import type {
   AppConfig,
   CreateAppConfigInput,
   CreateAppConfigMutation,
   ListAppConfigsQuery,
+  ModelAppConfigConditionInput,
   UpdateAppConfigInput,
   UpdateAppConfigMutation,
 } from "@shared/api/graphql/types";
+import { type UpdatePayload } from "@shared/api/graphql/updatePayload";
+
+export type UpdateAppConfigPayload = UpdatePayload<UpdateAppConfigInput, ModelAppConfigConditionInput>;
 
 // Exported for testing
 export const nonNullable = <T>(value: T | null | undefined): value is T =>
@@ -47,17 +53,12 @@ export const appConfigApi = createApi({
 
         return { data: items[0] ?? null };
       },
-      providesTags: (result) => {
-        const baseTag = { type: "AppConfig" as const, id: "LIST" };
-        if (!result) {
-          return [baseTag];
-        }
-
-        return [
-          baseTag,
-          { type: "AppConfig" as const, id: result.id ?? "UNKNOWN" },
-        ];
-      },
+      providesTags: (result) =>
+        buildListAndItemTags(
+          "AppConfig",
+          result ? [result] : undefined,
+          (r) => r.id ?? "unknown",
+        ),
     }),
     createAppConfig: builder.mutation<AppConfig, CreateAppConfigInput>({
       async queryFn(input, _queryApi, _extraOptions, baseQuery) {
@@ -78,15 +79,45 @@ export const appConfigApi = createApi({
           return { error: { message: "Failed to create app config" } };
         }
 
+        await logOperationEvent({
+          action: "app_config.create",
+          resource: "app_config",
+          resourceId: created.id,
+          before: null,
+          after: created,
+          details: {
+            name: created.name,
+          },
+        });
+
         return { data: created };
       },
       invalidatesTags: [{ type: "AppConfig", id: "LIST" }],
     }),
-    updateAppConfig: builder.mutation<AppConfig, UpdateAppConfigInput>({
-      async queryFn(input, _queryApi, _extraOptions, baseQuery) {
+    updateAppConfig: builder.mutation<AppConfig, UpdateAppConfigPayload>({
+      async queryFn({ input, condition }, _queryApi, _extraOptions, baseQuery) {
+        const currentResult = await baseQuery({
+          document: listAppConfigs,
+          variables: {
+            filter: { name: { eq: input.name ?? "default" } },
+          },
+          authMode: "apiKey",
+        });
+
+        if (currentResult.error) {
+          return { error: currentResult.error };
+        }
+
+        const currentData = currentResult.data as ListAppConfigsQuery | null;
+        const current =
+          currentData?.listAppConfigs?.items?.filter(nonNullable)[0];
+
         const result = await baseQuery({
           document: updateAppConfig,
-          variables: { input },
+          variables: {
+            input,
+            condition: condition ?? undefined,
+          },
           authMode: "apiKey",
         });
 
@@ -101,18 +132,25 @@ export const appConfigApi = createApi({
           return { error: { message: "Failed to update app config" } };
         }
 
+        await logOperationEvent({
+          action: "app_config.update",
+          resource: "app_config",
+          resourceId: updated.id,
+          before: current ?? null,
+          after: updated,
+          details: {
+            name: updated.name,
+          },
+        });
+
         return { data: updated };
       },
-      invalidatesTags: (result) => {
-        if (!result) {
-          return [{ type: "AppConfig", id: "LIST" }];
-        }
-
-        return [
-          { type: "AppConfig", id: "LIST" },
-          { type: "AppConfig", id: result.id ?? "UNKNOWN" },
-        ];
-      },
+      invalidatesTags: (result) =>
+        buildListAndItemTags(
+          "AppConfig",
+          result ? [result] : undefined,
+          (r) => r.id ?? "unknown",
+        ),
     }),
   }),
 });

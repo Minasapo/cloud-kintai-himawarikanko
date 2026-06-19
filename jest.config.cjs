@@ -15,6 +15,7 @@ module.exports = {
     "^@features/(.*)$": "<rootDir>/src/features/$1",
     "^@entities/(.*)$": "<rootDir>/src/entities/$1",
     "^@shared/(.*)$": "<rootDir>/src/shared/$1",
+    "^@extensions/(.*)$": "<rootDir>/src/extensions/$1",
   },
   // Ignore directories used by e2e tests and build artifacts
   testPathIgnorePatterns: [
@@ -27,9 +28,10 @@ module.exports = {
   // Only run tests located under src (unit tests)
   testMatch: ["**/src/**/?(*.)+(spec|test).[tj]s?(x)"],
   transform: {
-    "^.+\\.(ts|tsx)$": "ts-jest",
+    "^.+\\.(ts|tsx)$": "<rootDir>/__mocks__/importMetaTransformer.cjs",
+    "^.+\\.(yaml|yml)$": "<rootDir>/__mocks__/yamlTransformer.cjs",
   },
-  moduleFileExtensions: ["ts", "tsx", "js", "jsx", "json", "node"],
+  moduleFileExtensions: ["ts", "tsx", "js", "jsx", "json", "node", "yaml", "yml"],
   // Coverage configuration
   coverageReporters: ["text", "lcov", "html"],
   collectCoverageFrom: [
@@ -45,10 +47,10 @@ module.exports = {
   ],
   coverageThreshold: {
     global: {
-      statements: 50,
-      branches: 40,
-      functions: 50,
-      lines: 50,
+      statements: 65.0,
+      branches: 52.0,
+      functions: 56.0,
+      lines: 65.0,
     },
   },
 };

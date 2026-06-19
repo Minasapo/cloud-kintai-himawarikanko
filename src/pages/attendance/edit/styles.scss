@@ -1,0 +1,33 @@
+.attendance-edit-root {
+  min-height: 100%;
+}
+
+.attendance-edit__loading {
+  padding: 8px 0;
+}
+
+.attendance-edit__loading-track {
+  height: 4px;
+  width: 100%;
+  overflow: hidden;
+  border-radius: 9999px;
+  background: rgb(226 232 240);
+}
+
+.attendance-edit__loading-bar {
+  height: 100%;
+  width: 35%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, rgb(16 185 129), rgb(5 150 105));
+  animation: attendance-edit-loading 1s ease-in-out infinite;
+}
+
+@keyframes attendance-edit-loading {
+  0% {
+    transform: translateX(-110%);
+  }
+
+  100% {
+    transform: translateX(320%);
+  }
+}

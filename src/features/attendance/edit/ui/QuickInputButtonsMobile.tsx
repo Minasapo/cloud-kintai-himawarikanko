@@ -1,31 +1,19 @@
-import {
-  Box,
-  Button,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  List,
-  ListItemButton,
-  ListItemText,
-  Stack,
-  Typography,
-} from "@mui/material";
+import { AttendanceEditInputs } from "@features/attendance/edit/model/common";
+import { AppButton, AppSplitButton } from "@shared/ui/button";
 import dayjs from "dayjs";
-import { useState } from "react";
+import { useEffect } from "react";
 import type { UseFormSetValue } from "react-hook-form";
 
-import { AttendanceEditInputs } from "@/features/attendance/edit/model/common";
-
 import { useQuickInputActions } from "../model/useQuickInputActions";
+import { useQuickInputSelection } from "../model/useQuickInputSelection";
 
 type Props = {
   setValue: UseFormSetValue<AttendanceEditInputs>;
   restReplace: (
-    items: { startTime: string | null; endTime: string | null }[]
+    items: { startTime: string | null; endTime: string | null }[],
   ) => void;
   hourlyPaidHolidayTimeReplace: (
-    items: { startTime: string | null; endTime: string | null }[]
+    items: { startTime: string | null; endTime: string | null }[],
   ) => void;
   workDate: dayjs.Dayjs | null;
   visibleMode?: "all" | "admin" | "staff";
@@ -40,9 +28,6 @@ export default function QuickInputButtonsMobile({
   visibleMode,
   readOnly,
 }: Props) {
-  const [open, setOpen] = useState(false);
-  const [selectedKey, setSelectedKey] = useState<string | null>(null);
-
   const actions = useQuickInputActions({
     setValue,
     restReplace,
@@ -51,66 +36,82 @@ export default function QuickInputButtonsMobile({
     visibleMode,
     readOnly,
   });
+  const {
+    open,
+    selectedKey,
+    setSelectedKey,
+    confirmLabel,
+    askConfirm,
+    applySelectedAction,
+    close,
+  } = useQuickInputSelection(actions);
+
+  useEffect(() => {
+    if (actions.length === 0) return;
+    if (!actions.some((action) => action.key === selectedKey)) {
+      setSelectedKey(actions[0].key);
+    }
+  }, [actions, selectedKey, setSelectedKey]);
+
+  const selectedAction =
+    actions.find((action) => action.key === selectedKey) ?? actions[0] ?? null;
 
   // ボタンが表示されない場合は null を返す
   if (actions.length === 0) return null;
 
   return (
-    <Box sx={{ mb: 1 }}>
-      <Stack
-        direction="row"
-        spacing={1}
-        alignItems="center"
-        sx={{ flexWrap: "wrap" }}
-      >
-        <Box sx={{ fontWeight: "bold", mr: 1 }}>定型入力</Box>
-        <Button variant="outlined" onClick={() => setOpen(true)}>
-          選択
-        </Button>
-      </Stack>
-      <Dialog
-        open={open}
-        onClose={() => setOpen(false)}
-        fullWidth
-        maxWidth="xs"
-      >
-        <DialogTitle>定型入力</DialogTitle>
-        <DialogContent>
-          <List>
-            {actions.map((action) => (
-              <ListItemButton
-                key={action.key}
-                selected={selectedKey === action.key}
-                onClick={() => setSelectedKey(action.key)}
+    <div className="mb-1">
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="mr-1 text-base font-bold text-slate-900">定型入力</div>
+        <AppSplitButton
+          options={actions.map((action) => ({
+            key: action.key,
+            label: action.label,
+            title: action.tooltip,
+          }))}
+          selectedKey={selectedAction?.key ?? null}
+          onSelectedKeyChange={setSelectedKey}
+          onPrimaryClick={() => {
+            if (!selectedAction) return;
+            askConfirm(
+              `定型入力: 「${selectedAction.label}」を適用します。よろしいですか？`,
+              selectedAction.action,
+            );
+          }}
+          disabled={!!readOnly}
+          variant="outline"
+          tone="primary"
+          size="sm"
+        />
+      </div>
+      {open ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/30 px-4">
+          <div className="w-full max-w-sm rounded-[14px] border border-emerald-200 bg-white p-5 shadow-[0_24px_60px_-32px_rgba(15,23,42,0.45)]">
+            <div className="text-base font-semibold text-slate-950">確認</div>
+            <p className="mt-3 text-sm leading-6 text-slate-600">
+              {confirmLabel}
+            </p>
+            <div className="mt-5 flex justify-end gap-2">
+              <AppButton
+                onClick={close}
+                variant="outline"
+                tone="neutral"
+                size="sm"
               >
-                <ListItemText primary={action.label} />
-              </ListItemButton>
-            ))}
-            {actions.length === 0 && (
-              <Typography sx={{ color: "text.secondary" }}>
-                操作可能な項目がありません。
-              </Typography>
-            )}
-          </List>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpen(false)}>閉じる</Button>
-          <Button
-            variant="contained"
-            onClick={() => {
-              const action = actions.find((a) => a.key === selectedKey);
-              if (action) {
-                action.action();
-                setOpen(false);
-                setSelectedKey(null);
-              }
-            }}
-            disabled={!selectedKey}
-          >
-            適用
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </Box>
+                キャンセル
+              </AppButton>
+              <AppButton
+                onClick={applySelectedAction}
+                variant="solid"
+                tone="primary"
+                size="sm"
+              >
+                適用
+              </AppButton>
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </div>
   );
 }

@@ -32,7 +32,13 @@ export default function OperationLogCreateForm(props) {
     ipAddress: "",
     userAgent: "",
     metadata: "",
+    clientTimezone: "",
+    occurredAt: "",
+    resolvedWorkDate: "",
+    idempotencyKey: "",
+    appVersion: "",
     severity: "",
+    version: "",
   };
   const [staffId, setStaffId] = React.useState(initialValues.staffId);
   const [action, setAction] = React.useState(initialValues.action);
@@ -43,7 +49,19 @@ export default function OperationLogCreateForm(props) {
   const [ipAddress, setIpAddress] = React.useState(initialValues.ipAddress);
   const [userAgent, setUserAgent] = React.useState(initialValues.userAgent);
   const [metadata, setMetadata] = React.useState(initialValues.metadata);
+  const [clientTimezone, setClientTimezone] = React.useState(
+    initialValues.clientTimezone
+  );
+  const [occurredAt, setOccurredAt] = React.useState(initialValues.occurredAt);
+  const [resolvedWorkDate, setResolvedWorkDate] = React.useState(
+    initialValues.resolvedWorkDate
+  );
+  const [idempotencyKey, setIdempotencyKey] = React.useState(
+    initialValues.idempotencyKey
+  );
+  const [appVersion, setAppVersion] = React.useState(initialValues.appVersion);
   const [severity, setSeverity] = React.useState(initialValues.severity);
+  const [version, setVersion] = React.useState(initialValues.version);
   const [errors, setErrors] = React.useState({});
   const resetStateValues = () => {
     setStaffId(initialValues.staffId);
@@ -55,7 +73,13 @@ export default function OperationLogCreateForm(props) {
     setIpAddress(initialValues.ipAddress);
     setUserAgent(initialValues.userAgent);
     setMetadata(initialValues.metadata);
+    setClientTimezone(initialValues.clientTimezone);
+    setOccurredAt(initialValues.occurredAt);
+    setResolvedWorkDate(initialValues.resolvedWorkDate);
+    setIdempotencyKey(initialValues.idempotencyKey);
+    setAppVersion(initialValues.appVersion);
     setSeverity(initialValues.severity);
+    setVersion(initialValues.version);
     setErrors({});
   };
   const validations = {
@@ -68,7 +92,13 @@ export default function OperationLogCreateForm(props) {
     ipAddress: [],
     userAgent: [],
     metadata: [],
+    clientTimezone: [],
+    occurredAt: [],
+    resolvedWorkDate: [],
+    idempotencyKey: [],
+    appVersion: [],
     severity: [],
+    version: [],
   };
   const runValidationTasks = async (
     fieldName,
@@ -105,7 +135,13 @@ export default function OperationLogCreateForm(props) {
           ipAddress,
           userAgent,
           metadata,
+          clientTimezone,
+          occurredAt,
+          resolvedWorkDate,
+          idempotencyKey,
+          appVersion,
           severity,
+          version,
         };
         const validationResponses = await Promise.all(
           Object.keys(validations).reduce((promises, fieldName) => {
@@ -177,7 +213,13 @@ export default function OperationLogCreateForm(props) {
               ipAddress,
               userAgent,
               metadata,
+              clientTimezone,
+              occurredAt,
+              resolvedWorkDate,
+              idempotencyKey,
+              appVersion,
               severity,
+              version,
             };
             const result = onChange(modelFields);
             value = result?.staffId ?? value;
@@ -210,7 +252,13 @@ export default function OperationLogCreateForm(props) {
               ipAddress,
               userAgent,
               metadata,
+              clientTimezone,
+              occurredAt,
+              resolvedWorkDate,
+              idempotencyKey,
+              appVersion,
               severity,
+              version,
             };
             const result = onChange(modelFields);
             value = result?.action ?? value;
@@ -243,7 +291,13 @@ export default function OperationLogCreateForm(props) {
               ipAddress,
               userAgent,
               metadata,
+              clientTimezone,
+              occurredAt,
+              resolvedWorkDate,
+              idempotencyKey,
+              appVersion,
               severity,
+              version,
             };
             const result = onChange(modelFields);
             value = result?.resource ?? value;
@@ -276,7 +330,13 @@ export default function OperationLogCreateForm(props) {
               ipAddress,
               userAgent,
               metadata,
+              clientTimezone,
+              occurredAt,
+              resolvedWorkDate,
+              idempotencyKey,
+              appVersion,
               severity,
+              version,
             };
             const result = onChange(modelFields);
             value = result?.resourceId ?? value;
@@ -309,7 +369,13 @@ export default function OperationLogCreateForm(props) {
               ipAddress,
               userAgent,
               metadata,
+              clientTimezone,
+              occurredAt,
+              resolvedWorkDate,
+              idempotencyKey,
+              appVersion,
               severity,
+              version,
             };
             const result = onChange(modelFields);
             value = result?.timestamp ?? value;
@@ -342,7 +408,13 @@ export default function OperationLogCreateForm(props) {
               ipAddress,
               userAgent,
               metadata,
+              clientTimezone,
+              occurredAt,
+              resolvedWorkDate,
+              idempotencyKey,
+              appVersion,
               severity,
+              version,
             };
             const result = onChange(modelFields);
             value = result?.details ?? value;
@@ -375,7 +447,13 @@ export default function OperationLogCreateForm(props) {
               ipAddress: value,
               userAgent,
               metadata,
+              clientTimezone,
+              occurredAt,
+              resolvedWorkDate,
+              idempotencyKey,
+              appVersion,
               severity,
+              version,
             };
             const result = onChange(modelFields);
             value = result?.ipAddress ?? value;
@@ -408,7 +486,13 @@ export default function OperationLogCreateForm(props) {
               ipAddress,
               userAgent: value,
               metadata,
+              clientTimezone,
+              occurredAt,
+              resolvedWorkDate,
+              idempotencyKey,
+              appVersion,
               severity,
+              version,
             };
             const result = onChange(modelFields);
             value = result?.userAgent ?? value;
@@ -441,7 +525,13 @@ export default function OperationLogCreateForm(props) {
               ipAddress,
               userAgent,
               metadata: value,
+              clientTimezone,
+              occurredAt,
+              resolvedWorkDate,
+              idempotencyKey,
+              appVersion,
               severity,
+              version,
             };
             const result = onChange(modelFields);
             value = result?.metadata ?? value;
@@ -455,6 +545,201 @@ export default function OperationLogCreateForm(props) {
         errorMessage={errors.metadata?.errorMessage}
         hasError={errors.metadata?.hasError}
         {...getOverrideProps(overrides, "metadata")}
+      ></TextField>
+      <TextField
+        label="Client timezone"
+        isRequired={false}
+        isReadOnly={false}
+        value={clientTimezone}
+        onChange={(e) => {
+          let { value } = e.target;
+          if (onChange) {
+            const modelFields = {
+              staffId,
+              action,
+              resource,
+              resourceId,
+              timestamp,
+              details,
+              ipAddress,
+              userAgent,
+              metadata,
+              clientTimezone: value,
+              occurredAt,
+              resolvedWorkDate,
+              idempotencyKey,
+              appVersion,
+              severity,
+              version,
+            };
+            const result = onChange(modelFields);
+            value = result?.clientTimezone ?? value;
+          }
+          if (errors.clientTimezone?.hasError) {
+            runValidationTasks("clientTimezone", value);
+          }
+          setClientTimezone(value);
+        }}
+        onBlur={() => runValidationTasks("clientTimezone", clientTimezone)}
+        errorMessage={errors.clientTimezone?.errorMessage}
+        hasError={errors.clientTimezone?.hasError}
+        {...getOverrideProps(overrides, "clientTimezone")}
+      ></TextField>
+      <TextField
+        label="Occurred at"
+        isRequired={false}
+        isReadOnly={false}
+        value={occurredAt}
+        onChange={(e) => {
+          let { value } = e.target;
+          if (onChange) {
+            const modelFields = {
+              staffId,
+              action,
+              resource,
+              resourceId,
+              timestamp,
+              details,
+              ipAddress,
+              userAgent,
+              metadata,
+              clientTimezone,
+              occurredAt: value,
+              resolvedWorkDate,
+              idempotencyKey,
+              appVersion,
+              severity,
+              version,
+            };
+            const result = onChange(modelFields);
+            value = result?.occurredAt ?? value;
+          }
+          if (errors.occurredAt?.hasError) {
+            runValidationTasks("occurredAt", value);
+          }
+          setOccurredAt(value);
+        }}
+        onBlur={() => runValidationTasks("occurredAt", occurredAt)}
+        errorMessage={errors.occurredAt?.errorMessage}
+        hasError={errors.occurredAt?.hasError}
+        {...getOverrideProps(overrides, "occurredAt")}
+      ></TextField>
+      <TextField
+        label="Resolved work date"
+        isRequired={false}
+        isReadOnly={false}
+        value={resolvedWorkDate}
+        onChange={(e) => {
+          let { value } = e.target;
+          if (onChange) {
+            const modelFields = {
+              staffId,
+              action,
+              resource,
+              resourceId,
+              timestamp,
+              details,
+              ipAddress,
+              userAgent,
+              metadata,
+              clientTimezone,
+              occurredAt,
+              resolvedWorkDate: value,
+              idempotencyKey,
+              appVersion,
+              severity,
+              version,
+            };
+            const result = onChange(modelFields);
+            value = result?.resolvedWorkDate ?? value;
+          }
+          if (errors.resolvedWorkDate?.hasError) {
+            runValidationTasks("resolvedWorkDate", value);
+          }
+          setResolvedWorkDate(value);
+        }}
+        onBlur={() => runValidationTasks("resolvedWorkDate", resolvedWorkDate)}
+        errorMessage={errors.resolvedWorkDate?.errorMessage}
+        hasError={errors.resolvedWorkDate?.hasError}
+        {...getOverrideProps(overrides, "resolvedWorkDate")}
+      ></TextField>
+      <TextField
+        label="Idempotency key"
+        isRequired={false}
+        isReadOnly={false}
+        value={idempotencyKey}
+        onChange={(e) => {
+          let { value } = e.target;
+          if (onChange) {
+            const modelFields = {
+              staffId,
+              action,
+              resource,
+              resourceId,
+              timestamp,
+              details,
+              ipAddress,
+              userAgent,
+              metadata,
+              clientTimezone,
+              occurredAt,
+              resolvedWorkDate,
+              idempotencyKey: value,
+              appVersion,
+              severity,
+              version,
+            };
+            const result = onChange(modelFields);
+            value = result?.idempotencyKey ?? value;
+          }
+          if (errors.idempotencyKey?.hasError) {
+            runValidationTasks("idempotencyKey", value);
+          }
+          setIdempotencyKey(value);
+        }}
+        onBlur={() => runValidationTasks("idempotencyKey", idempotencyKey)}
+        errorMessage={errors.idempotencyKey?.errorMessage}
+        hasError={errors.idempotencyKey?.hasError}
+        {...getOverrideProps(overrides, "idempotencyKey")}
+      ></TextField>
+      <TextField
+        label="App version"
+        isRequired={false}
+        isReadOnly={false}
+        value={appVersion}
+        onChange={(e) => {
+          let { value } = e.target;
+          if (onChange) {
+            const modelFields = {
+              staffId,
+              action,
+              resource,
+              resourceId,
+              timestamp,
+              details,
+              ipAddress,
+              userAgent,
+              metadata,
+              clientTimezone,
+              occurredAt,
+              resolvedWorkDate,
+              idempotencyKey,
+              appVersion: value,
+              severity,
+              version,
+            };
+            const result = onChange(modelFields);
+            value = result?.appVersion ?? value;
+          }
+          if (errors.appVersion?.hasError) {
+            runValidationTasks("appVersion", value);
+          }
+          setAppVersion(value);
+        }}
+        onBlur={() => runValidationTasks("appVersion", appVersion)}
+        errorMessage={errors.appVersion?.errorMessage}
+        hasError={errors.appVersion?.hasError}
+        {...getOverrideProps(overrides, "appVersion")}
       ></TextField>
       <TextField
         label="Severity"
@@ -474,7 +759,13 @@ export default function OperationLogCreateForm(props) {
               ipAddress,
               userAgent,
               metadata,
+              clientTimezone,
+              occurredAt,
+              resolvedWorkDate,
+              idempotencyKey,
+              appVersion,
               severity: value,
+              version,
             };
             const result = onChange(modelFields);
             value = result?.severity ?? value;
@@ -488,6 +779,49 @@ export default function OperationLogCreateForm(props) {
         errorMessage={errors.severity?.errorMessage}
         hasError={errors.severity?.hasError}
         {...getOverrideProps(overrides, "severity")}
+      ></TextField>
+      <TextField
+        label="Version"
+        isRequired={false}
+        isReadOnly={false}
+        type="number"
+        step="any"
+        value={version}
+        onChange={(e) => {
+          let value = isNaN(parseInt(e.target.value))
+            ? e.target.value
+            : parseInt(e.target.value);
+          if (onChange) {
+            const modelFields = {
+              staffId,
+              action,
+              resource,
+              resourceId,
+              timestamp,
+              details,
+              ipAddress,
+              userAgent,
+              metadata,
+              clientTimezone,
+              occurredAt,
+              resolvedWorkDate,
+              idempotencyKey,
+              appVersion,
+              severity,
+              version: value,
+            };
+            const result = onChange(modelFields);
+            value = result?.version ?? value;
+          }
+          if (errors.version?.hasError) {
+            runValidationTasks("version", value);
+          }
+          setVersion(value);
+        }}
+        onBlur={() => runValidationTasks("version", version)}
+        errorMessage={errors.version?.errorMessage}
+        hasError={errors.version?.hasError}
+        {...getOverrideProps(overrides, "version")}
       ></TextField>
       <Flex
         justifyContent="space-between"

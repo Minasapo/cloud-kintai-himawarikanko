@@ -1,17 +1,22 @@
+import { type UpdateStaffPayload } from "@entities/staff/api/staffApi";
+import { graphqlClient } from "@shared/api/amplify/graphqlClient";
 import * as mutations from "@shared/api/graphql/documents/mutations";
 import {
   Staff,
-  UpdateStaffInput,
   UpdateStaffMutation,
 } from "@shared/api/graphql/types";
 import { GraphQLResult } from "aws-amplify/api";
 
-import { graphqlClient } from "@/shared/api/amplify/graphqlClient";
-
-export default async function updateStaff(input: UpdateStaffInput) {
+export default async function updateStaff({
+  input,
+  condition,
+}: UpdateStaffPayload) {
   const response = (await graphqlClient.graphql({
     query: mutations.updateStaff,
-    variables: { input },
+    variables: {
+      input,
+      condition: condition ?? undefined,
+    },
     authMode: "userPool",
   })) as GraphQLResult<UpdateStaffMutation>;
 

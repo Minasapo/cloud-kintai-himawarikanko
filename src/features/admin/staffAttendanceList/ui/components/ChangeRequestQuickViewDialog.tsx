@@ -1,19 +1,17 @@
+import { AttendanceDate } from "@entities/attendance/lib/AttendanceDate";
 import { ChangeRequestDiffTable } from "@features/attendance/edit/ui/ChangeRequestDialog/ChangeRequestDiffTable";
 import {
-  Button,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
-  Stack,
-  TextField,
-  Typography,
+  Stack,  Typography,
 } from "@mui/material";
 import { Attendance, AttendanceChangeRequest } from "@shared/api/graphql/types";
+import { AppButton } from "@shared/ui/button";
+import { AppTextField } from "@shared/ui/form";
 import dayjs from "dayjs";
 import { useMemo } from "react";
-
-import { AttendanceDate } from "@/entities/attendance/lib/AttendanceDate";
 
 export type ChangeRequestQuickViewDialogProps = {
   open: boolean;
@@ -28,13 +26,13 @@ export default function ChangeRequestQuickViewDialog({
   changeRequest,
   onClose,
 }: ChangeRequestQuickViewDialogProps) {
+  const workDate = attendance?.workDate ?? null;
   const workDateLabel = useMemo(() => {
-    if (!attendance?.workDate) return "";
-    const date = dayjs(attendance.workDate);
+    if (!workDate) return "";
+    const date = dayjs(workDate);
     if (!date.isValid()) return "";
     return date.format(AttendanceDate.DisplayFormat);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [attendance?.workDate]);
+  }, [workDate]);
 
   if (!attendance || !changeRequest) {
     return (
@@ -46,7 +44,9 @@ export default function ChangeRequestQuickViewDialog({
           </Typography>
         </DialogContent>
         <DialogActions>
-          <Button onClick={onClose}>閉じる</Button>
+          <AppButton variant="ghost" tone="neutral" onClick={onClose}>
+            閉じる
+          </AppButton>
         </DialogActions>
       </Dialog>
     );
@@ -66,7 +66,7 @@ export default function ChangeRequestQuickViewDialog({
           />
           <Stack direction="column" spacing={1}>
             <Typography variant="body1">【スタッフからのコメント】</Typography>
-            <TextField
+            <AppTextField
               fullWidth
               multiline
               disabled
@@ -77,7 +77,9 @@ export default function ChangeRequestQuickViewDialog({
         </Stack>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>閉じる</Button>
+        <AppButton variant="ghost" tone="neutral" onClick={onClose}>
+          閉じる
+        </AppButton>
       </DialogActions>
     </Dialog>
   );

@@ -223,68 +223,59 @@ test.describe("管理者ユーザーの権限チェック", () => {
  * ログイン前ユーザーの権限チェック
  */
 test.describe("未認証ユーザーの権限チェック", () => {
+  test.use({ storageState: "playwright/.auth/out-user.json" });
+
   test.describe("ログインページへのリダイレクト", () => {
-    test.skip("ログアウト状態でスタッフページへアクセスするとログインページにリダイレクトされること", async ({
+    test("ログアウト状態でスタッフページへアクセスするとログインページにリダイレクトされること", async ({
       page,
     }) => {
-      // ログアウト状態でテスト実行
-      await page.context().clearCookies();
-
       await page.goto("/attendance/list");
 
       // ログインページへリダイレクトされることを確認
       await expect(page).toHaveURL(/\/login/);
 
       const loginForm = page.locator(
-        'input[name="username"], input[name="password"]'
+        'input[name="username"], input[name="password"]',
       );
       await expect(loginForm.first()).toBeVisible({ timeout: 5000 });
     });
 
-    test.skip("ログアウト状態で管理者ページへアクセスするとログインページにリダイレクトされること", async ({
+    test("ログアウト状態で管理者ページへアクセスするとログインページにリダイレクトされること", async ({
       page,
     }) => {
-      // ログアウト状態でテスト実行
-      await page.context().clearCookies();
-
       await page.goto("/admin");
 
       // ログインページへリダイレクトされることを確認
       await expect(page).toHaveURL(/\/login/);
 
       const loginForm = page.locator(
-        'input[name="username"], input[name="password"]'
+        'input[name="username"], input[name="password"]',
       );
       await expect(loginForm.first()).toBeVisible({ timeout: 5000 });
     });
 
-    test.skip("ログアウト状態でプロフィールページへアクセスするとログインページにリダイレクトされること", async ({
+    test("ログアウト状態でプロフィールページへアクセスするとログインページにリダイレクトされること", async ({
       page,
     }) => {
-      // ログアウト状態でテスト実行
-      await page.context().clearCookies();
-
       await page.goto("/profile");
 
       // ログインページへリダイレクトされることを確認
       await expect(page).toHaveURL(/\/login/);
 
       const loginForm = page.locator(
-        'input[name="username"], input[name="password"]'
+        'input[name="username"], input[name="password"]',
       );
       await expect(loginForm.first()).toBeVisible({ timeout: 5000 });
     });
   });
 
   test.describe("ログインページの動作", () => {
-    test.skip("ログインページにアクセスできること", async ({ page }) => {
-      await page.context().clearCookies();
-
+    test("ログインページにアクセスできること", async ({ page }) => {
       await page.goto("/login");
 
       // ログインフォームが表示されることを確認
       const loginForm = page.locator(
-        'input[name="username"], input[name="password"]'
+        'input[name="username"], input[name="password"]',
       );
       await expect(loginForm.first()).toBeVisible({ timeout: 5000 });
     });

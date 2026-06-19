@@ -1,13 +1,8 @@
-import DeleteIcon from "@mui/icons-material/Delete";
 import {
-  Button,
-  Checkbox,
-  FormControlLabel,
-  IconButton,
-  Stack,
-  TextField,
-  Typography,
-} from "@mui/material";
+  SettingsCheckbox,
+  SettingsTextField,
+} from "@features/admin/layout/ui/SettingsPrimitives";
+import { AppButton, AppDeleteIconButton } from "@shared/ui/button";
 
 interface Reason {
   reason: string;
@@ -20,7 +15,7 @@ interface ReasonListSectionProps {
   onReasonChange: (
     index: number,
     field: "reason" | "enabled",
-    value: string | boolean
+    value: string | boolean,
   ) => void;
   onRemoveReason: (index: number) => void;
 }
@@ -31,54 +26,49 @@ const ReasonListSection = ({
   onReasonChange,
   onRemoveReason,
 }: ReasonListSectionProps) => (
-  <>
-    <Typography variant="h4">修正理由</Typography>
-    <Typography variant="body1" color="textSecondary">
-      修正理由のテキスト一覧を管理してください。
-    </Typography>
-    <Stack spacing={2} sx={{ alignItems: "flex-start" }}>
-      {reasons.map((reason, index) => (
-        <Stack
-          direction="row"
-          spacing={2}
-          alignItems="center"
-          key={index}
-          sx={{ flexWrap: "wrap", rowGap: 1.5 }}
-        >
-          <TextField
-            label={`理由 ${index + 1}`}
-            value={reason.reason}
-            onChange={(e) => onReasonChange(index, "reason", e.target.value)}
-            size="small"
-            sx={{ width: 320, maxWidth: "100%" }}
-          />
-          <FormControlLabel
-            control={
-              <Checkbox
-                checked={reason.enabled}
-                onChange={(e) =>
-                  onReasonChange(index, "enabled", e.target.checked)
-                }
-              />
-            }
+  <div className="flex flex-col gap-4">
+    {reasons.map((reason, index) => (
+      <div className="flex flex-row flex-wrap items-center gap-4" key={index}>
+        <SettingsTextField
+          label={`理由 ${index + 1}`}
+          value={reason.reason}
+          onChange={(value) => onReasonChange(index, "reason", value)}
+          className="w-[320px] max-w-full"
+        />
+        <div className="min-w-[88px]">
+          <SettingsCheckbox
+            checked={reason.enabled}
+            onChange={(checked) => onReasonChange(index, "enabled", checked)}
             label="有効"
-            sx={{ minWidth: 88 }}
           />
-          <IconButton onClick={() => onRemoveReason(index)} color="error">
-            <DeleteIcon />
-          </IconButton>
-        </Stack>
-      ))}
-      <Button
-        variant="text"
-        size="small"
-        onClick={onAddReason}
-        sx={{ alignSelf: "flex-start" }}
-      >
-        理由を追加
-      </Button>
-    </Stack>
-  </>
+        </div>
+        <AppDeleteIconButton
+          size="sm"
+          onClick={() => onRemoveReason(index)}
+          aria-label="削除"
+        />
+      </div>
+    ))}
+    <AppButton
+      variant="ghost"
+      tone="primary"
+      size="sm"
+      onClick={onAddReason}
+      sx={{
+        alignSelf: "flex-start",
+        mt: 1,
+        textTransform: "none",
+        fontWeight: 500,
+        color: "rgb(5 150 105)",
+        "&:hover": {
+          color: "rgb(4 120 87)",
+          backgroundColor: "transparent",
+        },
+      }}
+    >
+      + 理由を追加
+    </AppButton>
+  </div>
 );
 
 export default ReasonListSection;

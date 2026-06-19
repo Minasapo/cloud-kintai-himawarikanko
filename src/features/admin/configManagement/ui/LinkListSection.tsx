@@ -1,17 +1,13 @@
-import DeleteIcon from "@mui/icons-material/Delete";
+import SettingsIcon from "@features/admin/layout/ui/SettingsIcon";
 import {
-  Button,
-  Checkbox,
-  FormControlLabel,
-  IconButton,
-  MenuItem,
-  Select,
-  Stack,
-  TextField,
-  Typography,
-} from "@mui/material";
-
-import { predefinedIcons } from "@/shared/config/icons";
+  SettingsButton,
+  SettingsSelect,
+  SettingsSwitch,
+} from "@features/admin/layout/ui/SettingsPrimitives";
+import { predefinedIcons } from "@shared/config/icons";
+import AppIconButton from "@shared/ui/button/AppIconButton";
+import { AppTextField } from "@shared/ui/form";
+import { SubsectionTitle } from "@shared/ui/typography";
 
 interface Link {
   label: string;
@@ -26,7 +22,7 @@ interface LinkListSectionProps {
   onLinkChange: (
     index: number,
     field: "label" | "url" | "enabled" | "icon",
-    value: string | boolean
+    value: string | boolean,
   ) => void;
   onRemoveLink: (index: number) => void;
 }
@@ -37,79 +33,108 @@ const LinkListSection = ({
   onLinkChange,
   onRemoveLink,
 }: LinkListSectionProps) => (
-  <>
-    <Typography variant="h6">リンク集</Typography>
-    <Typography variant="body2" color="textSecondary">
-      ヘッダーのリンク集に表示するリンクを設定してください。
-      <br />
-      URL内で<code>{"{staffName}"}</code>
-      を使用すると、スタッフ名が動的に挿入されます。
-    </Typography>
-    <Stack spacing={2} sx={{ alignItems: "flex-start" }}>
+  <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-1">
+      <SubsectionTitle className="text-base font-semibold text-slate-800">
+        リンク集
+      </SubsectionTitle>
+      <p className="text-sm text-slate-500">
+        ヘッダーのリンク集に表示するリンクを設定してください。
+        <br />
+        URL内で
+        <code className="bg-slate-100 px-1 rounded text-pink-600">
+          {"{staffName}"}
+        </code>
+        を使用すると、スタッフ名が動的に挿入されます。
+      </p>
+    </div>
+    <div className="flex flex-col gap-3">
       {links.map((link, index) => (
-        <Stack
-          direction="row"
-          spacing={2}
-          alignItems="center"
+        <div
           key={index}
-          sx={{ flexWrap: "wrap", rowGap: 1.5 }}
+          className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm"
         >
-          <TextField
-            label="ラベル"
-            value={link.label}
-            onChange={(e) => onLinkChange(index, "label", e.target.value)}
-            size="small"
-            sx={{ width: 200 }}
-          />
-          <TextField
-            label="URL"
-            value={link.url}
-            onChange={(e) => onLinkChange(index, "url", e.target.value)}
-            size="small"
-            sx={{ minWidth: 260, width: 360, maxWidth: "100%" }}
-          />
-          <Select
-            value={link.icon}
-            onChange={(e) => onLinkChange(index, "icon", e.target.value)}
-            size="small"
-            sx={{ width: 200, minWidth: 160 }}
-          >
-            {predefinedIcons.map((icon) => (
-              <MenuItem key={icon.value} value={icon.value}>
-                <Stack direction="row" alignItems="center" spacing={1}>
-                  {icon.component}
-                  <span>{icon.label}</span>
-                </Stack>
-              </MenuItem>
-            ))}
-          </Select>
-          <FormControlLabel
-            control={
-              <Checkbox
+          {/* カードヘッダー */}
+          <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50 px-4 py-2">
+            <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              リンク {index + 1}
+            </span>
+            <div className="flex items-center gap-1">
+              <SettingsSwitch
                 checked={link.enabled}
-                onChange={(e) =>
-                  onLinkChange(index, "enabled", e.target.checked)
-                }
+                onChange={(checked) => onLinkChange(index, "enabled", checked)}
+                label={link.enabled ? "有効" : "無効"}
               />
-            }
-            label="有効"
-            sx={{ minWidth: 88 }}
-          />
-          <IconButton onClick={() => onRemoveLink(index)} color="error">
-            <DeleteIcon />
-          </IconButton>
-        </Stack>
+              <AppIconButton
+                tone="danger"
+                aria-label="削除"
+                onClick={() => onRemoveLink(index)}
+              >
+                <SettingsIcon name="delete" />
+              </AppIconButton>
+            </div>
+          </div>
+          {/* カードボディ */}
+          <div className="flex flex-col gap-3 p-4">
+            {/* 行1: ラベル + URL */}
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_2fr]">
+              <div className="flex flex-col gap-1">
+                <label className="text-sm font-medium text-slate-700">
+                  ラベル
+                </label>
+                <AppTextField
+                  size="small"
+                  fullWidth
+                  value={link.label}
+                  onChange={(event) =>
+                    onLinkChange(index, "label", event.target.value)
+                  }
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-sm font-medium text-slate-700">
+                  URL
+                </label>
+                <AppTextField
+                  size="small"
+                  fullWidth
+                  value={link.url}
+                  onChange={(event) =>
+                    onLinkChange(index, "url", event.target.value)
+                  }
+                />
+              </div>
+            </div>
+            {/* 行2: アイコン + プレビュー + 有効 */}
+            <div className="flex items-end gap-3">
+              <SettingsSelect
+                label="アイコン"
+                value={link.icon}
+                onChange={(value) => onLinkChange(index, "icon", value)}
+                className="w-[200px] min-w-[160px]"
+                options={predefinedIcons.map((icon) => ({
+                  value: icon.value,
+                  label: icon.label,
+                }))}
+              />
+              <div className="flex items-center rounded-xl border border-slate-200 bg-slate-50 px-2.5 py-2">
+                {
+                  (
+                    predefinedIcons.find((icon) => icon.value === link.icon) ??
+                    predefinedIcons[0]
+                  )?.component
+                }
+              </div>
+            </div>
+          </div>
+        </div>
       ))}
-      <Button
-        variant="text"
-        size="small"
-        onClick={onAddLink}
-        sx={{ alignSelf: "flex-start" }}
-      >
+      <SettingsButton variant="secondary" size="sm" onClick={onAddLink}>
+        <SettingsIcon name="plus" />
         リンクを追加
-      </Button>
-    </Stack>
-  </>
+      </SettingsButton>
+    </div>
+  </div>
 );
 
 export default LinkListSection;

@@ -1,10 +1,13 @@
+import type {
+  CreateAttendanceMutationArg,
+  UpdateAttendanceMutationArg,
+} from "@entities/attendance/api/attendanceApi";
 import { AttendanceTime } from "@entities/attendance/lib/AttendanceTime";
 import { CLOCK_CORRECTION_CHECK_OUT_LABEL } from "@entities/workflow/lib/workflowLabels";
 import {
   Attendance,
   CreateAttendanceInput,
   GetWorkflowQuery,
-  UpdateAttendanceInput,
 } from "@shared/api/graphql/types";
 import dayjs from "dayjs";
 
@@ -23,11 +26,11 @@ export type AttendanceQueryTrigger = (arg: {
 }) => { unwrap: () => Promise<Attendance | null> };
 
 export type CreateAttendanceTrigger = (
-  input: CreateAttendanceInput
+  input: CreateAttendanceMutationArg
 ) => { unwrap: () => Promise<Attendance> };
 
 export type UpdateAttendanceTrigger = (
-  input: UpdateAttendanceInput
+  input: UpdateAttendanceMutationArg
 ) => { unwrap: () => Promise<Attendance> };
 
 export class WorkflowApprovalUserError extends Error {}
@@ -133,13 +136,134 @@ export const processPaidLeaveApprovalAttendance = async ({
         rests: input.rests,
         hourlyPaidHolidayTimes: input.hourlyPaidHolidayTimes,
         revision: existingAttendance.revision,
+        logContext: {
+          action: "attendance.workflow.apply",
+        },
       }).unwrap();
     } else {
-      await createAttendance(input).unwrap();
+      await createAttendance({
+        ...input,
+        logContext: {
+          action: "attendance.workflow.apply",
+        },
+      }).unwrap();
     }
   }
 
   return { kind: "updated" };
+};
+
+export type CompensatoryLeaveProcessResult =
+  | { kind: "updated" | "created" }
+  | { kind: "skipped"; reason: "missing_date" | "invalid_date" };
+
+export const processCompensatoryLeaveApprovalAttendance = async ({
+  workflow,
+  staffs,
+  getStartTime,
+  getEndTime,
+  getLunchRestStartTime,
+  getLunchRestEndTime,
+  getAttendanceByStaffAndDate,
+  createAttendance,
+  updateAttendance,
+}: {
+  workflow: WorkflowData;
+  staffs: StaffLike[];
+  getStartTime: () => dayjs.Dayjs;
+  getEndTime: () => dayjs.Dayjs;
+  getLunchRestStartTime: () => dayjs.Dayjs;
+  getLunchRestEndTime: () => dayjs.Dayjs;
+  getAttendanceByStaffAndDate: AttendanceQueryTrigger;
+  createAttendance: CreateAttendanceTrigger;
+  updateAttendance: UpdateAttendanceTrigger;
+}): Promise<CompensatoryLeaveProcessResult> => {
+  // overTimeDetails.startTime に振替取得日（YYYY-MM-DD）、date に振替対象日が格納されている
+  const compensatoryDateStr = workflow.overTimeDetails?.startTime ?? null;
+  // 振替休日の substituteHolidayDate に振替対象日をセットする
+  const targetDateStr = workflow.overTimeDetails?.date ?? null;
+
+  if (!compensatoryDateStr) {
+    return { kind: "skipped", reason: "missing_date" };
+  }
+
+  const compensatoryDay = dayjs(compensatoryDateStr);
+  if (!compensatoryDay.isValid()) {
+    return { kind: "skipped", reason: "invalid_date" };
+  }
+
+  const applicantStaff = staffs.find((staff) => staff.id === workflow.staffId);
+  const targetStaffId = applicantStaff?.cognitoUserId || workflow.staffId;
+
+  const workDate = compensatoryDay.format("YYYY-MM-DD");
+
+  const buildIso = (time: string) => {
+    const [hour, minute] = time.split(":").map(Number);
+    return compensatoryDay
+      .hour(hour || 0)
+      .minute(minute || 0)
+      .second(0)
+      .millisecond(0)
+      .toISOString();
+  };
+
+  const stdStartTime = getStartTime().format("HH:mm");
+  const stdEndTime = getEndTime().format("HH:mm");
+  const stdLunchStartTime = getLunchRestStartTime().format("HH:mm");
+  const stdLunchEndTime = getLunchRestEndTime().format("HH:mm");
+
+  const input: CreateAttendanceInput = {
+    staffId: targetStaffId,
+    workDate,
+    startTime: buildIso(stdStartTime),
+    endTime: buildIso(stdEndTime),
+    goDirectlyFlag: false,
+    returnDirectlyFlag: false,
+    absentFlag: false,
+    paidHolidayFlag: false,
+    specialHolidayFlag: true,
+    // 振替対象日（働いた日）を振替休日の日付として記録する
+    substituteHolidayDate: targetDateStr ?? undefined,
+    rests: [
+      {
+        startTime: buildIso(stdLunchStartTime),
+        endTime: buildIso(stdLunchEndTime),
+      },
+    ],
+    hourlyPaidHolidayTimes: [],
+  };
+
+  const existingAttendance = await getAttendanceByStaffAndDate({
+    staffId: targetStaffId,
+    workDate,
+  }).unwrap();
+
+  if (existingAttendance) {
+    await updateAttendance({
+      id: existingAttendance.id,
+      staffId: targetStaffId,
+      workDate,
+      startTime: input.startTime,
+      endTime: input.endTime,
+      goDirectlyFlag: input.goDirectlyFlag,
+      returnDirectlyFlag: input.returnDirectlyFlag,
+      absentFlag: input.absentFlag,
+      paidHolidayFlag: input.paidHolidayFlag,
+      specialHolidayFlag: input.specialHolidayFlag,
+      substituteHolidayDate: input.substituteHolidayDate,
+      rests: input.rests,
+      hourlyPaidHolidayTimes: input.hourlyPaidHolidayTimes,
+      revision: existingAttendance.revision,
+      logContext: { action: "attendance.workflow.apply" },
+    }).unwrap();
+    return { kind: "updated" };
+  }
+
+  await createAttendance({
+    ...input,
+    logContext: { action: "attendance.workflow.apply" },
+  }).unwrap();
+  return { kind: "created" };
 };
 
 export type ClockCorrectionProcessResult = { kind: "updated" | "created" };
@@ -232,7 +356,12 @@ export const processClockCorrectionApprovalAttendance = async ({
   }
 
   if (!existingAttendance) {
-    await createAttendance(createInput).unwrap();
+    await createAttendance({
+      ...createInput,
+      logContext: {
+        action: "attendance.workflow.apply",
+      },
+    }).unwrap();
     return { kind: "created" };
   }
 
@@ -257,6 +386,9 @@ export const processClockCorrectionApprovalAttendance = async ({
     hourlyPaidHolidayTimes:
       existingAttendance.hourlyPaidHolidayTimes ?? createInput.hourlyPaidHolidayTimes,
     revision: existingAttendance.revision,
+    logContext: {
+      action: "attendance.workflow.apply",
+    },
   }).unwrap();
 
   return { kind: "updated" };

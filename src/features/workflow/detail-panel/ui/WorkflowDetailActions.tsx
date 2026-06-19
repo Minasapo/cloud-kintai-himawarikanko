@@ -1,61 +1,46 @@
-import { Box, Button } from "@mui/material";
+import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
+import { AppButton } from "@shared/ui/button";
 
-type WorkflowDetailActionsProps = {
-  onBack: () => void;
-  onWithdraw: () => void;
-  onEdit: () => void;
-  withdrawDisabled?: boolean;
-  withdrawTooltip?: string;
-  editDisabled?: boolean;
-  editTooltip?: string;
-};
+import { useWorkflowDetailContext } from "../model/WorkflowDetailContext";
+import styles from "./WorkflowDetailActions.module.scss";
 
-export default function WorkflowDetailActions({
-  onBack,
-  onWithdraw,
-  onEdit,
-  withdrawDisabled,
-  withdrawTooltip,
-  editDisabled,
-  editTooltip,
-}: WorkflowDetailActionsProps) {
+export default function WorkflowDetailActions() {
+  const { permissions, onBack, onWithdraw, onEdit } =
+    useWorkflowDetailContext();
+  const { withdrawDisabled, withdrawTooltip, editDisabled, editTooltip } =
+    permissions;
   return (
-    <Box
-      sx={{
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-        mb: 2,
-      }}
-    >
-      <Box>
-        <Button size="small" sx={{ mr: 1 }} onClick={onBack}>
+    <div className={styles.actions}>
+      <div>
+        <AppButton
+          variant="outline"
+          tone="secondary"
+          size="sm"
+          onClick={onBack}
+          startIcon={<ArrowBackRoundedIcon sx={{ fontSize: 18 }} />}
+        >
           一覧に戻る
-        </Button>
-      </Box>
-      <Box>
-        <Button
-          size="small"
-          variant="contained"
-          color="error"
-          sx={{ mr: 1 }}
+        </AppButton>
+      </div>
+      <div className={styles.actionsRight}>
+        <AppButton
+          tone="danger"
+          size="sm"
           onClick={onWithdraw}
           disabled={withdrawDisabled}
           title={withdrawTooltip}
         >
           取り下げ
-        </Button>
-
-        <Button
-          size="small"
-          variant="contained"
+        </AppButton>
+        <AppButton
+          size="sm"
           onClick={onEdit}
           disabled={editDisabled}
           title={editTooltip}
         >
           編集
-        </Button>
-      </Box>
-    </Box>
+        </AppButton>
+      </div>
+    </div>
   );
 }

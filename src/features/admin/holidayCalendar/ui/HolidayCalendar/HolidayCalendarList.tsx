@@ -1,46 +1,36 @@
+import { useAppDispatchV2 } from "@app/hooks";
 import {
+  type UpdateHolidayCalendarPayload,
   useBulkCreateHolidayCalendarsMutation,
   useCreateHolidayCalendarMutation,
   useDeleteHolidayCalendarMutation,
   useGetHolidayCalendarsQuery,
   useUpdateHolidayCalendarMutation,
 } from "@entities/calendar/api/calendarApi";
+import { useHolidayCalendarList } from "@features/admin/holidayCalendar/model/useHolidayCalendarList";
+import CreatedAtTableCell from "@features/admin/holidayCalendar/ui/components/CreatedAtTableCell";
+import HolidayCalendarDelete from "@features/admin/holidayCalendar/ui/components/HolidayCalendarDelete";
+import HolidayCalendarListScaffold from "@features/admin/holidayCalendar/ui/components/HolidayCalendarListScaffold";
+import HolidayDateTableCell from "@features/admin/holidayCalendar/ui/components/HolidayDateTableCell";
+import HolidayNameTableCell from "@features/admin/holidayCalendar/ui/components/HolidayNameTableCell";
 import {
-  Button,
-  FormControl,
-  InputLabel,
-  LinearProgress,
-  MenuItem,
-  Paper,
-  Select,
-  Stack,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableFooter,
-  TableHead,
-  TablePagination,
-  TableRow,
-  TextField,
-  Typography,
-} from "@mui/material";
+  buildVersionOrUpdatedAtCondition,
+  getNextVersion,
+} from "@shared/api/graphql/concurrency";
 import { HolidayCalendar } from "@shared/api/graphql/types";
+import { createLogger } from "@shared/lib/logger";
+import { pushNotification } from "@shared/lib/store/notificationSlice";
+import { ProgressBar } from "@shared/ui/feedback";
 import { useCallback, useEffect } from "react";
 
-import { useAppDispatchV2 } from "@/app/hooks";
 import * as MESSAGE_CODE from "@/errors";
-import { useHolidayCalendarList } from "@/features/admin/holidayCalendar/model/useHolidayCalendarList";
-import CreatedAtTableCell from "@/features/admin/holidayCalendar/ui/components/CreatedAtTableCell";
-import HolidayCalendarDelete from "@/features/admin/holidayCalendar/ui/components/HolidayCalendarDelete";
-import HolidayDateTableCell from "@/features/admin/holidayCalendar/ui/components/HolidayDateTableCell";
-import HolidayNameTableCell from "@/features/admin/holidayCalendar/ui/components/HolidayNameTableCell";
-import { setSnackbarError } from "@/shared/lib/store/snackbarSlice";
 
 import { AddHolidayCalendar } from "./AddHolidayCalendar";
 import { CSVFilePicker } from "./CSVFilePicker";
 import HolidayCalendarCopy from "./HolidayCalendarCopy";
 import HolidayCalendarEdit from "./HolidayCalendarEdit";
+
+const logger = createLogger("HolidayCalendarList");
 
 export default function HolidayCalendarList() {
   const dispatch = useAppDispatchV2();
@@ -59,35 +49,47 @@ export default function HolidayCalendarList() {
   const createHolidayCalendar = useCallback(
     async (input: Parameters<typeof createHolidayCalendarMutation>[0]) =>
       createHolidayCalendarMutation(input).unwrap(),
-    [createHolidayCalendarMutation]
+    [createHolidayCalendarMutation],
   );
 
   const bulkCreateHolidayCalendar = useCallback(
     async (inputs: Parameters<typeof bulkCreateHolidayCalendarsMutation>[0]) =>
       bulkCreateHolidayCalendarsMutation(inputs).unwrap(),
-    [bulkCreateHolidayCalendarsMutation]
+    [bulkCreateHolidayCalendarsMutation],
   );
 
   const updateHolidayCalendar = useCallback(
-    async (input: Parameters<typeof updateHolidayCalendarMutation>[0]) =>
-      updateHolidayCalendarMutation(input).unwrap(),
-    [updateHolidayCalendarMutation]
+    async (input: HolidayCalendar) =>
+      updateHolidayCalendarMutation({
+        input: {
+          id: input.id,
+          holidayDate: input.holidayDate,
+          name: input.name,
+          version: getNextVersion(input.version),
+        },
+        condition: buildVersionOrUpdatedAtCondition(input.version, input.updatedAt),
+      } satisfies UpdateHolidayCalendarPayload).unwrap(),
+    [updateHolidayCalendarMutation],
   );
 
   const deleteHolidayCalendar = useCallback(
     async (input: Parameters<typeof deleteHolidayCalendarMutation>[0]) => {
       await deleteHolidayCalendarMutation(input).unwrap();
     },
-    [deleteHolidayCalendarMutation]
+    [deleteHolidayCalendarMutation],
   );
 
-  const calendarLoading =
-    isHolidayCalendarsLoading || isHolidayCalendarsFetching;
+  const calendarLoading = isHolidayCalendarsLoading || isHolidayCalendarsFetching;
 
   useEffect(() => {
     if (holidayCalendarsError) {
-      console.error(holidayCalendarsError);
-      dispatch(setSnackbarError(MESSAGE_CODE.E00001));
+      logger.error(holidayCalendarsError);
+      dispatch(
+        pushNotification({
+          tone: "error",
+          message: MESSAGE_CODE.E00001,
+        }),
+      );
     }
   }, [holidayCalendarsError, dispatch]);
 
@@ -101,7 +103,6 @@ export default function HolidayCalendarList() {
     setSelectedMonth,
     nameFilter,
     setNameFilter,
-    /* yearMonthFilter intentionally unused */
     applyYearMonthFilter,
     filtered,
     paginated,
@@ -115,150 +116,67 @@ export default function HolidayCalendarList() {
   });
 
   if (calendarLoading) {
-    return <LinearProgress sx={{ width: "100%" }} />;
+    return <ProgressBar className="w-full" />;
   }
 
   return (
-    <>
-      <Stack direction="column" spacing={1}>
-        <Stack direction="row" spacing={1} alignItems="center">
+    <HolidayCalendarListScaffold
+      actions={
+        <>
           <AddHolidayCalendar
             createHolidayCalendar={createHolidayCalendar}
             bulkCreateHolidayCalendar={bulkCreateHolidayCalendar}
           />
-          <CSVFilePicker
-            bulkCreateHolidayCalendar={bulkCreateHolidayCalendar}
+          <CSVFilePicker bulkCreateHolidayCalendar={bulkCreateHolidayCalendar} />
+        </>
+      }
+      paginated={paginated}
+      filteredCount={filtered.length}
+      page={page}
+      rowsPerPage={rowsPerPage}
+      years={years}
+      selectedYear={selectedYear}
+      selectedMonth={selectedMonth}
+      onYearChange={(year) => {
+        setSelectedYear(year);
+        applyYearMonthFilter(year, selectedMonth);
+      }}
+      onMonthChange={(month) => {
+        setSelectedMonth(month);
+        applyYearMonthFilter(selectedYear, month);
+      }}
+      nameFilter={nameFilter}
+      onNameFilterChange={setNameFilter}
+      onClearFilters={clearFilters}
+      onPageChange={handleChangePage}
+      onRowsPerPageChange={handleChangeRowsPerPage}
+      nameFilterLabel="休日名で検索"
+      filterIdPrefix="holiday"
+      actionRowAlignItems="center"
+      getRowKey={(holidayCalendar, index) => holidayCalendar.id ?? index}
+      renderActionButtons={(holidayCalendar) => (
+        <>
+          <HolidayCalendarEdit
+            holidayCalendar={holidayCalendar}
+            updateHolidayCalendar={updateHolidayCalendar}
           />
-        </Stack>
-        <Paper variant="outlined" sx={{ p: 1, width: "100%" }}>
-          <Typography variant="subtitle2" sx={{ mb: 1 }}>
-            フィルター
-          </Typography>
-          <Stack direction="row" spacing={1} alignItems="center">
-            <FormControl size="small" sx={{ minWidth: 110 }}>
-              <InputLabel id="select-year-label">年</InputLabel>
-              <Select
-                labelId="select-year-label"
-                value={selectedYear}
-                label="年"
-                onChange={(e) => {
-                  const y = e.target.value as number | "";
-                  setSelectedYear(y);
-                  applyYearMonthFilter(y, selectedMonth);
-                }}
-              >
-                <MenuItem value="">-</MenuItem>
-                {years.map((y) => (
-                  <MenuItem key={y} value={y}>
-                    {y}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-            <FormControl size="small" sx={{ minWidth: 100 }}>
-              <InputLabel id="select-month-label">月</InputLabel>
-              <Select
-                labelId="select-month-label"
-                value={selectedMonth}
-                label="月"
-                onChange={(e) => {
-                  const m = e.target.value as number | "";
-                  setSelectedMonth(m);
-                  applyYearMonthFilter(selectedYear, m);
-                }}
-              >
-                <MenuItem value="">-</MenuItem>
-                {Array.from({ length: 12 }).map((_, i) => (
-                  <MenuItem key={i + 1} value={i + 1}>
-                    {i + 1}月
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-            <TextField
-              label="休日名で検索"
-              size="small"
-              value={nameFilter}
-              onChange={(e) => {
-                setNameFilter(e.target.value);
-              }}
-              sx={{ minWidth: 200 }}
-            />
-            <Button
-              size="small"
-              onClick={() => {
-                clearFilters();
-              }}
-            >
-              クリア
-            </Button>
-          </Stack>
-        </Paper>
-      </Stack>
-      <TableContainer>
-        <Table size="small">
-          <TableHead>
-            <TableRow>
-              <TableCell sx={{ width: 50 }} />
-              <TableCell sx={{ width: 100 }}>日付</TableCell>
-              <TableCell sx={{ width: 200 }}>名前</TableCell>
-              <TableCell sx={{ width: 100 }}>作成日</TableCell>
-              <TableCell sx={{ flexGrow: 1 }} />
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {paginated.map((holidayCalendar, index) => (
-              <TableRow key={holidayCalendar.id ?? index}>
-                <TableCell>
-                  <Stack direction="row" spacing={0}>
-                    <HolidayCalendarEdit
-                      holidayCalendar={holidayCalendar}
-                      updateHolidayCalendar={updateHolidayCalendar}
-                    />
-                    <HolidayCalendarCopy
-                      holidayCalendar={holidayCalendar}
-                      createHolidayCalendar={createHolidayCalendar}
-                    />
-                    <HolidayCalendarDelete
-                      holidayCalendar={holidayCalendar}
-                      deleteHolidayCalendar={deleteHolidayCalendar}
-                    />
-                  </Stack>
-                </TableCell>
-                <HolidayDateTableCell holidayCalendar={holidayCalendar} />
-                <HolidayNameTableCell holidayCalendar={holidayCalendar} />
-                <CreatedAtTableCell holidayCalendar={holidayCalendar} />
-                <TableCell />
-              </TableRow>
-            ))}
-          </TableBody>
-          <TableFooter>
-            <TableRow>
-              <TablePagination
-                rowsPerPageOptions={[10, 20, 50, 100]}
-                colSpan={5}
-                count={filtered.length}
-                rowsPerPage={rowsPerPage}
-                page={page}
-                labelRowsPerPage="表示件数"
-                labelDisplayedRows={({ from, to, count }) =>
-                  `${from}-${to} / ${count === -1 ? `以上` : `${count}`} 件`
-                }
-                slotProps={{
-                  select: {
-                    inputProps: {
-                      "aria-label": "rows per page",
-                    },
-                    native: false,
-                  },
-                }}
-                onPageChange={handleChangePage}
-                onRowsPerPageChange={handleChangeRowsPerPage}
-              />
-            </TableRow>
-          </TableFooter>
-        </Table>
-      </TableContainer>
-    </>
+          <HolidayCalendarCopy
+            holidayCalendar={holidayCalendar}
+            createHolidayCalendar={createHolidayCalendar}
+          />
+          <HolidayCalendarDelete
+            holidayCalendar={holidayCalendar}
+            deleteHolidayCalendar={deleteHolidayCalendar}
+          />
+        </>
+      )}
+      renderDataCells={(holidayCalendar) => (
+        <>
+          <HolidayDateTableCell holidayCalendar={holidayCalendar} />
+          <HolidayNameTableCell holidayCalendar={holidayCalendar} />
+          <CreatedAtTableCell holidayCalendar={holidayCalendar} />
+        </>
+      )}
+    />
   );
 }

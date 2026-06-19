@@ -1,14 +1,7 @@
-import { Box } from "@mui/material";
+import { AuthContext } from "@app/providers/auth/AuthContext";
 import SignInOutButtonView from "@shared/ui/header/SignInOutButton";
 import StaffIcon from "@shared/ui/icon/StaffIcon";
 import { useContext } from "react";
-
-import { AuthContext } from "@/context/AuthContext";
-
-const DESKTOP_ONLY_DISPLAY = {
-  xs: "block",
-  lg: "block",
-} as const;
 
 export function SignInOutButton() {
   const { signOut, signIn, cognitoUser, authStatus } = useContext(AuthContext);
@@ -24,9 +17,9 @@ export function SignInOutButton() {
     }
 
     return (
-      <Box sx={{ display: DESKTOP_ONLY_DISPLAY }}>
+      <div className="block">
         <StaffIcon name={cognitoUser.familyName} />
-      </Box>
+      </div>
     );
   }
 

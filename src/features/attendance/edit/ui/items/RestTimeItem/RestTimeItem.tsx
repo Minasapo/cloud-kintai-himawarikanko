@@ -1,18 +1,16 @@
-import DeleteIcon from "@mui/icons-material/Delete";
-import { Box, IconButton, Stack, Typography } from "@mui/material";
+import { AttendanceEditContext } from "@features/attendance/edit/model/AttendanceEditProvider";
+import { AttendanceEditInputs } from "@features/attendance/edit/model/common";
+import { Box, Stack, Typography } from "@mui/material";
+import { AppDeleteIconButton } from "@shared/ui/button/AppActionIconButton";
 import dayjs from "dayjs";
 import { useContext, useMemo } from "react";
 import { FieldArrayWithId } from "react-hook-form";
 
-import { AttendanceEditContext } from "@/features/attendance/edit/model/AttendanceEditProvider";
-import { AttendanceEditInputs } from "@/features/attendance/edit/model/common";
-
-import RestEndTimeInput from "./RestEndTimeInput";
-import RestStartTimeInput from "./RestStartTimeInput";
+import RestTimeFieldInput from "./RestTimeFieldInput";
 
 export function calcTotalRestTime(
   startTime: string | null | undefined,
-  endTime: string | null | undefined
+  endTime: string | null | undefined,
 ) {
   if (!startTime) return 0;
 
@@ -45,21 +43,19 @@ export function RestTimeItem({
   return (
     <Box>
       <Stack direction="row" spacing={1}>
-        <RestStartTimeInput index={index} rest={rest} />
+        <RestTimeFieldInput type="start" index={index} rest={rest} />
         <Box>
           <Typography variant="body1" sx={{ my: 1 }}>
             ～
           </Typography>
         </Box>
-        <RestEndTimeInput index={index} rest={rest} />
+        <RestTimeFieldInput type="end" index={index} rest={rest} />
         <Box>
-          <IconButton
-            aria-label="staff-search"
+          <AppDeleteIconButton
+            aria-label="休憩時間を削除"
             onClick={() => restRemove(index)}
             disabled={!!readOnly}
-          >
-            <DeleteIcon />
-          </IconButton>
+          />
         </Box>
         <Box sx={{ flexGrow: 1 }} textAlign={"right"}>
           {`${totalRestTime.toFixed(1)} 時間`}

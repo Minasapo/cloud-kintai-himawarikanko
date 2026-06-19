@@ -1,15 +1,13 @@
+import { AppConfigContext } from "@entities/app-config/model/AppConfigContext";
+import { AttendanceDate } from "@entities/attendance/lib/AttendanceDate";
+import { FLAG_VALUES } from "@entities/attendance/lib/businessLogic";
+import { calcTotalRestTime } from "@entities/attendance/lib/time";
 import { StaffType } from "@entities/staff/model/useStaffs/useStaffs";
 import CloudDownloadOutlinedIcon from "@mui/icons-material/CloudDownloadOutlined";
-import { Button } from "@mui/material";
 import { Attendance } from "@shared/api/graphql/types";
+import { AppButton } from "@shared/ui/button";
 import dayjs from "dayjs";
 import { useContext } from "react";
-
-import { AppConfigContext } from "@/context/AppConfigContext";
-import { AttendanceDate } from "@/entities/attendance/lib/AttendanceDate";
-import { FLAG_VALUES } from "@/entities/attendance/lib/businessLogic";
-import { calcTotalRestTime } from "@/entities/attendance/lib/time";
-import { BUTTON_MIN_WIDTH } from "@/shared/config/uiDimensions";
 
 import downloadAttendances from "../lib/downloadAttendances";
 
@@ -188,29 +186,16 @@ export default function ExportButton({
   };
 
   return (
-    <Button
+    <AppButton
       onClick={onClick}
-      variant="contained"
-      color="primary"
-      size="medium"
+      variant="solid"
+      tone="primary"
+      size="md"
       fullWidth={fullWidth}
       startIcon={<CloudDownloadOutlinedIcon />}
       disabled={disabled}
-      disableElevation
-      sx={{
-        minWidth: BUTTON_MIN_WIDTH,
-        fontWeight: "bold",
-        transition: "transform 150ms ease",
-        "&:hover": {
-          backgroundColor: "primary.main",
-          boxShadow: "none",
-          transform: "translateY(-3px)",
-        },
-        "&:active": { transform: "translateY(-1px)" },
-        "&.Mui-disabled": { transform: "none", opacity: 0.6 },
-      }}
     >
       一括ダウンロード
-    </Button>
+    </AppButton>
   );
 }

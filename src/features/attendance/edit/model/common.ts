@@ -1,8 +1,8 @@
 import {
   Rest,
-  SystemCommentInput,
   UpdateAttendanceInput,
 } from "@shared/api/graphql/types";
+import { createMonthSearchParams, MONTH_QUERY_KEY } from "@shared/lib/monthQuery";
 
 export type RestInputs = {
   startTime: Rest["startTime"] | null;
@@ -10,8 +10,8 @@ export type RestInputs = {
 };
 
 export type HourlyPaidHolidayTimeInputs = {
-  startTime: string | null;
-  endTime: string | null;
+  startTime: string | null | undefined;
+  endTime: string | null | undefined;
 };
 
 export type AttendanceEditInputs = {
@@ -22,7 +22,6 @@ export type AttendanceEditInputs = {
   specialHolidayFlag?: UpdateAttendanceInput["specialHolidayFlag"];
   paidHolidayFlag?: UpdateAttendanceInput["paidHolidayFlag"];
   absentFlag?: UpdateAttendanceInput["absentFlag"];
-  // hourlyPaidHolidayHours: UpdateAttendanceInput["hourlyPaidHolidayHours"];
   hourlyPaidHolidayTimes?: HourlyPaidHolidayTimeInputs[];
   substituteHolidayDate?: UpdateAttendanceInput["substituteHolidayDate"];
   goDirectlyFlag?: UpdateAttendanceInput["goDirectlyFlag"];
@@ -33,7 +32,6 @@ export type AttendanceEditInputs = {
   staffComment?: string;
   histories?: UpdateAttendanceInput["histories"];
   changeRequests?: UpdateAttendanceInput["changeRequests"];
-  systemComments?: SystemCommentInput[];
   revision?: UpdateAttendanceInput["revision"];
 };
 
@@ -43,7 +41,6 @@ export const defaultValues: AttendanceEditInputs = {
   specialHolidayFlag: false,
   endTime: null,
   paidHolidayFlag: false,
-  // hourlyPaidHolidayHours: undefined,
   hourlyPaidHolidayTimes: [],
   substituteHolidayDate: null,
   absentFlag: false,
@@ -52,5 +49,18 @@ export const defaultValues: AttendanceEditInputs = {
   remarks: "",
   remarkTags: [],
   rests: [],
-  systemComments: [],
 };
+
+export function buildAttendanceListPath(
+  searchParams: URLSearchParams,
+  targetStaffId: string | undefined,
+): string {
+  const month = searchParams.get(MONTH_QUERY_KEY);
+  const basePath = targetStaffId
+    ? `/admin/staff/${targetStaffId}/attendance`
+    : "/admin/attendances";
+  if (!month) {
+    return basePath;
+  }
+  return `${basePath}?${createMonthSearchParams(month).toString()}`;
+}

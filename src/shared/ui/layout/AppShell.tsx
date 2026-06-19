@@ -1,64 +1,44 @@
-import { Box, type BoxProps, Stack, type StackProps } from "@mui/material";
-import type { SxProps, Theme } from "@mui/material/styles";
-import type { ReactNode } from "react";
-
-import { designTokenVar } from "@/shared/designSystem";
+import { designTokenVar } from "@shared/designSystem";
+import { APP_LAYER_Z_INDEX } from "@shared/ui/overlay/layers";
+import type { CSSProperties, HTMLAttributes, ReactNode } from "react";
 
 type TestableProps<T> = T & {
   "data-testid"?: string;
 };
 
 type SlotProps = {
-  root?: TestableProps<StackProps>;
-  header?: TestableProps<BoxProps>;
-  main?: TestableProps<BoxProps>;
-  footer?: TestableProps<BoxProps>;
-  snackbar?: TestableProps<BoxProps>;
+  root?: TestableProps<HTMLAttributes<HTMLDivElement> & { sx?: CSSProperties }>;
+  header?: TestableProps<
+    HTMLAttributes<HTMLDivElement> & { sx?: CSSProperties }
+  >;
+  main?: TestableProps<HTMLAttributes<HTMLElement> & { sx?: CSSProperties }>;
+  footer?: TestableProps<HTMLAttributes<HTMLElement> & { sx?: CSSProperties }>;
 };
 
 type AppShellProps = {
   header: ReactNode;
   main: ReactNode;
   footer?: ReactNode;
-  snackbar?: ReactNode;
   minHeight?: number | string;
   slotProps?: SlotProps;
 };
 
 const APP_BACKGROUND = designTokenVar(
   "component.appShell.background",
-  "#F8FAF9"
+  "rgb(248 250 249)",
 );
 const APP_TEXT_COLOR = designTokenVar(
   "component.appShell.textColor",
-  "#1E2A25"
+  "rgb(30 42 37)",
 );
 const CONTENT_BACKGROUND = designTokenVar(
   "component.appShell.contentBackground",
-  "#F8FAF9"
+  "rgb(248 250 249)",
 );
-
-type MergeableSx = SxProps<Theme>;
-
-const normalizeSxArray = (value?: MergeableSx): MergeableSx[] => {
-  if (!value) return [];
-  return Array.isArray(value) ? value : [value];
-};
-
-const mergeSx = (base: MergeableSx, override?: MergeableSx): MergeableSx => {
-  if (!override) {
-    return base;
-  }
-  const baseArray = normalizeSxArray(base);
-  const overrideArray = normalizeSxArray(override);
-  return [...baseArray, ...overrideArray] as MergeableSx;
-};
-
 export default function AppShell({
   header,
   main,
   footer,
-  snackbar,
   minHeight = "100vh",
   slotProps,
 }: AppShellProps) {
@@ -67,79 +47,78 @@ export default function AppShell({
     header: headerSlot,
     main: mainSlot,
     footer: footerSlot,
-    snackbar: snackbarSlot,
   } = slotProps ?? {};
   const { sx: rootSx, ...rootRest } = root ?? {};
   const { sx: headerSx, ...headerRest } = headerSlot ?? {};
   const { sx: mainSx, ...mainRest } = mainSlot ?? {};
   const { sx: footerSx, ...footerRest } = footerSlot ?? {};
-  const { sx: snackbarSx, ...snackbarRest } = snackbarSlot ?? {};
 
   return (
-    <Stack
+    <div
       {...rootRest}
-      sx={mergeSx(
-        {
-          minHeight,
-          backgroundColor: APP_BACKGROUND,
-          color: APP_TEXT_COLOR,
-        },
-        rootSx
-      )}
+      style={{
+        minHeight,
+        width: "100%",
+        maxWidth: "100vw",
+        minWidth: 0,
+        backgroundColor: APP_BACKGROUND,
+        color: APP_TEXT_COLOR,
+        display: "flex",
+        flexDirection: "column",
+        overflowX: "hidden",
+        ...rootSx,
+        ...rootRest.style,
+      }}
     >
-      <Box
+      <div
         {...headerRest}
-        sx={mergeSx(
-          {
-            flexShrink: 0,
-          },
-          headerSx
-        )}
+        style={{
+          position: "relative",
+          // Keep header popovers above sticky content in main, but below overlay layers.
+          zIndex: APP_LAYER_Z_INDEX.header,
+          flexShrink: 0,
+          width: "100%",
+          maxWidth: "100%",
+          minWidth: 0,
+          overflow: "visible",
+          ...headerSx,
+          ...headerRest.style,
+        }}
       >
         {header}
-      </Box>
-      <Box
-        component="main"
+      </div>
+      <main
         {...mainRest}
-        sx={mergeSx(
-          {
-            flex: 1,
-            overflow: "auto",
-            backgroundColor: CONTENT_BACKGROUND,
-          },
-          mainSx
-        )}
+        style={{
+          flex: 1,
+          width: "100%",
+          maxWidth: "100%",
+          minWidth: 0,
+          overflowX: "hidden",
+          overflowY: "auto",
+          backgroundColor: CONTENT_BACKGROUND,
+          ...mainSx,
+          ...mainRest.style,
+        }}
       >
         {main}
-      </Box>
+      </main>
       {footer && (
-        <Box
-          component="footer"
+        <footer
           {...footerRest}
-          sx={mergeSx(
-            {
-              flexShrink: 0,
-            },
-            footerSx
-          )}
+          style={{
+            flexShrink: 0,
+            width: "100%",
+            maxWidth: "100%",
+            minWidth: 0,
+            overflowX: "hidden",
+            ...footerSx,
+            ...footerRest.style,
+          }}
         >
           {footer}
-        </Box>
+        </footer>
       )}
-      {snackbar && (
-        <Box
-          {...snackbarRest}
-          sx={mergeSx(
-            {
-              position: "relative",
-              zIndex: 1,
-            },
-            snackbarSx
-          )}
-        >
-          {snackbar}
-        </Box>
-      )}
-    </Stack>
+    </div>
   );
 }

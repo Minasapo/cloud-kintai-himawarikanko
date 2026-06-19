@@ -4,26 +4,28 @@ import {
   deleteWorkflow,
   updateWorkflow,
 } from "@shared/api/graphql/documents/mutations";
-import { listWorkflows } from "@shared/api/graphql/documents/queries";
+import {
+  getWorkflow as getWorkflowDocument,
+  listWorkflows,
+} from "@shared/api/graphql/documents/queries";
 import { graphqlBaseQuery } from "@shared/api/graphql/graphqlBaseQuery";
+import { executePaginatedQuery } from "@shared/api/graphql/paginatedQuery";
+import { buildListAndItemTags } from "@shared/api/graphql/tagBuilder";
 import type {
   CreateWorkflowInput,
   CreateWorkflowMutation,
   DeleteWorkflowInput,
   DeleteWorkflowMutation,
+  GetWorkflowQuery,
   ListWorkflowsQuery,
+  ModelWorkflowConditionInput,
   UpdateWorkflowInput,
   UpdateWorkflowMutation,
   Workflow,
 } from "@shared/api/graphql/types";
+import { type UpdatePayload } from "@shared/api/graphql/updatePayload";
 
-type WorkflowTag = {
-  type: "Workflow";
-  id: string;
-};
-
-const nonNullable = <T>(value: T | null | undefined): value is T =>
-  value !== null && value !== undefined;
+export type UpdateWorkflowPayload = UpdatePayload<UpdateWorkflowInput, ModelWorkflowConditionInput>;
 
 const buildWorkflowTagId = (workflow: { id?: string | null }) =>
   workflow.id ?? "unknown";
@@ -33,48 +35,35 @@ export const workflowApi = createApi({
   baseQuery: graphqlBaseQuery(),
   tagTypes: ["Workflow"],
   endpoints: (builder) => ({
-    getWorkflows: builder.query<Workflow[], void>({
-      async queryFn(_arg, _api, _extraOptions, baseQuery) {
-        const workflows: Workflow[] = [];
-        let nextToken: string | null = null;
+    getWorkflow: builder.query<Workflow | null, string>({
+      async queryFn(id, _api, _extraOptions, baseQuery) {
+        const result = await baseQuery({
+          document: getWorkflowDocument,
+          variables: { id },
+        });
 
-        do {
-          const result = await baseQuery({
-            document: listWorkflows,
-            variables: { nextToken },
-          });
-
-          if (result.error) {
-            return { error: result.error };
-          }
-
-          const data = result.data as ListWorkflowsQuery | null;
-          const connection = data?.listWorkflows;
-
-          if (!connection) {
-            return { error: { message: "Failed to fetch workflows" } };
-          }
-
-          workflows.push(...(connection.items?.filter(nonNullable) ?? []));
-          nextToken = connection.nextToken ?? null;
-        } while (nextToken);
-
-        return { data: workflows };
-      },
-      providesTags: (result) => {
-        const listTag: WorkflowTag = { type: "Workflow", id: "LIST" };
-        if (!result) {
-          return [listTag];
+        if (result.error) {
+          return { error: result.error };
         }
 
-        return [
-          listTag,
-          ...result.map((workflow) => ({
-            type: "Workflow" as const,
-            id: buildWorkflowTagId(workflow),
-          })),
-        ];
+        const data = result.data as GetWorkflowQuery | null;
+        return { data: data?.getWorkflow ?? null };
       },
+      providesTags: (_result, _error, id) => [
+        { type: "Workflow" as const, id: id ?? "unknown" },
+      ],
+    }),
+    getWorkflows: builder.query<Workflow[], void>({
+      async queryFn(_arg, _api, _extraOptions, baseQuery) {
+        return executePaginatedQuery<Workflow>({
+          baseQuery,
+          document: listWorkflows,
+          connectionExtractor: (data) => (data as ListWorkflowsQuery | null)?.listWorkflows,
+          errorMessage: "Failed to fetch workflows",
+        });
+      },
+      providesTags: (result) =>
+        buildListAndItemTags("Workflow", result, buildWorkflowTagId),
     }),
     createWorkflow: builder.mutation<Workflow, CreateWorkflowInput>({
       async queryFn(input, _api, _extraOptions, baseQuery) {
@@ -96,23 +85,17 @@ export const workflowApi = createApi({
 
         return { data: created };
       },
-      invalidatesTags: (result) => {
-        const listTag: WorkflowTag = { type: "Workflow", id: "LIST" };
-        if (!result) {
-          return [listTag];
-        }
-
-        return [
-          listTag,
-          { type: "Workflow" as const, id: buildWorkflowTagId(result) },
-        ];
-      },
+      invalidatesTags: (result) =>
+        buildListAndItemTags("Workflow", result ? [result] : undefined, buildWorkflowTagId),
     }),
-    updateWorkflow: builder.mutation<Workflow, UpdateWorkflowInput>({
-      async queryFn(input, _api, _extraOptions, baseQuery) {
+    updateWorkflow: builder.mutation<Workflow, UpdateWorkflowPayload>({
+      async queryFn({ input, condition }, _api, _extraOptions, baseQuery) {
         const result = await baseQuery({
           document: updateWorkflow,
-          variables: { input },
+          variables: {
+            input,
+            condition: condition ?? undefined,
+          },
         });
 
         if (result.error) {
@@ -128,17 +111,34 @@ export const workflowApi = createApi({
 
         return { data: updated };
       },
-      invalidatesTags: (result) => {
-        const listTag: WorkflowTag = { type: "Workflow", id: "LIST" };
-        if (!result) {
-          return [listTag];
+      async onQueryStarted(_arg, { dispatch, queryFulfilled }) {
+        try {
+          const { data: updatedWorkflow } = await queryFulfilled;
+          dispatch(
+            workflowApi.util.updateQueryData(
+              "getWorkflows",
+              undefined,
+              (draft) => {
+                const targetIndex = draft.findIndex(
+                  (workflow) => workflow.id === updatedWorkflow.id,
+                );
+                if (targetIndex < 0) return;
+                draft[targetIndex] = updatedWorkflow;
+              },
+            ),
+          );
+          dispatch(
+            workflowApi.util.upsertQueryData(
+              "getWorkflow",
+              updatedWorkflow.id,
+              updatedWorkflow,
+            ),
+          );
+        } catch {
+          // noop: keep mutation error handling in caller
         }
-
-        return [
-          listTag,
-          { type: "Workflow" as const, id: buildWorkflowTagId(result) },
-        ];
       },
+      invalidatesTags: () => [],
     }),
     deleteWorkflow: builder.mutation<Workflow, DeleteWorkflowInput>({
       async queryFn(input, _api, _extraOptions, baseQuery) {
@@ -161,15 +161,18 @@ export const workflowApi = createApi({
         return { data: deleted };
       },
       invalidatesTags: (result, _error, arg) => {
-        const listTag: WorkflowTag = { type: "Workflow", id: "LIST" };
         const targetId = arg.id ?? buildWorkflowTagId(result ?? {});
-        return [listTag, { type: "Workflow", id: targetId }];
+        return [
+          { type: "Workflow", id: "LIST" },
+          { type: "Workflow", id: targetId },
+        ];
       },
     }),
   }),
 });
 
 export const {
+  useGetWorkflowQuery,
   useGetWorkflowsQuery,
   useCreateWorkflowMutation,
   useUpdateWorkflowMutation,

@@ -1,10 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
-  content: [
-    "./index.html",
-    "./src/**/*.{js,jsx,ts,tsx}",
-    "./.storybook/**/*.{js,jsx,ts,tsx,mdx}",
-  ],
+  content: ["./index.html", "./src/**/*.{js,jsx,ts,tsx}"],
   theme: {
     extend: {
       colors: {
@@ -22,9 +18,9 @@ module.exports = {
         "ds-xl": "var(--ds-spacing-xl, 24px)",
       },
       borderRadius: {
-        "ds-sm": "var(--ds-radius-sm, 4px)",
-        "ds-md": "var(--ds-radius-md, 8px)",
-        "ds-lg": "var(--ds-radius-lg, 12px)",
+        "ds-sm": "var(--ds-radius-sm, 2px)",
+        "ds-md": "var(--ds-radius-md, 4px)",
+        "ds-lg": "var(--ds-radius-lg, 6px)",
       },
       fontFamily: {
         sans: [
@@ -34,6 +30,15 @@ module.exports = {
           "BlinkMacSystemFont",
           "sans-serif",
         ],
+      },
+      keyframes: {
+        "dropdown-enter": {
+          from: { opacity: "0", transform: "scale(0.96) translateY(-4px)" },
+          to: { opacity: "1", transform: "scale(1) translateY(0)" },
+        },
+      },
+      animation: {
+        "dropdown-enter": "dropdown-enter 120ms cubic-bezier(0.2, 0.8, 0.4, 1)",
       },
     },
   },

@@ -1,17 +1,10 @@
-import { Stack, styled, Typography } from "@mui/material";
-import Button from "@mui/material/Button";
-import Dialog from "@mui/material/Dialog";
-import DialogActions from "@mui/material/DialogActions";
-import DialogContent from "@mui/material/DialogContent";
-import DialogContentText from "@mui/material/DialogContentText";
-import DialogTitle from "@mui/material/DialogTitle";
+import { AttendanceDate } from "@entities/attendance/lib/AttendanceDate";
+import { AttendanceEditContext } from "@features/attendance/edit/model/AttendanceEditProvider";
+import { styled, Typography } from "@mui/material";
 import { DatePicker } from "@mui/x-date-pickers";
 import dayjs from "dayjs";
 import { useContext, useState } from "react";
 import { Controller } from "react-hook-form";
-
-import { AttendanceDate } from "@/entities/attendance/lib/AttendanceDate";
-import { AttendanceEditContext } from "@/features/attendance/edit/model/AttendanceEditProvider";
 
 const Label = styled(Typography)(() => ({
   width: "150px",
@@ -19,8 +12,9 @@ const Label = styled(Typography)(() => ({
 }));
 
 export function SubstituteHolidayDateInput() {
-  const { control, setValue, restReplace, changeRequests, readOnly } =
-    useContext(AttendanceEditContext);
+  const { control, setValue, restReplace, readOnly } = useContext(
+    AttendanceEditContext,
+  );
 
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [pendingDate, setPendingDate] = useState<dayjs.Dayjs | null>(null);
@@ -30,132 +24,138 @@ export function SubstituteHolidayDateInput() {
   }
 
   return (
-    <Stack direction="row" spacing={0} alignItems={"center"}>
+    <div className="flex items-center gap-4">
       <Label variant="body1">振替休日</Label>
       <Controller
         name="substituteHolidayDate"
         control={control}
         render={({ field, fieldState }) => {
-          const { value, onChange, ...restField } = field;
+          const { value, onChange, onBlur, name, ref: inputRef } = field;
 
           return (
             <>
-              <DatePicker
-                {...restField}
-                label="勤務した日"
-                format={AttendanceDate.DisplayFormat}
-                value={value ? dayjs(value) : null}
-                slotProps={{
-                  textField: {
-                    size: "small",
-                    error: !!fieldState.error,
-                    helperText: fieldState.error?.message,
-                    sx: {
-                      "& .MuiOutlinedInput-root.Mui-error .MuiOutlinedInput-notchedOutline":
-                        {
-                          borderColor: "divider",
+              <div className="min-w-0 flex-1">
+                <DatePicker
+                  value={value ? dayjs(value) : null}
+                  format="YYYY/MM/DD"
+                  disabled={!!readOnly}
+                  onChange={(nextValue) => {
+                    if (!nextValue) {
+                      onChange(null);
+                      return;
+                    }
+
+                    if (nextValue.isValid()) {
+                      setPendingDate(nextValue);
+                      setConfirmOpen(true);
+                    }
+                  }}
+                  slotProps={{
+                    textField: {
+                      size: "small",
+                      fullWidth: true,
+                      name,
+                      onBlur,
+                      inputRef,
+                      inputProps: {
+                        "aria-label": "勤務した日",
+                      },
+                      sx: {
+                        maxWidth: "340px",
+                        "& .MuiInputBase-root": {
+                          height: "34px",
+                          borderRadius: "16px",
+                          fontSize: "0.8125rem",
+                          backgroundColor: "#fff",
+                          boxShadow: "inset 0 1px 0 rgba(255, 255, 255, 0.72)",
                         },
-                      "& .MuiOutlinedInput-root.Mui-error:hover .MuiOutlinedInput-notchedOutline":
-                        {
-                          borderColor: "divider",
+                        "& .MuiOutlinedInput-input": {
+                          padding: "6px 12px",
                         },
-                      "& .MuiOutlinedInput-root.Mui-error.Mui-focused .MuiOutlinedInput-notchedOutline":
-                        {
-                          borderColor: "divider",
+                        "& .MuiSvgIcon-root": {
+                          fontSize: "1rem",
                         },
+                      },
                     },
-                  },
-                }}
-                disabled={changeRequests.length > 0 || !!readOnly}
-                onChange={(date) => {
-                  // ピッカー内で一時的に Dayjs が渡されるのを防ぎ、明示的なクリアのみ即時反映
-                  if (!date) {
-                    onChange(null);
-                  }
-                }}
-                onAccept={(date) => {
-                  if (readOnly) return;
-                  // 新しい日付が設定された場合は確認ダイアログを表示し、
-                  // ユーザーが承認したときのみフォーム値とフラグをクリアする
-                  if (date) {
-                    setPendingDate(date);
-                    setConfirmOpen(true);
-                  } else {
-                    // クリアした場合はそのまま反映
-                    onChange(null);
-                  }
-                }}
-              />
+                  }}
+                />
+                {fieldState.error?.message ? (
+                  <p className="mt-2 text-sm text-rose-600">
+                    {fieldState.error.message}
+                  </p>
+                ) : null}
+              </div>
+              {confirmOpen ? (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/30 px-4">
+                  <div className="w-full max-w-md rounded-[24px] border border-emerald-200 bg-white p-5 shadow-[0_24px_60px_-32px_rgba(15,23,42,0.45)]">
+                    <div className="text-base font-semibold text-slate-950">
+                      一部の入力内容をクリアします
+                    </div>
+                    <div className="mt-3 text-sm leading-6 text-slate-600">
+                      振替休日を設定すると、以下の入力内容がクリアされます。
+                      <ul>
+                        <li>勤務開始・終了時刻</li>
+                        <li>休憩時間</li>
+                        <li>有給フラグ</li>
+                        <li>直行フラグ</li>
+                        <li>直帰フラグ</li>
+                      </ul>
+                      よろしいですか？
+                    </div>
+                    <div className="mt-5 flex flex-wrap justify-end gap-2">
+                      <button
+                        type="button"
+                        className="rounded-[12px] border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                        onClick={() => {
+                          if (pendingDate) {
+                            onChange(
+                              pendingDate.format(AttendanceDate.DataFormat),
+                            );
+                          }
 
-              <Dialog
-                open={confirmOpen}
-                onClose={() => {
-                  setConfirmOpen(false);
-                  setPendingDate(null);
-                }}
-                aria-labelledby="confirm-clear-dialog"
-              >
-                <DialogTitle id="confirm-clear-dialog">
-                  一部の入力内容をクリアします
-                </DialogTitle>
-                <DialogContent>
-                  <DialogContentText>
-                    振替休日を設定すると、以下の入力内容がクリアされます。
-                    <ul>
-                      <li>勤務開始・終了時刻</li>
-                      <li>休憩時間</li>
-                      <li>有給フラグ</li>
-                      <li>直行フラグ</li>
-                      <li>直帰フラグ</li>
-                    </ul>
-                    よろしいですか？
-                  </DialogContentText>
-                </DialogContent>
-                <DialogActions>
-                  <Button
-                    onClick={() => {
-                      if (pendingDate) {
-                        onChange(pendingDate.format(AttendanceDate.DataFormat));
-                      }
+                          setConfirmOpen(false);
+                          setPendingDate(null);
+                        }}
+                      >
+                        クリアせず設定
+                      </button>
+                      <button
+                        type="button"
+                        className="rounded-[12px] border border-emerald-500 bg-emerald-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-600"
+                        onClick={() => {
+                          if (readOnly) {
+                            setConfirmOpen(false);
+                            setPendingDate(null);
+                            return;
+                          }
 
-                      setConfirmOpen(false);
-                      setPendingDate(null);
-                    }}
-                  >
-                    クリアせず設定
-                  </Button>
-                  <Button
-                    onClick={() => {
-                      if (readOnly) {
-                        setConfirmOpen(false);
-                        setPendingDate(null);
-                        return;
-                      }
+                          if (pendingDate) {
+                            onChange(
+                              pendingDate.format(AttendanceDate.DataFormat),
+                            );
 
-                      if (pendingDate) {
-                        onChange(pendingDate.format(AttendanceDate.DataFormat));
+                            setValue("paidHolidayFlag", false);
+                            setValue("goDirectlyFlag", false);
+                            setValue("returnDirectlyFlag", false);
+                            setValue("startTime", null);
+                            setValue("endTime", null);
+                            restReplace([]);
+                          }
 
-                        setValue("paidHolidayFlag", false);
-                        setValue("goDirectlyFlag", false);
-                        setValue("returnDirectlyFlag", false);
-                        setValue("startTime", null);
-                        setValue("endTime", null);
-                        restReplace([]);
-                      }
-
-                      setConfirmOpen(false);
-                      setPendingDate(null);
-                    }}
-                    autoFocus
-                  >
-                    クリアして設定
-                  </Button>
-                </DialogActions>
-              </Dialog>
+                          setConfirmOpen(false);
+                          setPendingDate(null);
+                        }}
+                      >
+                        クリアして設定
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
             </>
           );
         }}
       />
-    </Stack>
+    </div>
   );
 }

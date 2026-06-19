@@ -30,6 +30,7 @@ type Staff @model @auth(rules: [{ allow: private }]) {
   approverMultipleMode: ApproverMultipleMode
   shiftGroup: String
   attendanceManagementEnabled: Boolean
+  version: Int
 }
 
 enum ApproverSettingMode {
@@ -59,12 +60,14 @@ type HolidayCalendar @model @auth(rules: [{ allow: private }]) {
   id: ID!
   holidayDate: String!
   name: String!
+  version: Int
 }
 
 type CompanyHolidayCalendar @model @auth(rules: [{ allow: private }]) {
   id: ID!
   holidayDate: String!
   name: String!
+  version: Int
 }
 
 type EventCalendar @model @auth(rules: [{ allow: private }]) {
@@ -72,6 +75,7 @@ type EventCalendar @model @auth(rules: [{ allow: private }]) {
   eventDate: String!
   name: String!
   description: String
+  version: Int
 }
 
 type CloseDate @model @auth(rules: [{ allow: private }]) {
@@ -79,6 +83,7 @@ type CloseDate @model @auth(rules: [{ allow: private }]) {
   closeDate: String!
   startDate: String!
   endDate: String!
+  version: Int
 }
 
 type SystemComment {
@@ -95,6 +100,9 @@ type Attendance @model @auth(rules: [{ allow: private }]) {
       sortKeyFields: ["workDate"]
       queryField: "attendancesByStaffId"
     )
+  # 重複防止用の論理キー（staffId#workDate）
+  staffWorkDateKey: String
+    @index(name: "byStaffWorkDate", queryField: "attendancesByStaffWorkDate")
   workDate: String!
   startTime: String
   endTime: String
@@ -115,6 +123,51 @@ type Attendance @model @auth(rules: [{ allow: private }]) {
   revision: Int
 }
 
+enum AttendanceStatisticsStatus {
+  IDLE
+  RUNNING
+  SUCCEEDED
+  FAILED
+}
+
+type AttendanceStatisticsMonthlySummary {
+  month: Int!
+  rangeStart: String!
+  rangeEnd: String!
+  workHours: Float!
+  paidDays: Int!
+  specialHolidayDays: Int!
+  absentDays: Int!
+  workDays: Int!
+  isFallback: Boolean!
+}
+
+type AttendanceStatisticsSnapshot @model @auth(rules: [{ allow: private }]) {
+  id: ID!
+  staffId: String!
+    @index(
+      name: "byStaffIdYear"
+      sortKeyFields: ["year"]
+      queryField: "attendanceStatisticsByStaffIdYear"
+    )
+  year: Int!
+  status: AttendanceStatisticsStatus!
+  progressPercent: Float
+  currentStepLabel: String
+  rangeStart: String
+  rangeEnd: String
+  monthlySummaries: [AttendanceStatisticsMonthlySummary!]
+  totalWorkHours: Float
+  totalPaidDays: Int
+  totalSpecialHolidayDays: Int
+  totalAbsentDays: Int
+  totalWorkDays: Int
+  startedAt: String
+  completedAt: String
+  lastAggregatedAt: String
+  errorMessage: String
+}
+
 type Document @model @auth(rules: [{ allow: private }]) {
   id: ID!
   title: String!
@@ -127,6 +180,7 @@ type Document @model @auth(rules: [{ allow: private }]) {
 type CheckForUpdate @model {
   id: ID!
   deployUuid: String!
+  version: Int
 }
 
 type Rest {
@@ -170,6 +224,43 @@ type AttendanceChangeRequest {
   completed: Boolean
   comment: String
   staffComment: String
+}
+
+input UpsertAttendanceByStaffAndDateInput {
+  staffId: String!
+  workDate: String!
+  occurredAt: String!
+  action: String!
+  idempotencyKey: String!
+  startTime: String
+  endTime: String
+  goDirectlyFlag: Boolean
+  returnDirectlyFlag: Boolean
+  absentFlag: Boolean
+  rests: [UpsertRestInput]
+  hourlyPaidHolidayTimes: [UpsertHourlyPaidHolidayTimeInput]
+  remarks: String
+  paidHolidayFlag: Boolean
+  specialHolidayFlag: Boolean
+  isDeemedHoliday: Boolean
+  hourlyPaidHolidayHours: Int
+  substituteHolidayDate: String
+}
+
+input UpsertRestInput {
+  startTime: String
+  endTime: String
+}
+
+input UpsertHourlyPaidHolidayTimeInput {
+  startTime: String
+  endTime: String
+}
+
+type Mutation {
+  upsertAttendanceByStaffAndDate(
+    input: UpsertAttendanceByStaffAndDateInput!
+  ): Attendance @auth(rules: [{ allow: private }])
 }
 
 type Link {
@@ -228,6 +319,15 @@ type ShiftRequestHistory {
   changeReason: String
 }
 
+type ShiftRequestComment {
+  id: ID!
+  cellKey: String!
+  staffId: String!
+  authorName: String
+  body: String!
+  createdAt: String!
+}
+
 type ShiftRequest @model @auth(rules: [{ allow: private }]) {
   id: ID!
   staffId: String!
@@ -247,6 +347,20 @@ type ShiftRequest @model @auth(rules: [{ allow: private }]) {
   version: Int # 楽観的ロック用バージョン番号
   # 変更履歴（最新が先頭になるようクライアントで整列）
   histories: [ShiftRequestHistory]
+  # セルコメント（共同編集時のセル単位コメント）
+  comments: [ShiftRequestComment]
+}
+
+type ShiftEditLock @model @auth(rules: [{ allow: private }]) {
+  id: ID!
+  targetMonth: String!
+  staffId: String!
+  date: String!
+  holderUserId: String!
+  holderUserName: String!
+  acquiredAt: AWSDateTime!
+  expiresAt: AWSDateTime!
+  version: Int!
 }
 
 type ShiftPlanMonthSetting {
@@ -269,6 +383,29 @@ type ShiftPlanYear @model @auth(rules: [{ allow: private }]) {
   notes: String
   createdBy: String
   updatedBy: String
+  version: Int
+}
+
+type WorkflowCategoryOrderItem {
+  category: WorkflowCategory!
+  label: String!
+  displayOrder: Int!
+  enabled: Boolean!
+}
+
+input WorkflowCategoryOrderItemInput {
+  category: WorkflowCategory!
+  label: String!
+  displayOrder: Int!
+  enabled: Boolean!
+}
+
+type WorkflowCategoryOrder {
+  categories: [WorkflowCategoryOrderItem!]!
+}
+
+input WorkflowCategoryOrderInput {
+  categories: [WorkflowCategoryOrderItemInput!]!
 }
 
 type WorkflowCategoryOrderItem {
@@ -309,6 +446,9 @@ type AppConfig @model {
   amPmHolidayEnabled: Boolean
   officeMode: Boolean
   attendanceStatisticsEnabled: Boolean
+  workflowNotificationEnabled: Boolean
+  timeRecorderAnnouncementEnabled: Boolean
+  timeRecorderAnnouncementMessage: String
   absentEnabled: Boolean
   hourlyPaidHolidayEnabled: Boolean
   links: [Link]
@@ -319,6 +459,9 @@ type AppConfig @model {
   shiftGroups: [ShiftGroup]
   workflowCategoryOrder: WorkflowCategoryOrder
   overTimeCheckEnabled: Boolean
+  shiftCollaborativeEnabled: Boolean
+  shiftDefaultMode: String
+  version: Int
 }
 
 type EmailResult {
@@ -348,6 +491,7 @@ enum WorkflowCategory {
   OVERTIME
   CLOCK_CORRECTION
   CUSTOM
+  COMPENSATORY_LEAVE
 }
 
 enum WorkflowStatus {
@@ -408,6 +552,49 @@ type Workflow @model @auth(rules: [{ allow: private }]) {
   submitterApproverMultipleMode: ApproverMultipleMode
   overTimeDetails: OverTimeWorkflow
   comments: [WorkflowComment]
+  version: Int
+}
+
+type WorkflowTemplate @model @auth(rules: [{ allow: private }]) {
+  id: ID!
+  name: String!
+  title: String!
+  content: String!
+  organizationId: String!
+    @index(
+      name: "workflowTemplatesByOrganizationId"
+      queryField: "workflowTemplatesByOrganizationId"
+    )
+  version: Int
+}
+
+enum WorkflowNotificationEventType {
+  WORKFLOW_COMMENT
+}
+
+type WorkflowNotificationEvent @model @auth(rules: [{ allow: private }]) {
+  id: ID!
+  recipientStaffId: String!
+    @index(
+      name: "workflowNotificationEventsByRecipient"
+      sortKeyFields: ["eventAt"]
+      queryField: "workflowNotificationEventsByRecipient"
+    )
+  actorStaffId: String!
+  workflowId: ID!
+    @index(
+      name: "workflowNotificationEventsByWorkflow"
+      sortKeyFields: ["eventAt"]
+      queryField: "workflowNotificationEventsByWorkflow"
+    )
+  eventType: WorkflowNotificationEventType!
+  commentId: ID
+  title: String!
+  body: String!
+  isRead: Boolean!
+  readAt: String
+  eventAt: String!
+  version: Int
 }
 
 type WorkflowTemplate @model @auth(rules: [{ allow: private }]) {
@@ -430,24 +617,47 @@ type OperationLog @model @auth(rules: [{ allow: private }]) {
       sortKeyFields: ["timestamp"]
       queryField: "operationLogsByStaffId"
     )
+  resourceKey: String!
+    @index(
+      name: "byResourceKey"
+      sortKeyFields: ["timestamp"]
+      queryField: "operationLogsByResourceKey"
+    )
+  targetStaffId: String
   # 行った操作の種類（例: "LOGIN", "ATTENDANCE_UPDATE"）
   action: String!
   # 対象リソースの種類（例: "Attendance", "Workflow", "AppConfig"）
   resource: String
   # 対象リソースの ID（あれば）
   resourceId: String
+  summary: String
   # ISO 8601 形式のタイムスタンプ
   timestamp: String!
-  # 操作の詳細を JSON 文字列などで保存
-  details: String
+  before: AWSJSON
+  after: AWSJSON
+  diff: AWSJSON
+  # 操作の詳細（JSON）
+  details: AWSJSON
   # オプション: 発生元 IP
   ipAddress: String
   # オプション: ユーザーエージェント
   userAgent: String
-  # 任意の追加メタデータ（JSON 文字列）
-  metadata: String
+  # 任意の追加メタデータ（JSON）
+  metadata: AWSJSON
+  # クライアントのタイムゾーン（例: Asia/Tokyo）
+  clientTimezone: String
+  # クライアントで観測した発生時刻（ISO 8601）
+  occurredAt: String
+  # 業務日換算後の勤務日（YYYY-MM-DD）
+  resolvedWorkDate: String
+  # クライアント側で生成した冪等キー
+  idempotencyKey: String
+  # クライアントアプリのバージョン
+  appVersion: String
   # 重大度レベル（例: INFO, WARN, ERROR）
   severity: String
+  logFormatVersion: Int!
+  version: Int
 }
 
 type AuditLog @model @auth(rules: [{ allow: groups, groups: ["Admin"] }]) {
@@ -466,6 +676,7 @@ type AuditLog @model @auth(rules: [{ allow: groups, groups: ["Admin"] }]) {
   createdAt: AWSDateTime!
   ttl: AWSTimestamp
   reason: String
+  version: Int
 }
 
 enum DailyReportStatus {
@@ -510,6 +721,7 @@ type DailyReport @model @auth(rules: [{ allow: private }]) {
   updatedAt: String
   reactions: [DailyReportReaction]
   comments: [DailyReportComment]
+  version: Int
 }
 
 # 共同編集用のバッチ更新型

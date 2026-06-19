@@ -1,20 +1,24 @@
-import { Container, Stack } from "@mui/material";
+import { designTokenVar } from "@shared/designSystem";
 import CommonBreadcrumbs, {
   type BreadcrumbItem,
 } from "@shared/ui/breadcrumbs/CommonBreadcrumbs";
-import Title from "@shared/ui/typography/Title";
-import type { ReactNode } from "react";
+import {
+  getPageWidthStyle,
+  type LegacyPageMaxWidth,
+  type PageWidthPreset,
+  resolveLegacyPageWidth,
+} from "@shared/ui/layout/pageWidthPresets";
+import { PageTitle } from "@shared/ui/typography";
+import type { CSSProperties, ReactNode } from "react";
 
-import { designTokenVar } from "@/shared/designSystem";
-
-const PAGE_PADDING_TOP = designTokenVar("component.page.paddingTop", "24px");
 const PAGE_SECTION_GAP = designTokenVar("component.page.sectionGap", "16px");
 
 interface PageProps {
   title: string;
   breadcrumbs?: BreadcrumbItem[];
   children: ReactNode;
-  maxWidth?: "xl" | "lg" | "md" | "sm" | false;
+  width?: PageWidthPreset;
+  maxWidth?: LegacyPageMaxWidth;
   showDefaultHeader?: boolean;
 }
 
@@ -22,25 +26,24 @@ export default function Page({
   title,
   breadcrumbs = [{ label: "TOP", href: "/" }],
   children,
+  width,
   maxWidth = "xl",
   showDefaultHeader = true,
 }: PageProps) {
+  const resolvedWidth = width ?? resolveLegacyPageWidth(maxWidth);
+  const maxWidthStyle: CSSProperties = getPageWidthStyle(resolvedWidth);
+
   return (
-    <Container
-      maxWidth={maxWidth}
-      disableGutters
-      className="pt-6"
-      style={{ paddingTop: PAGE_PADDING_TOP }}
-    >
-      <Stack direction="column" spacing={0} style={{ gap: PAGE_SECTION_GAP }}>
+    <div style={maxWidthStyle}>
+      <div className="flex flex-col" style={{ gap: PAGE_SECTION_GAP }}>
         {showDefaultHeader && (
           <>
             <CommonBreadcrumbs items={breadcrumbs} current={title} />
-            <Title>{title}</Title>
+            <PageTitle>{title}</PageTitle>
           </>
         )}
         {children}
-      </Stack>
-    </Container>
+      </div>
+    </div>
   );
 }

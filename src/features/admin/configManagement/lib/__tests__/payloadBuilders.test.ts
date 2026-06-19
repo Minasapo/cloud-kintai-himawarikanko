@@ -1,11 +1,10 @@
-import dayjs from "dayjs";
-
-import { DEFAULT_CONFIG_NAME } from "@/features/admin/configManagement/lib/constants";
+import { DEFAULT_CONFIG_NAME } from "@features/admin/configManagement/lib/constants";
 import {
   buildCreatePayload,
   buildUpdatePayload,
   ConfigFormState,
-} from "@/features/admin/configManagement/lib/payloadHelpers";
+} from "@features/admin/configManagement/lib/payloadHelpers";
+import dayjs from "dayjs";
 
 describe("Payload Builders", () => {
   const baseFormState: Omit<ConfigFormState, "id"> = {
@@ -28,7 +27,12 @@ describe("Payload Builders", () => {
     amPmHolidayEnabled: true,
     specialHolidayEnabled: false,
     attendanceStatisticsEnabled: true,
+    workflowNotificationEnabled: true,
+    timeRecorderAnnouncementEnabled: true,
+    timeRecorderAnnouncementMessage: "お知らせ本文",
     overTimeCheckEnabled: true,
+    shiftCollaborativeEnabled: true,
+    shiftDefaultMode: "collaborative",
     startTime: dayjs("2020-01-01T09:00:00"),
     endTime: dayjs("2020-01-01T18:00:00"),
     lunchRestStartTime: dayjs("2020-01-01T12:00:00"),
@@ -54,6 +58,9 @@ describe("Payload Builders", () => {
       expect(payload.amPmHolidayEnabled).toBe(true);
       expect(payload.specialHolidayEnabled).toBe(false);
       expect(payload.attendanceStatisticsEnabled).toBe(true);
+      expect(payload.workflowNotificationEnabled).toBe(true);
+      expect(payload.timeRecorderAnnouncementEnabled).toBe(true);
+      expect(payload.timeRecorderAnnouncementMessage).toBe("お知らせ本文");
       expect(typeof payload.standardWorkHours).toBe("number");
     });
 
@@ -160,6 +167,15 @@ describe("Payload Builders", () => {
       );
       expect(updatePayload.attendanceStatisticsEnabled).toBe(
         createPayload.attendanceStatisticsEnabled,
+      );
+      expect(updatePayload.workflowNotificationEnabled).toBe(
+        createPayload.workflowNotificationEnabled,
+      );
+      expect(updatePayload.timeRecorderAnnouncementEnabled).toBe(
+        createPayload.timeRecorderAnnouncementEnabled,
+      );
+      expect(updatePayload.timeRecorderAnnouncementMessage).toBe(
+        createPayload.timeRecorderAnnouncementMessage,
       );
     });
 

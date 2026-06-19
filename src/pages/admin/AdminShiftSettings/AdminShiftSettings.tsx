@@ -1,228 +1,195 @@
-import { zodResolver } from "@hookform/resolvers/zod";
-import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
-import { Alert, Button, Paper, Stack, Typography } from "@mui/material";
-import {
-  CreateAppConfigInput,
-  UpdateAppConfigInput,
-} from "@shared/api/graphql/types";
-// Title removed per admin UI simplification
-import { useCallback, useContext, useEffect, useMemo, useState } from "react";
-import { useFieldArray, useForm } from "react-hook-form";
+import { useAppDispatchV2 } from "@app/hooks";
+import AdminSettingsLayout from "@features/admin/layout/ui/AdminSettingsLayout";
+import { useAdminShiftSettings } from "@features/admin-config-shift/useAdminShiftSettings";
+import { pushNotification } from "@shared/lib/store/notificationSlice";
+import { usePageLeaveGuard } from "@shared/ui/feedback/usePageLeaveGuard";
+import { useCallback, useRef, useState } from "react";
 
-import { useAppDispatchV2 } from "@/app/hooks";
-import { AppConfigContext } from "@/context/AppConfigContext";
-import { E14001, S14001, S14002 } from "@/errors";
-import {
-  setSnackbarError,
-  setSnackbarSuccess,
-} from "@/shared/lib/store/snackbarSlice";
+import { S14001, S14002 } from "@/errors";
 
-import {
-  buildShiftGroupPayload,
-  createShiftGroup,
-  SHIFT_GROUP_UI_TEXTS,
-  ShiftGroupRow,
-} from "./";
-import { toShiftGroupFormValue } from "./shiftGroupFactory";
-import type { ShiftGroupFormState } from "./shiftGroupSchema";
-import { shiftGroupFormSchema } from "./shiftGroupSchema";
+import ShiftDisplaySettingsPanel from "./ShiftDisplaySettingsPanel";
+import ShiftGroupSettingsPanel from "./ShiftGroupSettingsPanel";
 
-const SHIFT_GROUP_ERROR_FIELDS = [
-  { key: "label", label: "ラベル名" },
-  { key: "min", label: "最小人数" },
-  { key: "max", label: "最大人数" },
-  { key: "fixed", label: "固定人数" },
-] as const;
+type ShiftSettingsTab = "shift-group" | "shift-display";
 
-const getValidationDetails = (errors: {
-  shiftGroups?: Array<Record<string, { message?: unknown } | undefined>>;
-}) => {
-  const details: string[] = [];
+const SHIFT_SETTINGS_TABS: ReadonlyArray<{
+  value: ShiftSettingsTab;
+  label: string;
+}> = [
+  { value: "shift-group", label: "シフトグループ" },
+  { value: "shift-display", label: "シフト表示" },
+];
 
-  errors.shiftGroups?.forEach((groupError, index) => {
-    if (!groupError) {
-      return;
-    }
-
-    const messageToLabels = new Map<string, string[]>();
-    SHIFT_GROUP_ERROR_FIELDS.forEach(({ key, label }) => {
-      const message = groupError[key]?.message;
-      if (typeof message !== "string" || message.length === 0) {
-        return;
-      }
-
-      const labels = messageToLabels.get(message) ?? [];
-      if (!labels.includes(label)) {
-        labels.push(label);
-      }
-      messageToLabels.set(message, labels);
-    });
-
-    messageToLabels.forEach((labels, message) => {
-      const labelText = labels.join(" / ");
-      details.push(`${index + 1}行目 ${labelText}: ${message}`);
-    });
-  });
-
-  return details;
-};
+const getTabId = (tab: ShiftSettingsTab) => `admin-shift-settings-tab-${tab}`;
+const getPanelId = (tab: ShiftSettingsTab) =>
+  `admin-shift-settings-panel-${tab}`;
 
 export default function AdminShiftSettings() {
-  const { getShiftGroups, getConfigId, saveConfig, fetchConfig } =
-    useContext(AppConfigContext);
   const dispatch = useAppDispatchV2();
-  const [configId, setConfigId] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
+  const [activeTab, setActiveTab] = useState<ShiftSettingsTab>("shift-group");
+  const tabRefs = useRef<Record<ShiftSettingsTab, HTMLButtonElement | null>>({
+    "shift-group": null,
+    "shift-display": null,
+  });
+
+  const handleSaveSuccess = useCallback(
+    (isUpdate: boolean) => {
+      dispatch(
+        pushNotification({
+          tone: "success",
+          message: isUpdate ? S14002 : S14001,
+        }),
+      );
+    },
+    [dispatch],
+  );
 
   const {
     control,
-    handleSubmit,
-    reset,
-    trigger,
-    formState: { errors },
-  } = useForm<ShiftGroupFormState>({
-    defaultValues: { shiftGroups: [] },
-    resolver: zodResolver(shiftGroupFormSchema),
-    mode: "onChange",
+    fields,
+    validationDetails,
+    hasValidationError,
+    savingShiftGroup,
+    savingShiftDisplay,
+    isDirty,
+    isBusy,
+    shiftDefaultMode,
+    setShiftDefaultMode,
+    handleAddGroup,
+    handleRemoveGroup,
+    handleSaveShiftGroup,
+    handleSaveShiftDisplay,
+  } = useAdminShiftSettings({
+    enableShiftDisplayAutoSave: false,
+    onShiftDisplaySaveSuccess: handleSaveSuccess,
   });
-  const { fields, append, remove } = useFieldArray({
-    control,
-    name: "shiftGroups",
+
+  const { dialog } = usePageLeaveGuard({
+    isDirty,
+    isBusy,
   });
 
-  useEffect(() => {
-    const initialGroups = getShiftGroups();
-    reset({
-      shiftGroups: initialGroups.map((group) => toShiftGroupFormValue(group)),
-    });
-    setConfigId(getConfigId());
-    void trigger();
-  }, [getConfigId, getShiftGroups, reset, trigger]);
+  const handleTabKeyDown = (
+    event: React.KeyboardEvent<HTMLButtonElement>,
+    currentTab: ShiftSettingsTab,
+  ) => {
+    const currentIndex = SHIFT_SETTINGS_TABS.findIndex(
+      (tab) => tab.value === currentTab,
+    );
 
-  const handleAddGroup = () => {
-    append(createShiftGroup());
-    void trigger();
-  };
-
-  const validationDetails = useMemo(
-    () =>
-      getValidationDetails(errors as {
-        shiftGroups?: Array<Record<string, { message?: unknown } | undefined>>;
-      }),
-    [errors],
-  );
-  const hasValidationError = validationDetails.length > 0;
-
-  const persistConfig = useCallback(
-    async (payloadShiftGroups: ReturnType<typeof buildShiftGroupPayload>) => {
-      if (configId) {
-        await saveConfig({
-          id: configId,
-          shiftGroups: payloadShiftGroups,
-        } as UpdateAppConfigInput);
-        dispatch(setSnackbarSuccess(S14002));
-      } else {
-        await saveConfig({
-          name: "default",
-          shiftGroups: payloadShiftGroups,
-        } as CreateAppConfigInput);
-        dispatch(setSnackbarSuccess(S14001));
-      }
-      await fetchConfig();
-    },
-    [configId, dispatch, fetchConfig, saveConfig],
-  );
-
-  const handleSave = handleSubmit(async (values) => {
-    if (saving) {
+    if (currentIndex < 0) {
       return;
     }
 
-    setSaving(true);
-    const payloadShiftGroups = buildShiftGroupPayload(values.shiftGroups);
+    const moveFocusTo = (nextIndex: number) => {
+      const nextTab = SHIFT_SETTINGS_TABS[nextIndex];
+      if (!nextTab) {
+        return;
+      }
+      setActiveTab(nextTab.value);
+      tabRefs.current[nextTab.value]?.focus();
+    };
 
-    try {
-      await persistConfig(payloadShiftGroups);
-    } catch (error) {
-      console.error(error);
-      dispatch(setSnackbarError(E14001));
-    } finally {
-      setSaving(false);
+    if (event.key === "ArrowRight" || event.key === "ArrowDown") {
+      event.preventDefault();
+      moveFocusTo((currentIndex + 1) % SHIFT_SETTINGS_TABS.length);
+      return;
     }
-  });
+
+    if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
+      event.preventDefault();
+      moveFocusTo(
+        (currentIndex - 1 + SHIFT_SETTINGS_TABS.length) %
+          SHIFT_SETTINGS_TABS.length,
+      );
+      return;
+    }
+
+    if (event.key === "Home") {
+      event.preventDefault();
+      moveFocusTo(0);
+      return;
+    }
+
+    if (event.key === "End") {
+      event.preventDefault();
+      moveFocusTo(SHIFT_SETTINGS_TABS.length - 1);
+    }
+  };
 
   return (
-    <Stack spacing={2.5}>
-      <Stack spacing={0.5}>
-        <Typography variant="subtitle2">
-          {SHIFT_GROUP_UI_TEXTS.introTitle}
-        </Typography>
-        <Stack component="ul" sx={{ m: 0, pl: 3 }}>
-          {SHIFT_GROUP_UI_TEXTS.introBullets.map((text) => (
-            <Typography key={text} component="li" variant="body2">
-              {text}
-            </Typography>
-          ))}
-        </Stack>
-      </Stack>
-      <Alert severity="info">
-        {SHIFT_GROUP_UI_TEXTS.saveInfo}
-      </Alert>
-
-      <Paper sx={{ p: 2 }}>
-        <Stack spacing={3}>
-          <Typography variant="h6">シフトグループ</Typography>
-          <Stack spacing={1.5}>
-            {fields.length === 0 ? (
-              <Alert severity="info" variant="outlined">
-                {SHIFT_GROUP_UI_TEXTS.emptyGroups}
-              </Alert>
-            ) : (
-              fields.map((group, index) => (
-                <ShiftGroupRow
-                  key={group.id}
-                  control={control}
-                  index={index}
-                  onDelete={() => remove(index)}
-                />
-              ))
-            )}
-          </Stack>
-          <Button
-            variant="outlined"
-            onClick={handleAddGroup}
-            startIcon={<AddCircleOutlineIcon />}
+    <AdminSettingsLayout>
+      {dialog}
+      <div className="flex flex-col gap-6">
+        <div className="rounded-lg border border-slate-200 bg-white p-2 shadow-sm">
+          <div
+            className="grid grid-cols-2 gap-2"
+            role="tablist"
+            aria-label="シフト設定タブ"
           >
-            グループを追加
-          </Button>
-          {hasValidationError && (
-            <Alert severity="warning">
-              <Stack spacing={0.5}>
-                <Typography variant="body2">
-                  {SHIFT_GROUP_UI_TEXTS.validationWarning}
-                </Typography>
-                <Stack component="ul" sx={{ m: 0, pl: 3 }}>
-                  {validationDetails.map((detail) => (
-                    <Typography key={detail} component="li" variant="body2">
-                      {detail}
-                    </Typography>
-                  ))}
-                </Stack>
-              </Stack>
-            </Alert>
-          )}
-        </Stack>
-      </Paper>
+            {SHIFT_SETTINGS_TABS.map((tab) => (
+              <button
+                key={tab.value}
+                type="button"
+                role="tab"
+                id={getTabId(tab.value)}
+                aria-selected={activeTab === tab.value}
+                aria-controls={getPanelId(tab.value)}
+                tabIndex={activeTab === tab.value ? 0 : -1}
+                onClick={() => setActiveTab(tab.value)}
+                onKeyDown={(event) => handleTabKeyDown(event, tab.value)}
+                ref={(element) => {
+                  tabRefs.current[tab.value] = element;
+                }}
+                className={[
+                  "rounded-xl px-4 py-3 text-sm font-medium transition",
+                  activeTab === tab.value
+                    ? "bg-emerald-600 text-white"
+                    : "bg-slate-100 text-slate-700 hover:bg-slate-200",
+                ].join(" ")}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        </div>
 
-      <Stack direction="row" justifyContent="flex-end" sx={{ pb: 4 }}>
-        <Button
-          variant="contained"
-          onClick={handleSave}
-          disabled={hasValidationError || saving}
+        <div
+          id={getPanelId("shift-group")}
+          role="tabpanel"
+          hidden={activeTab !== "shift-group"}
+          aria-labelledby={getTabId("shift-group")}
         >
-          {saving ? "保存中..." : "保存"}
-        </Button>
-      </Stack>
-    </Stack>
+          {activeTab === "shift-group" && (
+            <ShiftGroupSettingsPanel
+              control={control}
+              fields={fields}
+              validationDetails={validationDetails}
+              hasValidationError={hasValidationError}
+              savingShiftGroup={savingShiftGroup}
+              onAddGroup={handleAddGroup}
+              onRemoveGroup={handleRemoveGroup}
+              onSaveShiftGroup={handleSaveShiftGroup}
+            />
+          )}
+        </div>
+
+        <div
+          id={getPanelId("shift-display")}
+          role="tabpanel"
+          hidden={activeTab !== "shift-display"}
+          aria-labelledby={getTabId("shift-display")}
+        >
+          {activeTab === "shift-display" && (
+            <ShiftDisplaySettingsPanel
+              shiftDefaultMode={shiftDefaultMode}
+              savingShiftDisplay={savingShiftDisplay}
+              onSwitchShiftDefaultMode={setShiftDefaultMode}
+              onSaveShiftDisplay={handleSaveShiftDisplay}
+            />
+          )}
+        </div>
+      </div>
+    </AdminSettingsLayout>
   );
 }

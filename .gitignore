@@ -12,10 +12,6 @@ coverage-summary.json
 *.coverage.json
 .nyc_output
 
-# storybook
-/storybook-static
-.storybook-presets
-
 # production
 /build
 
@@ -95,4 +91,10 @@ amplify-gradle-config.json
 amplifytools.xcconfig
 .secret-*
 **.sample
-#amplify-do-not-edit-end
+.claude/
+.mcp.json
+.continue/
+.copilot/
+.agents/
+.clinerules/
+.github/agents/

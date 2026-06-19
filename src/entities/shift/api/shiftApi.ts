@@ -4,6 +4,8 @@ import {
   updateShiftRequest,
 } from "@shared/api/graphql/documents/mutations";
 import { graphqlBaseQuery } from "@shared/api/graphql/graphqlBaseQuery";
+import { executePaginatedQuery } from "@shared/api/graphql/paginatedQuery";
+import { buildListAndItemTags } from "@shared/api/graphql/tagBuilder";
 import type {
   CreateShiftRequestInput,
   CreateShiftRequestMutation,
@@ -15,6 +17,7 @@ import type {
   UpdateShiftRequestInput,
   UpdateShiftRequestMutation,
 } from "@shared/api/graphql/types";
+import { type UpdatePayload } from "@shared/api/graphql/updatePayload";
 
 export type ShiftRequestLite = {
   id: string;
@@ -24,6 +27,24 @@ export type ShiftRequestLite = {
     date: string;
     status: ShiftRequestStatus;
     isLocked?: boolean | null;
+  } | null> | null;
+  comments?: Array<{
+    id: string;
+    cellKey: string;
+    staffId: string;
+    authorName?: string | null;
+    body: string;
+    createdAt: string;
+  } | null> | null;
+  histories?: Array<{
+    version: number;
+    entries?: Array<{
+      date: string;
+      status: string;
+      isLocked?: boolean | null;
+    } | null> | null;
+    recordedAt: string;
+    recordedByStaffId?: string | null;
   } | null> | null;
   updatedAt?: string | null;
   updatedBy?: string | null;
@@ -60,6 +81,24 @@ const listShiftRequestsLite = /* GraphQL */ `
           status
           isLocked
         }
+        comments {
+          id
+          cellKey
+          staffId
+          authorName
+          body
+          createdAt
+        }
+        histories {
+          version
+          entries {
+            date
+            status
+            isLocked
+          }
+          recordedAt
+          recordedByStaffId
+        }
         updatedAt
         updatedBy
         version
@@ -91,6 +130,24 @@ const shiftRequestsByStaffIdLite = /* GraphQL */ `
           status
           isLocked
         }
+        comments {
+          id
+          cellKey
+          staffId
+          authorName
+          body
+          createdAt
+        }
+        histories {
+          version
+          entries {
+            date
+            status
+            isLocked
+          }
+          recordedAt
+          recordedByStaffId
+        }
         updatedAt
         updatedBy
         version
@@ -110,10 +167,7 @@ export type ShiftRequestQueryArgs = {
   targetMonth: string;
 };
 
-export type UpdateShiftRequestPayload = {
-  input: UpdateShiftRequestInput;
-  condition?: ModelShiftRequestConditionInput | null;
-};
+export type UpdateShiftRequestPayload = UpdatePayload<UpdateShiftRequestInput, ModelShiftRequestConditionInput>;
 
 export type CreateShiftRequestPayload = {
   input: CreateShiftRequestInput;
@@ -127,11 +181,6 @@ export type BatchUpdateShiftCellsArgs = {
 export type BatchUpdateShiftCellsResult = {
   updatedRequests: ShiftRequest[];
   errors: Array<{ index: number; message: string }>;
-};
-
-type ShiftRequestTag = {
-  type: "ShiftRequest";
-  id: string;
 };
 
 type ShiftCollaborationTag = {
@@ -191,57 +240,29 @@ export const shiftApi = createApi({
             return { data: [] };
           }
 
-          const shiftRequests: ShiftRequestLite[] = [];
-          let nextToken: string | null = null;
           const filter = buildShiftRequestsFilter(arg);
-
-          do {
-            const result = await baseQuery({
-              document: listShiftRequestsLite,
-              variables: { filter, limit: 200, nextToken },
-            });
-
-            if (result.error) {
-              return { error: result.error };
-            }
-
-            const data = result.data as ListShiftRequestsLiteQuery | null;
-            const connection = data?.listShiftRequests;
-
-            if (!connection) {
-              return { error: { message: "Failed to fetch shift requests" } };
-            }
-
-            shiftRequests.push(
-              ...(connection.items?.filter(nonNullable) ?? []),
-            );
-            nextToken = connection.nextToken ?? null;
-          } while (nextToken);
-
-          return { data: shiftRequests };
+          return executePaginatedQuery<ShiftRequestLite>({
+            baseQuery,
+            document: listShiftRequestsLite,
+            variables: { filter, limit: 200 },
+            connectionExtractor: (data) =>
+              (data as ListShiftRequestsLiteQuery | null)?.listShiftRequests,
+            errorMessage: "Failed to fetch shift requests",
+          });
         },
         serializeQueryArgs: ({ queryArgs }) => ({
           ...queryArgs,
           staffIds: queryArgs.staffIds.toSorted(),
         }),
         providesTags: (result, _error, arg) => {
-          const listTag: ShiftRequestTag = { type: "ShiftRequest", id: "LIST" };
           const collaborationTag: ShiftCollaborationTag = {
             type: "ShiftCollaboration",
             id: arg.targetMonth,
           };
 
-          if (!result) {
-            return [listTag, collaborationTag];
-          }
-
           return [
-            listTag,
             collaborationTag,
-            ...result.map((shiftRequest) => ({
-              type: "ShiftRequest" as const,
-              id: buildShiftRequestTagId(shiftRequest),
-            })),
+            ...buildListAndItemTags("ShiftRequest", result, buildShiftRequestTagId),
           ];
         },
       },
@@ -272,20 +293,18 @@ export const shiftApi = createApi({
         return { data: item };
       },
       providesTags: (result, _error, arg) => {
-        const listTag: ShiftRequestTag = { type: "ShiftRequest", id: "LIST" };
         const collaborationTag: ShiftCollaborationTag = {
           type: "ShiftCollaboration",
           id: arg.targetMonth,
         };
 
-        if (!result) {
-          return [listTag, collaborationTag];
-        }
-
         return [
-          listTag,
           collaborationTag,
-          { type: "ShiftRequest" as const, id: buildShiftRequestTagId(result) },
+          ...buildListAndItemTags(
+            "ShiftRequest",
+            result ? [result] : undefined,
+            buildShiftRequestTagId,
+          ),
         ];
       },
     }),

@@ -20,6 +20,7 @@ export const getCheckForUpdate = /* GraphQL */ `query GetCheckForUpdate($id: ID!
   getCheckForUpdate(id: $id) {
     id
     deployUuid
+    version
     createdAt
     updatedAt
     __typename
@@ -38,6 +39,7 @@ export const listCheckForUpdates = /* GraphQL */ `query ListCheckForUpdates(
     items {
       id
       deployUuid
+      version
       createdAt
       updatedAt
       __typename
@@ -67,6 +69,9 @@ export const getAppConfig = /* GraphQL */ `query GetAppConfig($id: ID!) {
     amPmHolidayEnabled
     officeMode
     attendanceStatisticsEnabled
+    workflowNotificationEnabled
+    timeRecorderAnnouncementEnabled
+    timeRecorderAnnouncementMessage
     absentEnabled
     hourlyPaidHolidayEnabled
     links {
@@ -111,6 +116,9 @@ export const getAppConfig = /* GraphQL */ `query GetAppConfig($id: ID!) {
       __typename
     }
     overTimeCheckEnabled
+    shiftCollaborativeEnabled
+    shiftDefaultMode
+    version
     createdAt
     updatedAt
     __typename
@@ -142,6 +150,9 @@ export const listAppConfigs = /* GraphQL */ `query ListAppConfigs(
       amPmHolidayEnabled
       officeMode
       attendanceStatisticsEnabled
+      workflowNotificationEnabled
+      timeRecorderAnnouncementEnabled
+      timeRecorderAnnouncementMessage
       absentEnabled
       hourlyPaidHolidayEnabled
       links {
@@ -186,6 +197,9 @@ export const listAppConfigs = /* GraphQL */ `query ListAppConfigs(
         __typename
       }
       overTimeCheckEnabled
+      shiftCollaborativeEnabled
+      shiftDefaultMode
+      version
       createdAt
       updatedAt
       __typename
@@ -231,6 +245,7 @@ export const getStaff = /* GraphQL */ `query GetStaff($id: ID!) {
     approverMultipleMode
     shiftGroup
     attendanceManagementEnabled
+    version
     createdAt
     updatedAt
     __typename
@@ -275,6 +290,7 @@ export const listStaff = /* GraphQL */ `query ListStaff(
       approverMultipleMode
       shiftGroup
       attendanceManagementEnabled
+      version
       createdAt
       updatedAt
       __typename
@@ -332,6 +348,7 @@ export const staffByCognitoUserId = /* GraphQL */ `query StaffByCognitoUserId(
       approverMultipleMode
       shiftGroup
       attendanceManagementEnabled
+      version
       createdAt
       updatedAt
       __typename
@@ -349,6 +366,7 @@ export const getHolidayCalendar = /* GraphQL */ `query GetHolidayCalendar($id: I
     id
     holidayDate
     name
+    version
     createdAt
     updatedAt
     __typename
@@ -368,6 +386,7 @@ export const listHolidayCalendars = /* GraphQL */ `query ListHolidayCalendars(
       id
       holidayDate
       name
+      version
       createdAt
       updatedAt
       __typename
@@ -385,6 +404,7 @@ export const getCompanyHolidayCalendar = /* GraphQL */ `query GetCompanyHolidayC
     id
     holidayDate
     name
+    version
     createdAt
     updatedAt
     __typename
@@ -408,6 +428,7 @@ export const listCompanyHolidayCalendars = /* GraphQL */ `query ListCompanyHolid
       id
       holidayDate
       name
+      version
       createdAt
       updatedAt
       __typename
@@ -426,6 +447,7 @@ export const getEventCalendar = /* GraphQL */ `query GetEventCalendar($id: ID!) 
     eventDate
     name
     description
+    version
     createdAt
     updatedAt
     __typename
@@ -446,6 +468,7 @@ export const listEventCalendars = /* GraphQL */ `query ListEventCalendars(
       eventDate
       name
       description
+      version
       createdAt
       updatedAt
       __typename
@@ -464,6 +487,7 @@ export const getCloseDate = /* GraphQL */ `query GetCloseDate($id: ID!) {
     closeDate
     startDate
     endDate
+    version
     createdAt
     updatedAt
     __typename
@@ -484,6 +508,7 @@ export const listCloseDates = /* GraphQL */ `query ListCloseDates(
       closeDate
       startDate
       endDate
+      version
       createdAt
       updatedAt
       __typename
@@ -500,6 +525,7 @@ export const getAttendance = /* GraphQL */ `query GetAttendance($id: ID!) {
   getAttendance(id: $id) {
     id
     staffId
+    staffWorkDateKey
     workDate
     startTime
     endTime
@@ -601,6 +627,7 @@ export const listAttendances = /* GraphQL */ `query ListAttendances(
     items {
       id
       staffId
+      staffWorkDateKey
       workDate
       startTime
       endTime
@@ -715,6 +742,7 @@ export const attendancesByStaffId = /* GraphQL */ `query AttendancesByStaffId(
     items {
       id
       staffId
+      staffWorkDateKey
       workDate
       startTime
       endTime
@@ -810,6 +838,269 @@ export const attendancesByStaffId = /* GraphQL */ `query AttendancesByStaffId(
   APITypes.AttendancesByStaffIdQueryVariables,
   APITypes.AttendancesByStaffIdQuery
 >;
+export const attendancesByStaffWorkDate = /* GraphQL */ `query AttendancesByStaffWorkDate(
+  $staffWorkDateKey: String!
+  $sortDirection: ModelSortDirection
+  $filter: ModelAttendanceFilterInput
+  $limit: Int
+  $nextToken: String
+) {
+  attendancesByStaffWorkDate(
+    staffWorkDateKey: $staffWorkDateKey
+    sortDirection: $sortDirection
+    filter: $filter
+    limit: $limit
+    nextToken: $nextToken
+  ) {
+    items {
+      id
+      staffId
+      staffWorkDateKey
+      workDate
+      startTime
+      endTime
+      goDirectlyFlag
+      returnDirectlyFlag
+      absentFlag
+      rests {
+        startTime
+        endTime
+        __typename
+      }
+      hourlyPaidHolidayTimes {
+        startTime
+        endTime
+        __typename
+      }
+      remarks
+      paidHolidayFlag
+      specialHolidayFlag
+      isDeemedHoliday
+      hourlyPaidHolidayHours
+      substituteHolidayDate
+      histories {
+        staffId
+        workDate
+        startTime
+        endTime
+        goDirectlyFlag
+        absentFlag
+        returnDirectlyFlag
+        rests {
+          startTime
+          endTime
+          __typename
+        }
+        hourlyPaidHolidayTimes {
+          startTime
+          endTime
+          __typename
+        }
+        remarks
+        paidHolidayFlag
+        specialHolidayFlag
+        hourlyPaidHolidayHours
+        substituteHolidayFlag
+        substituteHolidayDate
+        createdAt
+        __typename
+      }
+      changeRequests {
+        startTime
+        endTime
+        goDirectlyFlag
+        absentFlag
+        returnDirectlyFlag
+        rests {
+          startTime
+          endTime
+          __typename
+        }
+        hourlyPaidHolidayTimes {
+          startTime
+          endTime
+          __typename
+        }
+        remarks
+        paidHolidayFlag
+        specialHolidayFlag
+        hourlyPaidHolidayHours
+        substituteHolidayFlag
+        substituteHolidayDate
+        completed
+        comment
+        staffComment
+        __typename
+      }
+      systemComments {
+        comment
+        confirmed
+        createdAt
+        __typename
+      }
+      revision
+      createdAt
+      updatedAt
+      __typename
+    }
+    nextToken
+    __typename
+  }
+}
+` as GeneratedQuery<
+  APITypes.AttendancesByStaffWorkDateQueryVariables,
+  APITypes.AttendancesByStaffWorkDateQuery
+>;
+export const getAttendanceStatisticsSnapshot = /* GraphQL */ `query GetAttendanceStatisticsSnapshot($id: ID!) {
+  getAttendanceStatisticsSnapshot(id: $id) {
+    id
+    staffId
+    year
+    status
+    progressPercent
+    currentStepLabel
+    rangeStart
+    rangeEnd
+    monthlySummaries {
+      month
+      rangeStart
+      rangeEnd
+      workHours
+      paidDays
+      specialHolidayDays
+      absentDays
+      workDays
+      isFallback
+      __typename
+    }
+    totalWorkHours
+    totalPaidDays
+    totalSpecialHolidayDays
+    totalAbsentDays
+    totalWorkDays
+    startedAt
+    completedAt
+    lastAggregatedAt
+    errorMessage
+    createdAt
+    updatedAt
+    __typename
+  }
+}
+` as GeneratedQuery<
+  APITypes.GetAttendanceStatisticsSnapshotQueryVariables,
+  APITypes.GetAttendanceStatisticsSnapshotQuery
+>;
+export const listAttendanceStatisticsSnapshots = /* GraphQL */ `query ListAttendanceStatisticsSnapshots(
+  $filter: ModelAttendanceStatisticsSnapshotFilterInput
+  $limit: Int
+  $nextToken: String
+) {
+  listAttendanceStatisticsSnapshots(
+    filter: $filter
+    limit: $limit
+    nextToken: $nextToken
+  ) {
+    items {
+      id
+      staffId
+      year
+      status
+      progressPercent
+      currentStepLabel
+      rangeStart
+      rangeEnd
+      monthlySummaries {
+        month
+        rangeStart
+        rangeEnd
+        workHours
+        paidDays
+        specialHolidayDays
+        absentDays
+        workDays
+        isFallback
+        __typename
+      }
+      totalWorkHours
+      totalPaidDays
+      totalSpecialHolidayDays
+      totalAbsentDays
+      totalWorkDays
+      startedAt
+      completedAt
+      lastAggregatedAt
+      errorMessage
+      createdAt
+      updatedAt
+      __typename
+    }
+    nextToken
+    __typename
+  }
+}
+` as GeneratedQuery<
+  APITypes.ListAttendanceStatisticsSnapshotsQueryVariables,
+  APITypes.ListAttendanceStatisticsSnapshotsQuery
+>;
+export const attendanceStatisticsByStaffIdYear = /* GraphQL */ `query AttendanceStatisticsByStaffIdYear(
+  $staffId: String!
+  $year: ModelIntKeyConditionInput
+  $sortDirection: ModelSortDirection
+  $filter: ModelAttendanceStatisticsSnapshotFilterInput
+  $limit: Int
+  $nextToken: String
+) {
+  attendanceStatisticsByStaffIdYear(
+    staffId: $staffId
+    year: $year
+    sortDirection: $sortDirection
+    filter: $filter
+    limit: $limit
+    nextToken: $nextToken
+  ) {
+    items {
+      id
+      staffId
+      year
+      status
+      progressPercent
+      currentStepLabel
+      rangeStart
+      rangeEnd
+      monthlySummaries {
+        month
+        rangeStart
+        rangeEnd
+        workHours
+        paidDays
+        specialHolidayDays
+        absentDays
+        workDays
+        isFallback
+        __typename
+      }
+      totalWorkHours
+      totalPaidDays
+      totalSpecialHolidayDays
+      totalAbsentDays
+      totalWorkDays
+      startedAt
+      completedAt
+      lastAggregatedAt
+      errorMessage
+      createdAt
+      updatedAt
+      __typename
+    }
+    nextToken
+    __typename
+  }
+}
+` as GeneratedQuery<
+  APITypes.AttendanceStatisticsByStaffIdYearQueryVariables,
+  APITypes.AttendanceStatisticsByStaffIdYearQuery
+>;
 export const getDocument = /* GraphQL */ `query GetDocument($id: ID!) {
   getDocument(id: $id) {
     id
@@ -896,6 +1187,15 @@ export const getShiftRequest = /* GraphQL */ `query GetShiftRequest($id: ID!) {
       changeReason
       __typename
     }
+    comments {
+      id
+      cellKey
+      staffId
+      authorName
+      body
+      createdAt
+      __typename
+    }
     createdAt
     __typename
   }
@@ -951,6 +1251,15 @@ export const listShiftRequests = /* GraphQL */ `query ListShiftRequests(
         recordedAt
         recordedByStaffId
         changeReason
+        __typename
+      }
+      comments {
+        id
+        cellKey
+        staffId
+        authorName
+        body
+        createdAt
         __typename
       }
       createdAt
@@ -1023,6 +1332,15 @@ export const shiftRequestsByStaffId = /* GraphQL */ `query ShiftRequestsByStaffI
         changeReason
         __typename
       }
+      comments {
+        id
+        cellKey
+        staffId
+        authorName
+        body
+        createdAt
+        __typename
+      }
       createdAt
       __typename
     }
@@ -1033,6 +1351,54 @@ export const shiftRequestsByStaffId = /* GraphQL */ `query ShiftRequestsByStaffI
 ` as GeneratedQuery<
   APITypes.ShiftRequestsByStaffIdQueryVariables,
   APITypes.ShiftRequestsByStaffIdQuery
+>;
+export const getShiftEditLock = /* GraphQL */ `query GetShiftEditLock($id: ID!) {
+  getShiftEditLock(id: $id) {
+    id
+    targetMonth
+    staffId
+    date
+    holderUserId
+    holderUserName
+    acquiredAt
+    expiresAt
+    version
+    createdAt
+    updatedAt
+    __typename
+  }
+}
+` as GeneratedQuery<
+  APITypes.GetShiftEditLockQueryVariables,
+  APITypes.GetShiftEditLockQuery
+>;
+export const listShiftEditLocks = /* GraphQL */ `query ListShiftEditLocks(
+  $filter: ModelShiftEditLockFilterInput
+  $limit: Int
+  $nextToken: String
+) {
+  listShiftEditLocks(filter: $filter, limit: $limit, nextToken: $nextToken) {
+    items {
+      id
+      targetMonth
+      staffId
+      date
+      holderUserId
+      holderUserName
+      acquiredAt
+      expiresAt
+      version
+      createdAt
+      updatedAt
+      __typename
+    }
+    nextToken
+    __typename
+  }
+}
+` as GeneratedQuery<
+  APITypes.ListShiftEditLocksQueryVariables,
+  APITypes.ListShiftEditLocksQuery
 >;
 export const getShiftPlanYear = /* GraphQL */ `query GetShiftPlanYear($id: ID!) {
   getShiftPlanYear(id: $id) {
@@ -1049,6 +1415,7 @@ export const getShiftPlanYear = /* GraphQL */ `query GetShiftPlanYear($id: ID!) 
     notes
     createdBy
     updatedBy
+    version
     createdAt
     updatedAt
     __typename
@@ -1078,6 +1445,7 @@ export const listShiftPlanYears = /* GraphQL */ `query ListShiftPlanYears(
       notes
       createdBy
       updatedBy
+      version
       createdAt
       updatedAt
       __typename
@@ -1120,6 +1488,7 @@ export const shiftPlanYearByTargetYear = /* GraphQL */ `query ShiftPlanYearByTar
       notes
       createdBy
       updatedBy
+      version
       createdAt
       updatedAt
       __typename
@@ -1172,6 +1541,7 @@ export const getWorkflow = /* GraphQL */ `query GetWorkflow($id: ID!) {
       createdAt
       __typename
     }
+    version
     createdAt
     updatedAt
     __typename
@@ -1226,6 +1596,7 @@ export const listWorkflows = /* GraphQL */ `query ListWorkflows(
         createdAt
         __typename
       }
+      version
       createdAt
       updatedAt
       __typename
@@ -1291,6 +1662,7 @@ export const workflowsByStaffId = /* GraphQL */ `query WorkflowsByStaffId(
         createdAt
         __typename
       }
+      version
       createdAt
       updatedAt
       __typename
@@ -1310,6 +1682,7 @@ export const getWorkflowTemplate = /* GraphQL */ `query GetWorkflowTemplate($id:
     title
     content
     organizationId
+    version
     createdAt
     updatedAt
     __typename
@@ -1331,6 +1704,7 @@ export const listWorkflowTemplates = /* GraphQL */ `query ListWorkflowTemplates(
       title
       content
       organizationId
+      version
       createdAt
       updatedAt
       __typename
@@ -1363,6 +1737,7 @@ export const workflowTemplatesByOrganizationId = /* GraphQL */ `query WorkflowTe
       title
       content
       organizationId
+      version
       createdAt
       updatedAt
       __typename
@@ -1375,19 +1750,172 @@ export const workflowTemplatesByOrganizationId = /* GraphQL */ `query WorkflowTe
   APITypes.WorkflowTemplatesByOrganizationIdQueryVariables,
   APITypes.WorkflowTemplatesByOrganizationIdQuery
 >;
+export const getWorkflowNotificationEvent = /* GraphQL */ `query GetWorkflowNotificationEvent($id: ID!) {
+  getWorkflowNotificationEvent(id: $id) {
+    id
+    recipientStaffId
+    actorStaffId
+    workflowId
+    eventType
+    commentId
+    title
+    body
+    isRead
+    readAt
+    eventAt
+    version
+    createdAt
+    updatedAt
+    __typename
+  }
+}
+` as GeneratedQuery<
+  APITypes.GetWorkflowNotificationEventQueryVariables,
+  APITypes.GetWorkflowNotificationEventQuery
+>;
+export const listWorkflowNotificationEvents = /* GraphQL */ `query ListWorkflowNotificationEvents(
+  $filter: ModelWorkflowNotificationEventFilterInput
+  $limit: Int
+  $nextToken: String
+) {
+  listWorkflowNotificationEvents(
+    filter: $filter
+    limit: $limit
+    nextToken: $nextToken
+  ) {
+    items {
+      id
+      recipientStaffId
+      actorStaffId
+      workflowId
+      eventType
+      commentId
+      title
+      body
+      isRead
+      readAt
+      eventAt
+      version
+      createdAt
+      updatedAt
+      __typename
+    }
+    nextToken
+    __typename
+  }
+}
+` as GeneratedQuery<
+  APITypes.ListWorkflowNotificationEventsQueryVariables,
+  APITypes.ListWorkflowNotificationEventsQuery
+>;
+export const workflowNotificationEventsByRecipient = /* GraphQL */ `query WorkflowNotificationEventsByRecipient(
+  $recipientStaffId: String!
+  $eventAt: ModelStringKeyConditionInput
+  $sortDirection: ModelSortDirection
+  $filter: ModelWorkflowNotificationEventFilterInput
+  $limit: Int
+  $nextToken: String
+) {
+  workflowNotificationEventsByRecipient(
+    recipientStaffId: $recipientStaffId
+    eventAt: $eventAt
+    sortDirection: $sortDirection
+    filter: $filter
+    limit: $limit
+    nextToken: $nextToken
+  ) {
+    items {
+      id
+      recipientStaffId
+      actorStaffId
+      workflowId
+      eventType
+      commentId
+      title
+      body
+      isRead
+      readAt
+      eventAt
+      version
+      createdAt
+      updatedAt
+      __typename
+    }
+    nextToken
+    __typename
+  }
+}
+` as GeneratedQuery<
+  APITypes.WorkflowNotificationEventsByRecipientQueryVariables,
+  APITypes.WorkflowNotificationEventsByRecipientQuery
+>;
+export const workflowNotificationEventsByWorkflow = /* GraphQL */ `query WorkflowNotificationEventsByWorkflow(
+  $workflowId: ID!
+  $eventAt: ModelStringKeyConditionInput
+  $sortDirection: ModelSortDirection
+  $filter: ModelWorkflowNotificationEventFilterInput
+  $limit: Int
+  $nextToken: String
+) {
+  workflowNotificationEventsByWorkflow(
+    workflowId: $workflowId
+    eventAt: $eventAt
+    sortDirection: $sortDirection
+    filter: $filter
+    limit: $limit
+    nextToken: $nextToken
+  ) {
+    items {
+      id
+      recipientStaffId
+      actorStaffId
+      workflowId
+      eventType
+      commentId
+      title
+      body
+      isRead
+      readAt
+      eventAt
+      version
+      createdAt
+      updatedAt
+      __typename
+    }
+    nextToken
+    __typename
+  }
+}
+` as GeneratedQuery<
+  APITypes.WorkflowNotificationEventsByWorkflowQueryVariables,
+  APITypes.WorkflowNotificationEventsByWorkflowQuery
+>;
 export const getOperationLog = /* GraphQL */ `query GetOperationLog($id: ID!) {
   getOperationLog(id: $id) {
     id
     staffId
+    resourceKey
+    targetStaffId
     action
     resource
     resourceId
+    summary
     timestamp
+    before
+    after
+    diff
     details
     ipAddress
     userAgent
     metadata
+    clientTimezone
+    occurredAt
+    resolvedWorkDate
+    idempotencyKey
+    appVersion
     severity
+    logFormatVersion
+    version
     createdAt
     updatedAt
     __typename
@@ -1406,15 +1934,28 @@ export const listOperationLogs = /* GraphQL */ `query ListOperationLogs(
     items {
       id
       staffId
+      resourceKey
+      targetStaffId
       action
       resource
       resourceId
+      summary
       timestamp
+      before
+      after
+      diff
       details
       ipAddress
       userAgent
       metadata
+      clientTimezone
+      occurredAt
+      resolvedWorkDate
+      idempotencyKey
+      appVersion
       severity
+      logFormatVersion
+      version
       createdAt
       updatedAt
       __typename
@@ -1446,15 +1987,28 @@ export const operationLogsByStaffId = /* GraphQL */ `query OperationLogsByStaffI
     items {
       id
       staffId
+      resourceKey
+      targetStaffId
       action
       resource
       resourceId
+      summary
       timestamp
+      before
+      after
+      diff
       details
       ipAddress
       userAgent
       metadata
+      clientTimezone
+      occurredAt
+      resolvedWorkDate
+      idempotencyKey
+      appVersion
       severity
+      logFormatVersion
+      version
       createdAt
       updatedAt
       __typename
@@ -1466,6 +2020,59 @@ export const operationLogsByStaffId = /* GraphQL */ `query OperationLogsByStaffI
 ` as GeneratedQuery<
   APITypes.OperationLogsByStaffIdQueryVariables,
   APITypes.OperationLogsByStaffIdQuery
+>;
+export const operationLogsByResourceKey = /* GraphQL */ `query OperationLogsByResourceKey(
+  $resourceKey: String!
+  $timestamp: ModelStringKeyConditionInput
+  $sortDirection: ModelSortDirection
+  $filter: ModelOperationLogFilterInput
+  $limit: Int
+  $nextToken: String
+) {
+  operationLogsByResourceKey(
+    resourceKey: $resourceKey
+    timestamp: $timestamp
+    sortDirection: $sortDirection
+    filter: $filter
+    limit: $limit
+    nextToken: $nextToken
+  ) {
+    items {
+      id
+      staffId
+      resourceKey
+      targetStaffId
+      action
+      resource
+      resourceId
+      summary
+      timestamp
+      before
+      after
+      diff
+      details
+      ipAddress
+      userAgent
+      metadata
+      clientTimezone
+      occurredAt
+      resolvedWorkDate
+      idempotencyKey
+      appVersion
+      severity
+      logFormatVersion
+      version
+      createdAt
+      updatedAt
+      __typename
+    }
+    nextToken
+    __typename
+  }
+}
+` as GeneratedQuery<
+  APITypes.OperationLogsByResourceKeyQueryVariables,
+  APITypes.OperationLogsByResourceKeyQuery
 >;
 export const getAuditLog = /* GraphQL */ `query GetAuditLog($id: ID!) {
   getAuditLog(id: $id) {
@@ -1484,6 +2091,7 @@ export const getAuditLog = /* GraphQL */ `query GetAuditLog($id: ID!) {
     createdAt
     ttl
     reason
+    version
     updatedAt
     __typename
   }
@@ -1514,6 +2122,7 @@ export const listAuditLogs = /* GraphQL */ `query ListAuditLogs(
       createdAt
       ttl
       reason
+      version
       updatedAt
       __typename
     }
@@ -1548,6 +2157,7 @@ export const getDailyReport = /* GraphQL */ `query GetDailyReport($id: ID!) {
       createdAt
       __typename
     }
+    version
     createdAt
     __typename
   }
@@ -1584,6 +2194,7 @@ export const listDailyReports = /* GraphQL */ `query ListDailyReports(
         createdAt
         __typename
       }
+      version
       createdAt
       __typename
     }
@@ -1633,6 +2244,7 @@ export const dailyReportsByStaffId = /* GraphQL */ `query DailyReportsByStaffId(
         createdAt
         __typename
       }
+      version
       createdAt
       __typename
     }

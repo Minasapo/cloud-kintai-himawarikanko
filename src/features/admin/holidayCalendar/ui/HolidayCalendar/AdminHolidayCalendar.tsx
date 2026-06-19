@@ -1,99 +1,75 @@
-import { Box, Stack, Tab, Tabs, Typography } from "@mui/material";
-import { type ReactNode, type SyntheticEvent, useMemo } from "react";
+import { AppTabs } from "@shared/ui/tabs";
+import { useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 
 import CompanyHolidayCalendarList from "../CompanyHolidayCalendar/CompanyHolidayCalendarList";
 import EventCalendarList from "../EventCalendar/EventCalendarList";
 import HolidayCalendarList from "./HolidayCalendarList";
 
-interface TabPanelProps {
-  children?: ReactNode;
-  index: number;
-  value: number;
-}
-
-function CustomTabPanel(props: TabPanelProps) {
-  const { children, value, index, ...other } = props;
-
-  return (
-    <div
-      role="tabpanel"
-      hidden={value !== index}
-      id={`simple-tabpanel-${index}`}
-      aria-labelledby={`simple-tab-${index}`}
-      {...other}
-    >
-      <Box sx={{ p: 3 }}>{children}</Box>
-    </div>
-  );
-}
-
-function a11yProps(index: number) {
-  return {
-    id: `simple-tab-${index}`,
-    "aria-controls": `simple-tabpanel-${index}`,
-  };
-}
-
 const tabParamKey = "tab";
 const tabValues = ["legal", "company", "event"] as const;
 type TabValue = (typeof tabValues)[number];
 
-const getTabIndexFromParam = (param: string | null) => {
-  if (!param) return 0;
-  const index = tabValues.indexOf(param as TabValue);
-  return index >= 0 ? index : 0;
-};
-
-const getTabParamFromIndex = (index: number): TabValue =>
-  tabValues[index] ?? "legal";
+const getTabValueFromParam = (param: string | null): TabValue =>
+  tabValues.includes(param as TabValue) ? (param as TabValue) : "legal";
 
 export default function AdminHolidayCalendar() {
   const [searchParams, setSearchParams] = useSearchParams();
   const value = useMemo(
-    () => getTabIndexFromParam(searchParams.get(tabParamKey)),
+    () => getTabValueFromParam(searchParams.get(tabParamKey)),
     [searchParams],
   );
 
-  const handleChange = (_event: SyntheticEvent, newValue: number) => {
+  const handleChange = (newValue: TabValue) => {
     const next = new URLSearchParams(searchParams);
-    next.set(tabParamKey, getTabParamFromIndex(newValue));
+    next.set(tabParamKey, newValue);
     setSearchParams(next, { replace: true });
   };
 
+  const tabs = useMemo(
+    () => [
+      {
+        value: "legal" as const,
+        label: "法定休日",
+        content: <HolidayCalendarList />,
+      },
+      {
+        value: "company" as const,
+        label: "会社休日",
+        content: <CompanyHolidayCalendarList />,
+      },
+      {
+        value: "event" as const,
+        label: "イベントカレンダー",
+        content: <EventCalendarList />,
+      },
+    ],
+    [],
+  );
+
   return (
-    <Stack spacing={2}>
-      <Typography>
+    <div className="flex flex-col gap-4">
+      <p className="m-0 text-slate-700">
         こちらでは、法定休日、会社休日、およびイベントカレンダーを管理できます。
         <br />
         法定休日は労働基準法に基づく休日、会社休日は企業が独自に設定した休日、イベントカレンダーは休日以外の周知したい情報です。
-        <br />
-      </Typography>
-      <Typography>
+      </p>
+      <p className="m-0 text-slate-700">
         法定休日は、政府が公開する祝日データを元に作成されています。詳細は「ファイルからまとめて追加」をご参照ください。
-      </Typography>
-      <Box sx={{ width: "100%" }}>
-        <Box sx={{ borderBottom: 1, borderColor: "divider" }}>
-          <Tabs
-            value={value}
-            onChange={handleChange}
-            aria-label="basic tabs example"
-          >
-            <Tab label="法定休日" {...a11yProps(0)} />
-            <Tab label="会社休日" {...a11yProps(1)} />
-            <Tab label="イベントカレンダー" {...a11yProps(2)} />
-          </Tabs>
-        </Box>
-        <CustomTabPanel value={value} index={0}>
-          <HolidayCalendarList />
-        </CustomTabPanel>
-        <CustomTabPanel value={value} index={1}>
-          <CompanyHolidayCalendarList />
-        </CustomTabPanel>
-        <CustomTabPanel value={value} index={2}>
-          <EventCalendarList />
-        </CustomTabPanel>
-      </Box>
-    </Stack>
+      </p>
+      <div className="w-full">
+        <AppTabs
+          value={value}
+          onChange={handleChange}
+          items={tabs}
+          appearance="underline"
+          panelPadding={3}
+          tabsProps={{
+            "aria-label": "祝日カレンダータブ",
+            variant: "scrollable",
+          }}
+        />
+      </div>
+    </div>
   );
 }

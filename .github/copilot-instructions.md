@@ -1,64 +1,153 @@
-このプロジェクトでコード生成するために必要な情報をエージェント向けに提供するためのドキュメントです。
+# garaku-frontend – Copilot Instructions
 
-## ルール
+英語で考えて、日本語で出力してください。  
+Think in English, respond in Japanese.
 
-英語で考えて、日本語で出力してください。
-
-## 実装
-
-実装時は、適宜 Linter や Formatter を使用してコードの品質を保ってください。
-コードを変更した際に作業コメントは不要です。(例：xxx を削減。xxx を修正、xxx を削除など)
-
-## テスト
-
-以下のコマンドを実行して、すべてのユニットテストと E2E テストがパスすることを確認してください。
+## Commands
 
 ```bash
-npm run test:unit
+npm start                    # dev server (Vite)
+npm run build                # production build
+npm run lint                 # ESLint
+npm run typecheck            # tsc --noEmit (runs automatically on git push)
+
+# Unit tests
+npm run test:unit            # all unit tests
+npx jest src/path/to/file.test.tsx   # single file
+
+# E2E tests (requires playwright/.auth/ — run setup first)
+npm run test:e2e:setup
 npm run test:e2e -- smoke-test --project=chromium-staff
 npm run test:e2e -- smoke-test --project=chromium-admin
 ```
 
-## コミットメッセージ
+## Architecture — Feature-Sliced Design (FSD)
 
-コミットメッセージは英語で記述してください。
-例: "Add Storybook stories for HeaderBar component"
+Dependency direction is strictly **downward only**: `pages` → `processes` → `features` → `entities` → `shared`
 
-## GitHub Issues
+| Layer        | Path              | Role                                                                                                                                                                                   |
+| ------------ | ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pages`      | `src/pages/`      | Route-level page components (lazy-loaded via `createLazyRoute`)                                                                                                                        |
+| `processes`  | `src/processes/`  | Cross-page business flows (e.g., `office-access`)                                                                                                                                      |
+| `features`   | `src/features/`   | Single-screen feature units; each has `ui/`, `model/`, `lib/`                                                                                                                          |
+| `entities`   | `src/entities/`   | Domain types, API clients, business logic (`attendance`, `shift`, `staff`, `workflow`, etc.)                                                                                           |
+| `shared`     | `src/shared/`     | Project-wide UI components, hooks, utilities — imported via `@shared/*`                                                                                                                |
+| `widgets`    | `src/widgets/`    | Large UI blocks used across pages (header, footer, snackbar)                                                                                                                           |
+| `extensions` | `src/extensions/` | 拡張モジュール。AppConfig フラグで on/off 可能な機能群を `manifest.ts` で宣言。`docs/EXTENSION_ARCHITECTURE.md` 参照。新規拡張は `node scripts/create-extension.mjs <name>` で雛形生成 |
 
-GitHub の Issues を作成や変更する際は、タイトルや内容、コメントは日本語で記述してください。
+### Path aliases (tsconfig.json)
 
-## コーディング規約・ベストプラクティス
+```
+@/*         → src/*
+@app/*      → src/app/*
+@pages/*    → src/pages/*
+@features/* → src/features/*
+@entities/* → src/entities/*
+@shared/*   → src/shared/*
+@processes/* → src/processes/*
+@extensions/* → src/extensions/*
+```
 
-### TypeScript の作法
+Always use aliases instead of relative `../` paths.
 
-- **any の禁止**: `no-explicit-any` ルールを有効化
-- **型推論の活用**: 冗長な型注釈は避け、推論に任せる
-- **ユニオン型**: 状態を明示的に表現 (例: `type Status = 'idle' | 'loading' | 'success' | 'error'`)
-- **非同期処理**: `async/await` を使用し、Promise チェーンは避ける
-- **インターフェースの命名**: `I` プレフィックスは使用しない
-- **型エイリアス vs インターフェース**: オブジェクト型にはインターフェース、ユニオン型やタプルには型エイリアスを使用
-- **Readonly と Immutable**: 可能な限り `readonly` 修飾子を使用し、不変データ構造を推奨
-- **型ガード**: カスタム型ガード関数を活用して型安全性を向上
+### Routing
 
-### React の作法
+All routes are **lazy-loaded** via `createLazyRoute()` in `src/router.tsx`.  
+Route loaders live in `src/router/loaders/`. Pages that need MUI X date pickers are wrapped with `wrapWithMuiXDateProvider`.
 
-- **関数コンポーネントの使用**: クラスコンポーネントは避け、関数コンポーネントとフックを使用
-- **JSX の記述**: JSX 内でのロジックは最小限に抑え、必要に応じて関数に切り出す
-- **状態管理**: ローカル状態には `useState`、複雑な状態には `useReducer` を使用
-- **副作用の管理**: `useEffect` を適切に使用し、依存配列を正確に指定
-- **コンポーネントの分割**: 単一責任の原則に従い、コンポーネントは小さく保つ
-- **PropTypes の使用**: TypeScript を使用している場合、PropTypes は不要
-- **コンテキストの使用**: コンテキスト API は必要最低限に抑え、状態管理ライブラリの使用も検討
+### Backend
 
-## 用語
+AWS Amplify (AppSync / GraphQL + Cognito). Real-time updates use GraphQL Subscriptions — do not add polling.
 
-### 勤怠(Attendance)
+## Key Conventions
 
-勤怠とは、スタッフの勤務時間や出勤・退勤、休憩時間などの記録を指します。勤怠管理は、労働時間の適正な把握や給与計算、法令遵守のために重要です。
+### Auto-generated files — DO NOT manually edit
 
-### 打刻エラー
+- `src/shared/api/graphql/documents/mutations.ts`, `queries.ts`, `subscriptions.ts` — regenerate with `amplify codegen`
+- `src/shared/api/graphql/types.ts` — regenerate with `amplify codegen`
+- `src/ui-components/**` — regenerate with `amplify pull`
+- `src/aws-exports.js`
 
-打刻エラーとは、勤怠システムにおいて、スタッフが勤務開始/終了や休憩開始/終了などを忘れた場合などに発生するエラーのことを指します。これにより、正確な勤務時間の記録ができなくなり、給与計算や勤務管理に影響を及ぼす可能性があります。
+> Note: Other files in `src/shared/api/graphql/` (e.g., `graphqlBaseQuery.ts`, `tagBuilder.ts`, `concurrency.ts`, `paginatedQuery.ts`) are **manually maintained** utilities and can be edited.
 
-打刻エラーは、スタッフにより勤怠編集画面から打刻の修正申請が行われ、管理者がその申請を承認することで解決されます。または、管理者側で直接修正することも可能です。
+To change GraphQL schema, edit `amplify/backend/api/garakufrontend/schema.graphql`, then run `amplify codegen`.
+
+### UI component rules
+
+- **Never** import MUI components directly (`import { Button } from '@mui/material'`). Use the wrappers in `src/shared/ui/` (e.g., `AppButton`, `AppIconButton`, `AppDialog`, `ConfirmDialog`).
+- Styling: MUI `sx` prop is primary; Tailwind CSS is supplementary for layout utilities.
+- Do **not** create new `.scss` files (SCSS is being phased out).
+- Page layout: wrap content in `Page` / `PageContent` / `PageSection` from `src/shared/ui/layout/`.
+- Design tokens: use `designTokenVar()` from `src/shared/designSystem/` — do not hardcode colors or spacing.
+- **Fonts**: Use `var(--ds-typography-font-family)` for all text. See `.github/instructions/font-strategy.md` for detailed font guidance, weight tokens, and special cases (monospace, etc.).
+
+### State management
+
+- **Global UI state** (e.g., snackbar/notifications): Redux Toolkit via `@reduxjs/toolkit` + `react-redux`
+- **Auth / config**: Context API — `AuthContext`, `AppConfigContext`, `ThemeContext` in `src/context/`
+- **Forms**: React Hook Form + Zod (`zodResolver`)
+
+### TypeScript conventions
+
+- `no-explicit-any` is enforced — use proper types or generics
+- No `I` prefix on interfaces
+- Use `interface` for object types, `type` for unions/tuples
+- Use `readonly` where possible
+- `async/await` over Promise chains
+
+### Testing conventions (see `.github/instructions/testing-guide.md` for full details)
+
+Unit/integration tests live in `__tests__/` next to the file under test.
+
+```typescript
+// Use renderWithProviders (not bare render) — wraps Router + Redux + Context
+import { renderWithProviders } from "@shared/test-utils";
+
+// Factory helpers
+import {
+  createMockAppConfig,
+  createMockUser,
+  createMockAttendance,
+} from "@shared/test-utils";
+```
+
+E2E tests go in `playwright/tests/<feature>/flow.spec.ts`.  
+Auth state is pre-loaded from `playwright/.auth/` — no login steps needed in tests.  
+Use `test.step()` to group operations and `data-testid` for stable locators.
+
+### Shift collaborative editing
+
+Managed by GraphQL Subscription in `src/pages/shift/collaborative/` and `src/features/shift/collaborative/`.  
+Self-emitted events must be filtered by `updatedBy === currentUserId` to prevent double-apply.  
+See `.github/instructions/shiftCollaborative.instructions.md` for guardrails.
+
+## Feature-specific instruction files
+
+| File                                                           | Topic                    |
+| -------------------------------------------------------------- | ------------------------ |
+| `.github/instructions/font-strategy.md`                        | フォント戦略と使用方法   |
+| `.github/instructions/attendanceEdit.instructions.md`          | 勤怠編集                 |
+| `.github/instructions/attendanceList.instructions.md`          | 勤怠一覧                 |
+| `.github/instructions/register.instructions.md`                | 打刻ページ               |
+| `.github/instructions/registerDashboard.instructions.md`       | ダッシュボード           |
+| `.github/instructions/shift.instructions.md`                   | シフト全般               |
+| `.github/instructions/shiftCollaborative.instructions.md`      | シフト共同編集           |
+| `.github/instructions/dailyReport.instructions.md`             | 日報                     |
+| `.github/instructions/testing-guide.md`                        | テスト規約               |
+| `.github/instructions/amplifyGraphqlGenerated.instructions.md` | 自動生成ファイル         |
+| `.github/instructions/graphqlCachingStrategy.instructions.md`  | GraphQL キャッシング戦略 |
+
+## Commit and issue conventions
+
+- Commit messages: **English** (e.g., `Add Playwright coverage for attendance editor`)
+- GitHub Issues (title, body, comments): **日本語**
+- No work-in-progress comments in code (e.g., "// 修正", "// 削除")
+
+## Domain terms
+
+| Term                    | Meaning                                                                                            |
+| ----------------------- | -------------------------------------------------------------------------------------------------- |
+| 勤怠 (Attendance)       | Record of staff work hours: clock-in/out, breaks                                                   |
+| 打刻 (Dakoku)           | The act of recording a time stamp (clock-in/out/break)                                             |
+| 打刻エラー              | Error when a stamp is missed; resolved by staff submitting a correction request, approved by admin |
+| ワークフロー (Workflow) | Approval flow for attendance correction requests                                                   |

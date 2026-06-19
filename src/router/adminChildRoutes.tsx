@@ -1,6 +1,7 @@
-import { RouteObject } from "react-router-dom";
+import { Navigate, RouteObject } from "react-router-dom";
 
 import AdminShiftGuard from "../pages/admin/AdminShiftGuard";
+import { ProgressBar, Spinner } from "../shared/ui/feedback/LoadingPrimitives";
 import { createLazyRoute } from "./lazyRoute";
 
 const AdminAttendanceRoute = createLazyRoute(
@@ -15,14 +16,11 @@ const AdminAttendanceHistoryRoute = createLazyRoute(
 const AdminAttendancePrintRoute = createLazyRoute(
   () => import("../pages/admin/AdminAttendancePrint"),
 );
-const AbsentRoute = createLazyRoute(
-  () => import("@/features/admin/configManagement/ui/Absent"),
+const DeveloperRoute = createLazyRoute(
+  () => import("@/features/admin/configManagement/ui/Developer"),
 );
-const AdminConfigManagementRoute = createLazyRoute(
-  () => import("@/features/admin/configManagement/ui/AdminConfigManagement"),
-);
-const AmPmHolidayRoute = createLazyRoute(
-  () => import("@/features/admin/configManagement/ui/AmPmHoliday"),
+const SchemaExportRoute = createLazyRoute(
+  () => import("@/features/admin/schema-export/ui/SchemaExport"),
 );
 const LinksRoute = createLazyRoute(
   () => import("@/features/admin/configManagement/ui/Links"),
@@ -30,45 +28,27 @@ const LinksRoute = createLazyRoute(
 const AttendanceStatisticsRoute = createLazyRoute(
   () => import("@/features/admin/configManagement/ui/AttendanceStatistics"),
 );
-const OfficeModeRoute = createLazyRoute(
-  () => import("@/features/admin/configManagement/ui/OfficeMode"),
-);
-const QuickInputRoute = createLazyRoute(
-  () => import("@/features/admin/configManagement/ui/QuickInput"),
+const TimeRecorderAnnouncementRoute = createLazyRoute(
+  () => import("@/features/admin/configManagement/ui/TimeRecorderAnnouncement"),
 );
 const ReasonsRoute = createLazyRoute(
   () => import("@/features/admin/configManagement/ui/Reasons"),
 );
-const SpecialHolidayRoute = createLazyRoute(
-  () => import("@/features/admin/configManagement/ui/SpecialHoliday"),
-);
-const WorkingTimeRoute = createLazyRoute(
-  () => import("@/features/admin/configManagement/ui/WorkingTime"),
-);
-const AdminDailyReportDetailRoute = createLazyRoute(
-  () =>
-    import("../pages/admin/AdminDailyReportManagement/AdminDailyReportDetail"),
-);
-const AdminDailyReportManagementRoute = createLazyRoute(
-  () =>
-    import("../pages/admin/AdminDailyReportManagement/AdminDailyReportManagement"),
-);
 const AdminHolidayCalendarRoute = createLazyRoute(
   () =>
     import("@/features/admin/holidayCalendar/ui/HolidayCalendar/AdminHolidayCalendar"),
+);
+const AdminWorkflowRoute = createLazyRoute(
+  () => import("../pages/admin/AdminWorkflow/AdminWorkflow"),
+);
+const AdminWorkflowDetailRoute = createLazyRoute(
+  () => import("../pages/admin/AdminWorkflow/AdminWorkflowDetail"),
 );
 const AdminLogsRoute = createLazyRoute(
   () => import("../pages/admin/AdminLogs/AdminLogsClean"),
 );
 const AdminMasterLayoutRoute = createLazyRoute(
   () => import("../pages/admin/AdminMasterLayout"),
-);
-const AdminShiftSettingsRoute = createLazyRoute(
-  () => import("../pages/admin/AdminShiftSettings/AdminShiftSettings"),
-);
-const AdminWorkflowCategorySettingsRoute = createLazyRoute(
-  () =>
-    import("@/features/admin-config-workflow/AdminWorkflowCategorySettings"),
 );
 const AdminStaffRoute = createLazyRoute(
   () => import("@/features/admin/staff/ui/AdminStaff"),
@@ -83,17 +63,11 @@ const AdminStaffEditorRoute = createLazyRoute(
 const AdminThemeRoute = createLazyRoute(
   () => import("../pages/admin/AdminTheme/AdminTheme"),
 );
-const AdminWorkflowRoute = createLazyRoute(
-  () => import("../pages/admin/AdminWorkflow/AdminWorkflow"),
-);
-const AdminWorkflowDetailRoute = createLazyRoute(
-  () => import("../pages/admin/AdminWorkflow/AdminWorkflowDetail"),
-);
 const JobTermRoute = createLazyRoute(
   () => import("@/features/admin/jobTerm/ui/JobTerm"),
 );
-const ShiftPlanManagementRoute = createLazyRoute(
-  () => import("../pages/admin/ShiftPlanManagement/ShiftPlanManagement"),
+const AdminShiftPlanRoute = createLazyRoute(
+  () => import("../pages/admin/AdminShiftPlan/AdminShiftPlan"),
 );
 const ShiftDayViewRoute = createLazyRoute(
   () => import("../pages/shift/day-view"),
@@ -105,6 +79,17 @@ const ShiftManagementRoute = createLazyRoute(
   () => import("../pages/shift/management"),
   {
     wrap: (node) => <AdminShiftGuard>{node}</AdminShiftGuard>,
+    hydrateFallback: (
+      <div className="flex min-h-[60vh] flex-col bg-surface">
+        <ProgressBar data-testid="admin-shift-hydrate-loading" />
+        <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
+          <Spinner />
+          <p className="text-sm font-medium text-slate-500">
+            シフト画面を読み込み中です...
+          </p>
+        </div>
+      </div>
+    ),
   },
 );
 const StaffShiftListRoute = createLazyRoute(
@@ -113,6 +98,7 @@ const StaffShiftListRoute = createLazyRoute(
     wrap: (node) => <AdminShiftGuard>{node}</AdminShiftGuard>,
   },
 );
+const NotFoundRoute = createLazyRoute(() => import("../pages/NotFound"));
 
 export const adminChildRoutes: RouteObject[] = [
   {
@@ -137,7 +123,15 @@ export const adminChildRoutes: RouteObject[] = [
             path: "edit",
             lazy: AdminStaffEditorRoute,
           },
+          {
+            path: "*",
+            lazy: NotFoundRoute,
+          },
         ],
+      },
+      {
+        path: "*",
+        lazy: NotFoundRoute,
       },
     ],
   },
@@ -164,6 +158,10 @@ export const adminChildRoutes: RouteObject[] = [
         path: "print",
         lazy: AdminAttendancePrintRoute,
       },
+      {
+        path: "*",
+        lazy: NotFoundRoute,
+      },
     ],
   },
   {
@@ -180,7 +178,7 @@ export const adminChildRoutes: RouteObject[] = [
   },
   {
     path: "shift-plan",
-    lazy: ShiftPlanManagementRoute,
+    lazy: AdminShiftPlanRoute,
   },
   {
     path: "master",
@@ -188,7 +186,7 @@ export const adminChildRoutes: RouteObject[] = [
     children: [
       {
         index: true,
-        lazy: JobTermRoute,
+        element: <Navigate to="/admin/master/job_term" replace />,
       },
       {
         path: "job_term",
@@ -204,31 +202,27 @@ export const adminChildRoutes: RouteObject[] = [
       },
       {
         path: "shift",
-        lazy: AdminShiftSettingsRoute,
+        lazy: NotFoundRoute,
       },
       {
         path: "workflow",
-        lazy: AdminWorkflowCategorySettingsRoute,
-      },
-      {
-        path: "feature_management",
-        lazy: AdminConfigManagementRoute,
-      },
-      {
-        path: "feature_management/working_time",
-        lazy: WorkingTimeRoute,
-      },
-      {
-        path: "feature_management/am_pm_holiday",
-        lazy: AmPmHolidayRoute,
-      },
-      {
-        path: "feature_management/office_mode",
-        lazy: OfficeModeRoute,
+        lazy: NotFoundRoute,
       },
       {
         path: "feature_management/attendance_statistics",
         lazy: AttendanceStatisticsRoute,
+      },
+      {
+        path: "developer",
+        lazy: DeveloperRoute,
+      },
+      {
+        path: "time_recorder_announcement",
+        lazy: TimeRecorderAnnouncementRoute,
+      },
+      {
+        path: "export",
+        lazy: SchemaExportRoute,
       },
       {
         path: "feature_management/links",
@@ -239,16 +233,8 @@ export const adminChildRoutes: RouteObject[] = [
         lazy: ReasonsRoute,
       },
       {
-        path: "feature_management/quick_input",
-        lazy: QuickInputRoute,
-      },
-      {
-        path: "feature_management/special_holiday",
-        lazy: SpecialHolidayRoute,
-      },
-      {
-        path: "feature_management/absent",
-        lazy: AbsentRoute,
+        path: "*",
+        lazy: NotFoundRoute,
       },
     ],
   },
@@ -263,6 +249,10 @@ export const adminChildRoutes: RouteObject[] = [
         path: ":id",
         lazy: AdminWorkflowDetailRoute,
       },
+      {
+        path: "*",
+        lazy: NotFoundRoute,
+      },
     ],
   },
   {
@@ -270,16 +260,7 @@ export const adminChildRoutes: RouteObject[] = [
     lazy: AdminLogsRoute,
   },
   {
-    path: "daily-report",
-    children: [
-      {
-        index: true,
-        lazy: AdminDailyReportManagementRoute,
-      },
-      {
-        path: ":id",
-        lazy: AdminDailyReportDetailRoute,
-      },
-    ],
+    path: "*",
+    lazy: NotFoundRoute,
   },
 ];

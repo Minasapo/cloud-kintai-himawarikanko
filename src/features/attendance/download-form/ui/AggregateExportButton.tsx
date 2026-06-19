@@ -1,14 +1,12 @@
+import { AppConfigContext } from "@entities/app-config/model/AppConfigContext";
+import { AttendanceDate } from "@entities/attendance/lib/AttendanceDate";
+import { calcTotalRestTime } from "@entities/attendance/lib/time";
 import { StaffType } from "@entities/staff/model/useStaffs/useStaffs";
 import CloudDownloadOutlinedIcon from "@mui/icons-material/CloudDownloadOutlined";
-import { Button } from "@mui/material";
 import { Attendance } from "@shared/api/graphql/types";
+import { AppButton } from "@shared/ui/button";
 import dayjs from "dayjs";
 import { useContext } from "react";
-
-import { AppConfigContext } from "@/context/AppConfigContext";
-import { AttendanceDate } from "@/entities/attendance/lib/AttendanceDate";
-import { calcTotalRestTime } from "@/entities/attendance/lib/time";
-import { BUTTON_MIN_WIDTH } from "@/shared/config/uiDimensions";
 
 import downloadAttendances from "../lib/downloadAttendances";
 
@@ -137,29 +135,16 @@ export default function AggregateExportButton({
   };
 
   return (
-    <Button
-      variant="contained"
-      color="secondary"
-      size="medium"
+    <AppButton
+      variant="solid"
+      tone="secondary"
+      size="md"
       onClick={onClick}
       startIcon={<CloudDownloadOutlinedIcon />}
       fullWidth={fullWidth}
       disabled={workDates.length === 0 || selectedStaff.length === 0}
-      disableElevation
-      sx={{
-        minWidth: BUTTON_MIN_WIDTH,
-        fontWeight: "bold",
-        transition: "transform 150ms ease",
-        "&:hover": {
-          backgroundColor: "secondary.main",
-          boxShadow: "none",
-          transform: "translateY(-3px)",
-        },
-        "&:active": { transform: "translateY(-1px)" },
-        "&.Mui-disabled": { transform: "none", opacity: 0.6 },
-      }}
     >
       集計ダウンロード
-    </Button>
+    </AppButton>
   );
 }

@@ -1,19 +1,6 @@
-import { Chip } from "@mui/material";
-import { WorkflowStatus } from "@shared/api/graphql/types";
-
-import { REVERSE_STATUS, STATUS_LABELS } from "@/entities/workflow/lib/workflowLabels";
-import { designTokenVar } from "@/shared/designSystem";
+import { designTokenVar } from "@shared/designSystem";
 
 type FeedbackKey = "success" | "warning" | "danger" | "info";
-
-const STATUS_FEEDBACK_MAP: Record<WorkflowStatus, FeedbackKey> = {
-  [WorkflowStatus.DRAFT]: "info",
-  [WorkflowStatus.SUBMITTED]: "info",
-  [WorkflowStatus.PENDING]: "warning",
-  [WorkflowStatus.APPROVED]: "success",
-  [WorkflowStatus.REJECTED]: "danger",
-  [WorkflowStatus.CANCELLED]: "danger",
-};
 
 type PaletteVars = {
   base: string;
@@ -23,7 +10,7 @@ type PaletteVars = {
 
 const createFeedbackPalette = (
   key: FeedbackKey,
-  defaults: PaletteVars
+  defaults: PaletteVars,
 ): PaletteVars => ({
   base: designTokenVar(`color.feedback.${key}.base`, defaults.base),
   surface: designTokenVar(`color.feedback.${key}.surface`, defaults.surface),
@@ -32,23 +19,23 @@ const createFeedbackPalette = (
 
 const FEEDBACK_COLORS: Record<FeedbackKey, PaletteVars> = {
   success: createFeedbackPalette("success", {
-    base: "#1EAA6A",
-    surface: "#ECF8F1",
+    base: "rgb(30 170 106)",
+    surface: "rgb(236 248 241)",
     border: "rgba(30, 170, 106, 0.4)",
   }),
   warning: createFeedbackPalette("warning", {
-    base: "#E8A447",
-    surface: "#FFF7EA",
+    base: "rgb(232 164 71)",
+    surface: "rgb(255 247 234)",
     border: "rgba(232, 164, 71, 0.4)",
   }),
   danger: createFeedbackPalette("danger", {
-    base: "#D7443E",
-    surface: "#FDECEC",
+    base: "rgb(215 68 62)",
+    surface: "rgb(253 236 236)",
     border: "rgba(215, 68, 62, 0.4)",
   }),
   info: createFeedbackPalette("info", {
-    base: "#3C7EDB",
-    surface: "#EDF2FC",
+    base: "rgb(60 126 219)",
+    surface: "rgb(237 242 252)",
     border: "rgba(60, 126, 219, 0.4)",
   }),
 };
@@ -56,94 +43,90 @@ const FEEDBACK_COLORS: Record<FeedbackKey, PaletteVars> = {
 const FALLBACK_COLORS: PaletteVars = {
   base: designTokenVar(
     "component.workflowList.statusChip.fallback.base",
-    "#45574F"
+    "rgb(69 87 79)",
   ),
   surface: designTokenVar(
     "component.workflowList.statusChip.fallback.surface",
-    "#EDF1EF"
+    "rgb(237 241 239)",
   ),
   border: designTokenVar(
     "component.workflowList.statusChip.fallback.border",
-    "rgba(69, 87, 79, 0.4)"
+    "rgba(69, 87, 79, 0.4)",
   ),
 };
 
 const STATUS_CHIP_BORDER_RADIUS = designTokenVar(
   "component.workflowList.statusChip.borderRadius",
-  "999px"
+  "999px",
 );
 const STATUS_CHIP_FONT_SIZE = designTokenVar(
   "component.workflowList.statusChip.fontSize",
-  "14px"
+  "14px",
 );
 const STATUS_CHIP_GAP = designTokenVar(
   "component.workflowList.statusChip.gap",
-  "4px"
+  "4px",
 );
 const STATUS_CHIP_PADDING_X = designTokenVar(
   "component.workflowList.statusChip.paddingX",
-  "8px"
+  "8px",
 );
 const STATUS_CHIP_FONT_WEIGHT = designTokenVar(
   "component.workflowList.statusChip.fontWeight",
-  "500"
+  "500",
 );
 const STATUS_CHIP_EASING = designTokenVar(
   "component.workflowList.statusChip.transitionEasing",
-  "cubic-bezier(0.2, 0.8, 0.4, 1)"
+  "cubic-bezier(0.2, 0.8, 0.4, 1)",
 );
 const STATUS_CHIP_DURATION = designTokenVar(
   "component.workflowList.statusChip.transitionMs",
-  "120ms"
+  "120ms",
 );
 
-const isWorkflowStatus = (value: string): value is WorkflowStatus =>
-  Boolean(STATUS_LABELS[value as WorkflowStatus]);
+type StatusChipProps<T extends string = string> = {
+  status?: T | null;
+  labelMap: Partial<Record<T, string>>;
+  colorMap: Partial<Record<T, FeedbackKey>>;
+  size?: "small" | "medium";
+};
 
-interface StatusChipProps {
-  status?: string | null;
-}
-
-export default function StatusChip({ status }: StatusChipProps) {
-  const resolvedStatus = (() => {
-    if (!status) return undefined;
-    if (typeof status === "string" && isWorkflowStatus(status)) {
-      return status;
-    }
-    const reverseKey = REVERSE_STATUS[status];
-    if (reverseKey && isWorkflowStatus(reverseKey)) {
-      return reverseKey;
-    }
-    return undefined;
-  })();
-
-  const label = resolvedStatus
-    ? STATUS_LABELS[resolvedStatus]
-    : status
-    ? status
-    : "-";
-
-  const feedbackPalette = resolvedStatus
-    ? FEEDBACK_COLORS[STATUS_FEEDBACK_MAP[resolvedStatus]]
-    : undefined;
-  const palette = feedbackPalette ?? FALLBACK_COLORS;
+export default function StatusChip<T extends string = string>({
+  status,
+  labelMap,
+  colorMap,
+}: StatusChipProps<T>) {
+  const label = status != null ? (labelMap[status] ?? status) : "-";
+  const feedbackKey = status != null ? colorMap[status] : undefined;
+  const palette =
+    feedbackKey != null ? FEEDBACK_COLORS[feedbackKey] : FALLBACK_COLORS;
 
   return (
-    <Chip
-      label={label}
-      size="small"
+    <span
+      className="inline-flex min-h-6 max-w-full items-center justify-center whitespace-nowrap"
       style={{
+        boxSizing: "border-box",
         borderRadius: STATUS_CHIP_BORDER_RADIUS,
-        fontSize: STATUS_CHIP_FONT_SIZE,
+        fontSize: `clamp(12px, 3.2vw, ${STATUS_CHIP_FONT_SIZE})`,
         fontWeight: STATUS_CHIP_FONT_WEIGHT,
-        columnGap: STATUS_CHIP_GAP,
+        lineHeight: 1.4,
+        gap: STATUS_CHIP_GAP,
+        maxWidth: "100%",
         paddingLeft: STATUS_CHIP_PADDING_X,
         paddingRight: STATUS_CHIP_PADDING_X,
+        paddingTop: "2px",
+        paddingBottom: "2px",
         transition: `background-color ${STATUS_CHIP_DURATION} ${STATUS_CHIP_EASING}, color ${STATUS_CHIP_DURATION} ${STATUS_CHIP_EASING}`,
         backgroundColor: palette.surface,
         color: palette.base,
         border: `1px solid ${palette.border}`,
+        overflow: "hidden",
+        textOverflow: "ellipsis",
+        verticalAlign: "middle",
+        flexShrink: 1,
       }}
-    />
+    >
+      {label}
+    </span>
   );
 }

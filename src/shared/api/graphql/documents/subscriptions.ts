@@ -14,6 +14,7 @@ export const onCreateCheckForUpdate = /* GraphQL */ `subscription OnCreateCheckF
   onCreateCheckForUpdate(filter: $filter) {
     id
     deployUuid
+    version
     createdAt
     updatedAt
     __typename
@@ -29,6 +30,7 @@ export const onUpdateCheckForUpdate = /* GraphQL */ `subscription OnUpdateCheckF
   onUpdateCheckForUpdate(filter: $filter) {
     id
     deployUuid
+    version
     createdAt
     updatedAt
     __typename
@@ -44,6 +46,7 @@ export const onDeleteCheckForUpdate = /* GraphQL */ `subscription OnDeleteCheckF
   onDeleteCheckForUpdate(filter: $filter) {
     id
     deployUuid
+    version
     createdAt
     updatedAt
     __typename
@@ -70,6 +73,9 @@ export const onCreateAppConfig = /* GraphQL */ `subscription OnCreateAppConfig($
     amPmHolidayEnabled
     officeMode
     attendanceStatisticsEnabled
+    workflowNotificationEnabled
+    timeRecorderAnnouncementEnabled
+    timeRecorderAnnouncementMessage
     absentEnabled
     hourlyPaidHolidayEnabled
     links {
@@ -114,6 +120,9 @@ export const onCreateAppConfig = /* GraphQL */ `subscription OnCreateAppConfig($
       __typename
     }
     overTimeCheckEnabled
+    shiftCollaborativeEnabled
+    shiftDefaultMode
+    version
     createdAt
     updatedAt
     __typename
@@ -140,6 +149,9 @@ export const onUpdateAppConfig = /* GraphQL */ `subscription OnUpdateAppConfig($
     amPmHolidayEnabled
     officeMode
     attendanceStatisticsEnabled
+    workflowNotificationEnabled
+    timeRecorderAnnouncementEnabled
+    timeRecorderAnnouncementMessage
     absentEnabled
     hourlyPaidHolidayEnabled
     links {
@@ -184,6 +196,9 @@ export const onUpdateAppConfig = /* GraphQL */ `subscription OnUpdateAppConfig($
       __typename
     }
     overTimeCheckEnabled
+    shiftCollaborativeEnabled
+    shiftDefaultMode
+    version
     createdAt
     updatedAt
     __typename
@@ -210,6 +225,9 @@ export const onDeleteAppConfig = /* GraphQL */ `subscription OnDeleteAppConfig($
     amPmHolidayEnabled
     officeMode
     attendanceStatisticsEnabled
+    workflowNotificationEnabled
+    timeRecorderAnnouncementEnabled
+    timeRecorderAnnouncementMessage
     absentEnabled
     hourlyPaidHolidayEnabled
     links {
@@ -254,6 +272,9 @@ export const onDeleteAppConfig = /* GraphQL */ `subscription OnDeleteAppConfig($
       __typename
     }
     overTimeCheckEnabled
+    shiftCollaborativeEnabled
+    shiftDefaultMode
+    version
     createdAt
     updatedAt
     __typename
@@ -296,6 +317,7 @@ export const onCreateStaff = /* GraphQL */ `subscription OnCreateStaff($filter: 
     approverMultipleMode
     shiftGroup
     attendanceManagementEnabled
+    version
     createdAt
     updatedAt
     __typename
@@ -338,6 +360,7 @@ export const onUpdateStaff = /* GraphQL */ `subscription OnUpdateStaff($filter: 
     approverMultipleMode
     shiftGroup
     attendanceManagementEnabled
+    version
     createdAt
     updatedAt
     __typename
@@ -380,6 +403,7 @@ export const onDeleteStaff = /* GraphQL */ `subscription OnDeleteStaff($filter: 
     approverMultipleMode
     shiftGroup
     attendanceManagementEnabled
+    version
     createdAt
     updatedAt
     __typename
@@ -396,6 +420,7 @@ export const onCreateHolidayCalendar = /* GraphQL */ `subscription OnCreateHolid
     id
     holidayDate
     name
+    version
     createdAt
     updatedAt
     __typename
@@ -412,6 +437,7 @@ export const onUpdateHolidayCalendar = /* GraphQL */ `subscription OnUpdateHolid
     id
     holidayDate
     name
+    version
     createdAt
     updatedAt
     __typename
@@ -428,6 +454,7 @@ export const onDeleteHolidayCalendar = /* GraphQL */ `subscription OnDeleteHolid
     id
     holidayDate
     name
+    version
     createdAt
     updatedAt
     __typename
@@ -444,6 +471,7 @@ export const onCreateCompanyHolidayCalendar = /* GraphQL */ `subscription OnCrea
     id
     holidayDate
     name
+    version
     createdAt
     updatedAt
     __typename
@@ -460,6 +488,7 @@ export const onUpdateCompanyHolidayCalendar = /* GraphQL */ `subscription OnUpda
     id
     holidayDate
     name
+    version
     createdAt
     updatedAt
     __typename
@@ -476,6 +505,7 @@ export const onDeleteCompanyHolidayCalendar = /* GraphQL */ `subscription OnDele
     id
     holidayDate
     name
+    version
     createdAt
     updatedAt
     __typename
@@ -493,6 +523,7 @@ export const onCreateEventCalendar = /* GraphQL */ `subscription OnCreateEventCa
     eventDate
     name
     description
+    version
     createdAt
     updatedAt
     __typename
@@ -510,6 +541,7 @@ export const onUpdateEventCalendar = /* GraphQL */ `subscription OnUpdateEventCa
     eventDate
     name
     description
+    version
     createdAt
     updatedAt
     __typename
@@ -527,6 +559,7 @@ export const onDeleteEventCalendar = /* GraphQL */ `subscription OnDeleteEventCa
     eventDate
     name
     description
+    version
     createdAt
     updatedAt
     __typename
@@ -542,6 +575,7 @@ export const onCreateCloseDate = /* GraphQL */ `subscription OnCreateCloseDate($
     closeDate
     startDate
     endDate
+    version
     createdAt
     updatedAt
     __typename
@@ -557,6 +591,7 @@ export const onUpdateCloseDate = /* GraphQL */ `subscription OnUpdateCloseDate($
     closeDate
     startDate
     endDate
+    version
     createdAt
     updatedAt
     __typename
@@ -572,6 +607,7 @@ export const onDeleteCloseDate = /* GraphQL */ `subscription OnDeleteCloseDate($
     closeDate
     startDate
     endDate
+    version
     createdAt
     updatedAt
     __typename
@@ -587,6 +623,7 @@ export const onCreateAttendance = /* GraphQL */ `subscription OnCreateAttendance
   onCreateAttendance(filter: $filter) {
     id
     staffId
+    staffWorkDateKey
     workDate
     startTime
     endTime
@@ -685,6 +722,7 @@ export const onUpdateAttendance = /* GraphQL */ `subscription OnUpdateAttendance
   onUpdateAttendance(filter: $filter) {
     id
     staffId
+    staffWorkDateKey
     workDate
     startTime
     endTime
@@ -783,6 +821,7 @@ export const onDeleteAttendance = /* GraphQL */ `subscription OnDeleteAttendance
   onDeleteAttendance(filter: $filter) {
     id
     staffId
+    staffWorkDateKey
     workDate
     startTime
     endTime
@@ -874,6 +913,132 @@ export const onDeleteAttendance = /* GraphQL */ `subscription OnDeleteAttendance
 ` as GeneratedSubscription<
   APITypes.OnDeleteAttendanceSubscriptionVariables,
   APITypes.OnDeleteAttendanceSubscription
+>;
+export const onCreateAttendanceStatisticsSnapshot = /* GraphQL */ `subscription OnCreateAttendanceStatisticsSnapshot(
+  $filter: ModelSubscriptionAttendanceStatisticsSnapshotFilterInput
+) {
+  onCreateAttendanceStatisticsSnapshot(filter: $filter) {
+    id
+    staffId
+    year
+    status
+    progressPercent
+    currentStepLabel
+    rangeStart
+    rangeEnd
+    monthlySummaries {
+      month
+      rangeStart
+      rangeEnd
+      workHours
+      paidDays
+      specialHolidayDays
+      absentDays
+      workDays
+      isFallback
+      __typename
+    }
+    totalWorkHours
+    totalPaidDays
+    totalSpecialHolidayDays
+    totalAbsentDays
+    totalWorkDays
+    startedAt
+    completedAt
+    lastAggregatedAt
+    errorMessage
+    createdAt
+    updatedAt
+    __typename
+  }
+}
+` as GeneratedSubscription<
+  APITypes.OnCreateAttendanceStatisticsSnapshotSubscriptionVariables,
+  APITypes.OnCreateAttendanceStatisticsSnapshotSubscription
+>;
+export const onUpdateAttendanceStatisticsSnapshot = /* GraphQL */ `subscription OnUpdateAttendanceStatisticsSnapshot(
+  $filter: ModelSubscriptionAttendanceStatisticsSnapshotFilterInput
+) {
+  onUpdateAttendanceStatisticsSnapshot(filter: $filter) {
+    id
+    staffId
+    year
+    status
+    progressPercent
+    currentStepLabel
+    rangeStart
+    rangeEnd
+    monthlySummaries {
+      month
+      rangeStart
+      rangeEnd
+      workHours
+      paidDays
+      specialHolidayDays
+      absentDays
+      workDays
+      isFallback
+      __typename
+    }
+    totalWorkHours
+    totalPaidDays
+    totalSpecialHolidayDays
+    totalAbsentDays
+    totalWorkDays
+    startedAt
+    completedAt
+    lastAggregatedAt
+    errorMessage
+    createdAt
+    updatedAt
+    __typename
+  }
+}
+` as GeneratedSubscription<
+  APITypes.OnUpdateAttendanceStatisticsSnapshotSubscriptionVariables,
+  APITypes.OnUpdateAttendanceStatisticsSnapshotSubscription
+>;
+export const onDeleteAttendanceStatisticsSnapshot = /* GraphQL */ `subscription OnDeleteAttendanceStatisticsSnapshot(
+  $filter: ModelSubscriptionAttendanceStatisticsSnapshotFilterInput
+) {
+  onDeleteAttendanceStatisticsSnapshot(filter: $filter) {
+    id
+    staffId
+    year
+    status
+    progressPercent
+    currentStepLabel
+    rangeStart
+    rangeEnd
+    monthlySummaries {
+      month
+      rangeStart
+      rangeEnd
+      workHours
+      paidDays
+      specialHolidayDays
+      absentDays
+      workDays
+      isFallback
+      __typename
+    }
+    totalWorkHours
+    totalPaidDays
+    totalSpecialHolidayDays
+    totalAbsentDays
+    totalWorkDays
+    startedAt
+    completedAt
+    lastAggregatedAt
+    errorMessage
+    createdAt
+    updatedAt
+    __typename
+  }
+}
+` as GeneratedSubscription<
+  APITypes.OnDeleteAttendanceStatisticsSnapshotSubscriptionVariables,
+  APITypes.OnDeleteAttendanceStatisticsSnapshotSubscription
 >;
 export const onCreateDocument = /* GraphQL */ `subscription OnCreateDocument($filter: ModelSubscriptionDocumentFilterInput) {
   onCreateDocument(filter: $filter) {
@@ -972,6 +1137,15 @@ export const onCreateShiftRequest = /* GraphQL */ `subscription OnCreateShiftReq
       changeReason
       __typename
     }
+    comments {
+      id
+      cellKey
+      staffId
+      authorName
+      body
+      createdAt
+      __typename
+    }
     createdAt
     __typename
   }
@@ -1024,6 +1198,15 @@ export const onUpdateShiftRequest = /* GraphQL */ `subscription OnUpdateShiftReq
       recordedAt
       recordedByStaffId
       changeReason
+      __typename
+    }
+    comments {
+      id
+      cellKey
+      staffId
+      authorName
+      body
+      createdAt
       __typename
     }
     createdAt
@@ -1080,6 +1263,15 @@ export const onDeleteShiftRequest = /* GraphQL */ `subscription OnDeleteShiftReq
       changeReason
       __typename
     }
+    comments {
+      id
+      cellKey
+      staffId
+      authorName
+      body
+      createdAt
+      __typename
+    }
     createdAt
     __typename
   }
@@ -1087,6 +1279,72 @@ export const onDeleteShiftRequest = /* GraphQL */ `subscription OnDeleteShiftReq
 ` as GeneratedSubscription<
   APITypes.OnDeleteShiftRequestSubscriptionVariables,
   APITypes.OnDeleteShiftRequestSubscription
+>;
+export const onCreateShiftEditLock = /* GraphQL */ `subscription OnCreateShiftEditLock(
+  $filter: ModelSubscriptionShiftEditLockFilterInput
+) {
+  onCreateShiftEditLock(filter: $filter) {
+    id
+    targetMonth
+    staffId
+    date
+    holderUserId
+    holderUserName
+    acquiredAt
+    expiresAt
+    version
+    createdAt
+    updatedAt
+    __typename
+  }
+}
+` as GeneratedSubscription<
+  APITypes.OnCreateShiftEditLockSubscriptionVariables,
+  APITypes.OnCreateShiftEditLockSubscription
+>;
+export const onUpdateShiftEditLock = /* GraphQL */ `subscription OnUpdateShiftEditLock(
+  $filter: ModelSubscriptionShiftEditLockFilterInput
+) {
+  onUpdateShiftEditLock(filter: $filter) {
+    id
+    targetMonth
+    staffId
+    date
+    holderUserId
+    holderUserName
+    acquiredAt
+    expiresAt
+    version
+    createdAt
+    updatedAt
+    __typename
+  }
+}
+` as GeneratedSubscription<
+  APITypes.OnUpdateShiftEditLockSubscriptionVariables,
+  APITypes.OnUpdateShiftEditLockSubscription
+>;
+export const onDeleteShiftEditLock = /* GraphQL */ `subscription OnDeleteShiftEditLock(
+  $filter: ModelSubscriptionShiftEditLockFilterInput
+) {
+  onDeleteShiftEditLock(filter: $filter) {
+    id
+    targetMonth
+    staffId
+    date
+    holderUserId
+    holderUserName
+    acquiredAt
+    expiresAt
+    version
+    createdAt
+    updatedAt
+    __typename
+  }
+}
+` as GeneratedSubscription<
+  APITypes.OnDeleteShiftEditLockSubscriptionVariables,
+  APITypes.OnDeleteShiftEditLockSubscription
 >;
 export const onCreateShiftPlanYear = /* GraphQL */ `subscription OnCreateShiftPlanYear(
   $filter: ModelSubscriptionShiftPlanYearFilterInput
@@ -1105,6 +1363,7 @@ export const onCreateShiftPlanYear = /* GraphQL */ `subscription OnCreateShiftPl
     notes
     createdBy
     updatedBy
+    version
     createdAt
     updatedAt
     __typename
@@ -1131,6 +1390,7 @@ export const onUpdateShiftPlanYear = /* GraphQL */ `subscription OnUpdateShiftPl
     notes
     createdBy
     updatedBy
+    version
     createdAt
     updatedAt
     __typename
@@ -1157,6 +1417,7 @@ export const onDeleteShiftPlanYear = /* GraphQL */ `subscription OnDeleteShiftPl
     notes
     createdBy
     updatedBy
+    version
     createdAt
     updatedAt
     __typename
@@ -1206,6 +1467,7 @@ export const onCreateWorkflow = /* GraphQL */ `subscription OnCreateWorkflow($fi
       createdAt
       __typename
     }
+    version
     createdAt
     updatedAt
     __typename
@@ -1255,6 +1517,7 @@ export const onUpdateWorkflow = /* GraphQL */ `subscription OnUpdateWorkflow($fi
       createdAt
       __typename
     }
+    version
     createdAt
     updatedAt
     __typename
@@ -1304,6 +1567,7 @@ export const onDeleteWorkflow = /* GraphQL */ `subscription OnDeleteWorkflow($fi
       createdAt
       __typename
     }
+    version
     createdAt
     updatedAt
     __typename
@@ -1322,6 +1586,7 @@ export const onCreateWorkflowTemplate = /* GraphQL */ `subscription OnCreateWork
     title
     content
     organizationId
+    version
     createdAt
     updatedAt
     __typename
@@ -1340,6 +1605,7 @@ export const onUpdateWorkflowTemplate = /* GraphQL */ `subscription OnUpdateWork
     title
     content
     organizationId
+    version
     createdAt
     updatedAt
     __typename
@@ -1358,6 +1624,7 @@ export const onDeleteWorkflowTemplate = /* GraphQL */ `subscription OnDeleteWork
     title
     content
     organizationId
+    version
     createdAt
     updatedAt
     __typename
@@ -1367,21 +1634,109 @@ export const onDeleteWorkflowTemplate = /* GraphQL */ `subscription OnDeleteWork
   APITypes.OnDeleteWorkflowTemplateSubscriptionVariables,
   APITypes.OnDeleteWorkflowTemplateSubscription
 >;
+export const onCreateWorkflowNotificationEvent = /* GraphQL */ `subscription OnCreateWorkflowNotificationEvent(
+  $filter: ModelSubscriptionWorkflowNotificationEventFilterInput
+) {
+  onCreateWorkflowNotificationEvent(filter: $filter) {
+    id
+    recipientStaffId
+    actorStaffId
+    workflowId
+    eventType
+    commentId
+    title
+    body
+    isRead
+    readAt
+    eventAt
+    version
+    createdAt
+    updatedAt
+    __typename
+  }
+}
+` as GeneratedSubscription<
+  APITypes.OnCreateWorkflowNotificationEventSubscriptionVariables,
+  APITypes.OnCreateWorkflowNotificationEventSubscription
+>;
+export const onUpdateWorkflowNotificationEvent = /* GraphQL */ `subscription OnUpdateWorkflowNotificationEvent(
+  $filter: ModelSubscriptionWorkflowNotificationEventFilterInput
+) {
+  onUpdateWorkflowNotificationEvent(filter: $filter) {
+    id
+    recipientStaffId
+    actorStaffId
+    workflowId
+    eventType
+    commentId
+    title
+    body
+    isRead
+    readAt
+    eventAt
+    version
+    createdAt
+    updatedAt
+    __typename
+  }
+}
+` as GeneratedSubscription<
+  APITypes.OnUpdateWorkflowNotificationEventSubscriptionVariables,
+  APITypes.OnUpdateWorkflowNotificationEventSubscription
+>;
+export const onDeleteWorkflowNotificationEvent = /* GraphQL */ `subscription OnDeleteWorkflowNotificationEvent(
+  $filter: ModelSubscriptionWorkflowNotificationEventFilterInput
+) {
+  onDeleteWorkflowNotificationEvent(filter: $filter) {
+    id
+    recipientStaffId
+    actorStaffId
+    workflowId
+    eventType
+    commentId
+    title
+    body
+    isRead
+    readAt
+    eventAt
+    version
+    createdAt
+    updatedAt
+    __typename
+  }
+}
+` as GeneratedSubscription<
+  APITypes.OnDeleteWorkflowNotificationEventSubscriptionVariables,
+  APITypes.OnDeleteWorkflowNotificationEventSubscription
+>;
 export const onCreateOperationLog = /* GraphQL */ `subscription OnCreateOperationLog(
   $filter: ModelSubscriptionOperationLogFilterInput
 ) {
   onCreateOperationLog(filter: $filter) {
     id
     staffId
+    resourceKey
+    targetStaffId
     action
     resource
     resourceId
+    summary
     timestamp
+    before
+    after
+    diff
     details
     ipAddress
     userAgent
     metadata
+    clientTimezone
+    occurredAt
+    resolvedWorkDate
+    idempotencyKey
+    appVersion
     severity
+    logFormatVersion
+    version
     createdAt
     updatedAt
     __typename
@@ -1397,15 +1752,28 @@ export const onUpdateOperationLog = /* GraphQL */ `subscription OnUpdateOperatio
   onUpdateOperationLog(filter: $filter) {
     id
     staffId
+    resourceKey
+    targetStaffId
     action
     resource
     resourceId
+    summary
     timestamp
+    before
+    after
+    diff
     details
     ipAddress
     userAgent
     metadata
+    clientTimezone
+    occurredAt
+    resolvedWorkDate
+    idempotencyKey
+    appVersion
     severity
+    logFormatVersion
+    version
     createdAt
     updatedAt
     __typename
@@ -1421,15 +1789,28 @@ export const onDeleteOperationLog = /* GraphQL */ `subscription OnDeleteOperatio
   onDeleteOperationLog(filter: $filter) {
     id
     staffId
+    resourceKey
+    targetStaffId
     action
     resource
     resourceId
+    summary
     timestamp
+    before
+    after
+    diff
     details
     ipAddress
     userAgent
     metadata
+    clientTimezone
+    occurredAt
+    resolvedWorkDate
+    idempotencyKey
+    appVersion
     severity
+    logFormatVersion
+    version
     createdAt
     updatedAt
     __typename
@@ -1456,6 +1837,7 @@ export const onCreateAuditLog = /* GraphQL */ `subscription OnCreateAuditLog($fi
     createdAt
     ttl
     reason
+    version
     updatedAt
     __typename
   }
@@ -1481,6 +1863,7 @@ export const onUpdateAuditLog = /* GraphQL */ `subscription OnUpdateAuditLog($fi
     createdAt
     ttl
     reason
+    version
     updatedAt
     __typename
   }
@@ -1506,6 +1889,7 @@ export const onDeleteAuditLog = /* GraphQL */ `subscription OnDeleteAuditLog($fi
     createdAt
     ttl
     reason
+    version
     updatedAt
     __typename
   }
@@ -1539,6 +1923,7 @@ export const onCreateDailyReport = /* GraphQL */ `subscription OnCreateDailyRepo
       createdAt
       __typename
     }
+    version
     createdAt
     __typename
   }
@@ -1572,6 +1957,7 @@ export const onUpdateDailyReport = /* GraphQL */ `subscription OnUpdateDailyRepo
       createdAt
       __typename
     }
+    version
     createdAt
     __typename
   }
@@ -1605,6 +1991,7 @@ export const onDeleteDailyReport = /* GraphQL */ `subscription OnDeleteDailyRepo
       createdAt
       __typename
     }
+    version
     createdAt
     __typename
   }

@@ -1,27 +1,18 @@
-import {
-  Box,
-  Button,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  Stack,
-  Tooltip,
-  Typography,
-} from "@mui/material";
+import { AppButton, AppSplitButton } from "@shared/ui/button";
 import dayjs from "dayjs";
-import { useRef, useState } from "react";
+import { useEffect } from "react";
 
 import { AttendanceGetValues, AttendanceSetValue } from "../model/types";
 import { useQuickInputActions } from "../model/useQuickInputActions";
+import { useQuickInputSelection } from "../model/useQuickInputSelection";
 
 type QuickInputButtonsProps = {
   setValue: AttendanceSetValue;
   restReplace: (
-    items: { startTime: string | null; endTime: string | null }[]
+    items: { startTime: string | null; endTime: string | null }[],
   ) => void;
   hourlyPaidHolidayTimeReplace: (
-    items: { startTime: string | null; endTime: string | null }[]
+    items: { startTime: string | null; endTime: string | null }[],
   ) => void;
   workDate: dayjs.Dayjs | null;
   /**
@@ -51,75 +42,83 @@ export default function QuickInputButtons({
     getValues,
     readOnly,
   });
+  const {
+    open,
+    selectedKey,
+    setSelectedKey,
+    confirmLabel,
+    askConfirm,
+    applySelectedAction,
+    close,
+  } = useQuickInputSelection(actions);
 
-  // 確認ダイアログ用のstate
-  const [confirmOpen, setConfirmOpen] = useState(false);
-  const [confirmLabel, setConfirmLabel] = useState<string | null>(null);
-  const pendingActionRef = useRef<(() => void) | null>(null);
+  useEffect(() => {
+    if (actions.length === 0) return;
+    if (!actions.some((action) => action.key === selectedKey)) {
+      setSelectedKey(actions[0].key);
+    }
+  }, [actions, selectedKey, setSelectedKey]);
+
+  const selectedAction =
+    actions.find((action) => action.key === selectedKey) ?? actions[0] ?? null;
 
   // どのボタンも表示されない場合はコンポーネントを非表示にする
   if (actions.length === 0) return null;
 
-  const askConfirm = (label: string, action: () => void) => {
-    setConfirmLabel(label);
-    pendingActionRef.current = action;
-    setConfirmOpen(true);
-  };
-
-  const handleConfirm = () => {
-    try {
-      pendingActionRef.current?.();
-    } finally {
-      setConfirmOpen(false);
-      pendingActionRef.current = null;
-      setConfirmLabel(null);
-    }
-  };
-
-  const handleCancel = () => {
-    setConfirmOpen(false);
-    pendingActionRef.current = null;
-    setConfirmLabel(null);
-  };
-
   return (
-    <Box sx={{ mb: 1 }}>
-      <Stack direction="row" spacing={1} alignItems="center">
-        <Box sx={{ fontWeight: "bold", mr: 1 }}>定型入力</Box>
-        <Stack direction="row" spacing={1}>
-          {actions.map((action) => (
-            <Tooltip key={action.key} title={action.tooltip || ""}>
-              <span>
-                <Button
-                  variant="outlined"
-                  onClick={() =>
-                    askConfirm(
-                      `定型入力: 「${action.label}」を適用します。よろしいですか？`,
-                      action.action
-                    )
-                  }
-                  disabled={!!readOnly}
-                >
-                  {action.label}
-                </Button>
-              </span>
-            </Tooltip>
-          ))}
-        </Stack>
-      </Stack>
+    <div className="mb-1">
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="mr-1 text-base font-bold text-slate-900">定型入力</div>
+        <AppSplitButton
+          options={actions.map((action) => ({
+            key: action.key,
+            label: action.label,
+            title: action.tooltip,
+          }))}
+          selectedKey={selectedAction?.key ?? null}
+          onSelectedKeyChange={setSelectedKey}
+          onPrimaryClick={() => {
+            if (!selectedAction) return;
+            askConfirm(
+              `定型入力: 「${selectedAction.label}」を適用します。よろしいですか？`,
+              selectedAction.action,
+            );
+          }}
+          disabled={!!readOnly}
+          variant="outline"
+          tone="primary"
+          size="sm"
+        />
+      </div>
 
-      <Dialog open={confirmOpen} onClose={handleCancel} fullWidth maxWidth="xs">
-        <DialogTitle>確認</DialogTitle>
-        <DialogContent>
-          <Typography>{confirmLabel}</Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCancel}>キャンセル</Button>
-          <Button onClick={handleConfirm} variant="contained">
-            適用
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </Box>
+      {open ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/30 px-4">
+          <div className="w-full max-w-sm rounded-[24px] border border-emerald-200 bg-white p-5 shadow-[0_24px_60px_-32px_rgba(15,23,42,0.45)]">
+            <div className="text-base font-semibold text-slate-950">確認</div>
+            <p className="mt-3 text-sm leading-6 text-slate-600">
+              {confirmLabel}
+            </p>
+            <div className="mt-5 flex justify-end gap-2">
+              <AppButton
+                onClick={close}
+                variant="outline"
+                tone="neutral"
+                size="sm"
+              >
+                キャンセル
+              </AppButton>
+              <AppButton
+                onClick={applySelectedAction}
+                variant="solid"
+                tone="primary"
+                size="sm"
+              >
+                適用
+              </AppButton>
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </div>
   );
 }

@@ -1,3 +1,9 @@
+import { CompanyHoliday } from "@entities/attendance/lib/CompanyHoliday";
+import { DayOfWeek } from "@entities/attendance/lib/DayOfWeek";
+import {
+  Holiday,
+  normalizeHolidayName,
+} from "@entities/attendance/lib/Holiday";
 import { styled, TableCell as MuiTableCell } from "@mui/material";
 import {
   Attendance,
@@ -5,10 +11,6 @@ import {
   HolidayCalendar,
 } from "@shared/api/graphql/types";
 import dayjs from "dayjs";
-
-import { CompanyHoliday } from "@/entities/attendance/lib/CompanyHoliday";
-import { DayOfWeek } from "@/entities/attendance/lib/DayOfWeek";
-import { Holiday } from "@/entities/attendance/lib/Holiday";
 
 const TableCell = styled(MuiTableCell)(({ theme }) => ({
   width: theme.spacing(10),
@@ -28,7 +30,9 @@ export function WorkDateTableCell({
   const date = dayjs(workDate);
 
   const holiday = new Holiday(holidayCalendars, workDate);
-  const holidayName = holiday.getHoliday()?.name;
+  const holidayName = holiday.getHoliday()?.name
+    ? normalizeHolidayName(holiday.getHoliday()!.name)
+    : undefined;
 
   const dayOfWeek = new DayOfWeek(holidayCalendars).getLabel(workDate);
 
@@ -37,7 +41,7 @@ export function WorkDateTableCell({
 
   return (
     <TableCell sx={{ whiteSpace: "nowrap" }}>{`${date.format(
-      "M/D"
+      "M/D",
     )}(${dayOfWeek}) ${holidayName || companyHolidayName || ""}`}</TableCell>
   );
 }

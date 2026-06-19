@@ -1,117 +1,40 @@
-import Box from "@mui/material/Box";
-import Button from "@mui/material/Button";
-import Stack from "@mui/material/Stack";
-import Typography from "@mui/material/Typography";
-import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
-import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
-import {
-  CreateAppConfigInput,
-  UpdateAppConfigInput,
-} from "@shared/api/graphql/types";
-import { Dayjs } from "dayjs";
-import { useContext, useEffect, useState } from "react";
+import { AppConfigContext } from "@entities/app-config/model/AppConfigContext";
+import AdminSettingsLayout from "@features/admin/layout/ui/AdminSettingsLayout";
+import AdminSettingsSection from "@features/admin/layout/ui/AdminSettingsSection";
+import { SettingsButton } from "@features/admin/layout/ui/SettingsPrimitives";
+import type { Dayjs } from "dayjs";
+import { useContext, useState } from "react";
 
-import { useAppDispatchV2 } from "@/app/hooks";
-import { AppConfigContext } from "@/context/AppConfigContext";
-import { E14001, E14002, S14001, S14002 } from "@/errors";
-import {
-  setSnackbarError,
-  setSnackbarSuccess,
-} from "@/shared/lib/store/snackbarSlice";
-
+import { createWorkingTimeState, getWorkingTimeStateKey, type WorkingTimeState } from "../lib/formState";
+import { useSaveAppConfigSection } from "../lib/useSaveAppConfigSection";
 import WorkingTimeSection from "./WorkingTimeSection";
 
 export default function WorkingTime() {
-  const {
-    getStartTime,
-    getEndTime,
-    getLunchRestStartTime,
-    getLunchRestEndTime,
-    getConfigId,
-    saveConfig,
-    fetchConfig,
-  } = useContext(AppConfigContext);
-  const [startTime, setStartTime] = useState<Dayjs | null>(null);
-  const [endTime, setEndTime] = useState<Dayjs | null>(null);
-  const [lunchRestStartTime, setLunchRestStartTime] = useState<Dayjs | null>(
-    null
-  );
-  const [lunchRestEndTime, setLunchRestEndTime] = useState<Dayjs | null>(null);
-  const [id, setId] = useState<string | null>(null);
-  const dispatch = useAppDispatchV2();
+    const { getStartTime, getEndTime, getLunchRestStartTime, getLunchRestEndTime } = useContext(AppConfigContext);
+    const initialState = createWorkingTimeState({ getStartTime, getEndTime, getLunchRestStartTime, getLunchRestEndTime });
+    const stateKey = getWorkingTimeStateKey(initialState);
+    return <WorkingTimeContent key={stateKey} initialState={initialState} />;
+}
 
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setStartTime(getStartTime());
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setEndTime(getEndTime());
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setLunchRestStartTime(getLunchRestStartTime());
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setLunchRestEndTime(getLunchRestEndTime());
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setId(getConfigId());
-  }, [
-    getStartTime,
-    getEndTime,
-    getLunchRestStartTime,
-    getLunchRestEndTime,
-    getConfigId,
-  ]);
-
-  const handleSave = async () => {
-    if (startTime && endTime && lunchRestStartTime && lunchRestEndTime) {
-      try {
-        if (id) {
-          await saveConfig({
-            id,
-            workStartTime: startTime.format("HH:mm"),
-            workEndTime: endTime.format("HH:mm"),
-            lunchRestStartTime: lunchRestStartTime.format("HH:mm"),
-            lunchRestEndTime: lunchRestEndTime.format("HH:mm"),
-          } as unknown as UpdateAppConfigInput);
-          dispatch(setSnackbarSuccess(S14002));
-        } else {
-          await saveConfig({
-            name: "default",
-            workStartTime: startTime.format("HH:mm"),
-            workEndTime: endTime.format("HH:mm"),
-            lunchRestStartTime: lunchRestStartTime.format("HH:mm"),
-            lunchRestEndTime: lunchRestEndTime.format("HH:mm"),
-          } as unknown as CreateAppConfigInput);
-          dispatch(setSnackbarSuccess(S14001));
+function WorkingTimeContent({ initialState }: { initialState: WorkingTimeState }) {
+    const [startTime, setStartTime] = useState<Dayjs | null>(() => initialState.startTime);
+    const [endTime, setEndTime] = useState<Dayjs | null>(() => initialState.endTime);
+    const [lunchRestStartTime, setLunchRestStartTime] = useState<Dayjs | null>(() => initialState.lunchRestStartTime);
+    const [lunchRestEndTime, setLunchRestEndTime] = useState<Dayjs | null>(() => initialState.lunchRestEndTime);
+    const saveAppConfigSection = useSaveAppConfigSection();
+    const handleSave = async () => {
+        if (startTime && endTime && lunchRestStartTime && lunchRestEndTime) {
+            await saveAppConfigSection({
+                workStartTime: startTime.format("HH:mm"),
+                workEndTime: endTime.format("HH:mm"),
+                lunchRestStartTime: lunchRestStartTime.format("HH:mm"),
+                lunchRestEndTime: lunchRestEndTime.format("HH:mm"),
+            });
         }
-        await fetchConfig();
-      } catch {
-        dispatch(setSnackbarError(E14001));
-      }
-    } else {
-      dispatch(setSnackbarError(E14002));
-    }
-  };
-
-  return (
-    <LocalizationProvider dateAdapter={AdapterDayjs}>
-      <Box>
-        <Typography variant="h4" sx={{ mb: 1 }}>
-          勤務時間設定
-        </Typography>
-        <Stack spacing={2} sx={{ mb: 2 }}>
-          <WorkingTimeSection
-            startTime={startTime}
-            endTime={endTime}
-            lunchRestStartTime={lunchRestStartTime}
-            lunchRestEndTime={lunchRestEndTime}
-            setStartTime={setStartTime}
-            setEndTime={setEndTime}
-            setLunchRestStartTime={setLunchRestStartTime}
-            setLunchRestEndTime={setLunchRestEndTime}
-          />
-          <Button variant="contained" color="primary" onClick={handleSave}>
-            保存
-          </Button>
-        </Stack>
-      </Box>
-    </LocalizationProvider>
-  );
+    };
+    return (<AdminSettingsLayout>
+      <AdminSettingsSection actions={<SettingsButton onClick={handleSave}>保存</SettingsButton>}>
+        <WorkingTimeSection startTime={startTime} endTime={endTime} lunchRestStartTime={lunchRestStartTime} lunchRestEndTime={lunchRestEndTime} setStartTime={setStartTime} setEndTime={setEndTime} setLunchRestStartTime={setLunchRestStartTime} setLunchRestEndTime={setLunchRestEndTime}/>
+      </AdminSettingsSection>
+    </AdminSettingsLayout>);
 }

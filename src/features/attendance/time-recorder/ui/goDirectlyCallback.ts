@@ -1,94 +1,49 @@
-import createOperationLogData from "@entities/operation-log/model/createOperationLogData";
+import { GoDirectlyFlag } from "@entities/attendance/lib/actions/attendanceActions";
+import { AttendanceDateTime } from "@entities/attendance/lib/AttendanceDateTime";
+import { resolveBusinessWorkDate } from "@entities/attendance/lib/businessDate";
+import { getNowISOStringWithZeroSeconds } from "@entities/attendance/lib/time";
+import { CognitoUser } from "@entities/staff/model/useCognitoUser";
 import { Dispatch } from "@reduxjs/toolkit";
-import {
-  Attendance,
-  CreateOperationLogInput,
-  Staff,
-} from "@shared/api/graphql/types";
+import { Attendance, Staff } from "@shared/api/graphql/types";
+import { Logger } from "@shared/lib/logger";
+import { TimeRecordMailSender } from "@shared/lib/mail/TimeRecordMailSender";
+import { pushNotification } from "@shared/lib/store/notificationSlice";
 
-import { GoDirectlyFlag } from "@/entities/attendance/lib/actions/attendanceActions";
-import { AttendanceDateTime } from "@/entities/attendance/lib/AttendanceDateTime";
-import { getNowISOStringWithZeroSeconds } from "@/entities/attendance/lib/time";
 import * as MESSAGE_CODE from "@/errors";
-import { CognitoUser } from "@/hooks/useCognitoUser";
-import { Logger } from "@/shared/lib/logger";
-import { TimeRecordMailSender } from "@/shared/lib/mail/TimeRecordMailSender";
-import {
-  setSnackbarError,
-  setSnackbarSuccess,
-} from "@/shared/lib/store/snackbarSlice";
 
-export async function goDirectlyCallback(
-  cognitoUser: CognitoUser | null | undefined,
-  today: string,
-  staff: Staff | null | undefined,
-  dispatch: Dispatch,
-  clockIn: (
-    staffId: string,
-    workDate: string,
-    startTime: string,
-    goDirectlyFlag?: GoDirectlyFlag
-  ) => Promise<Attendance>,
-  logger: Logger,
-  // optional explicit ISO timestamp to use for work start (allows AppConfig-driven times)
-  startTimeIso?: string
-): Promise<void> {
-  if (!cognitoUser) {
-    logger.debug("Skipped goDirectlyCallback because cognitoUser is missing");
-    return;
-  }
-
-  const attendanceStartTime = resolveStartTime(startTimeIso);
-
-  try {
-    const attendance = await clockIn(
-      cognitoUser.id,
-      today,
-      attendanceStartTime,
-      GoDirectlyFlag.YES
-    );
-
-    // record button-press time and include attendance time inside details (best-effort)
-    try {
-      const pressedAt = getNowISOStringWithZeroSeconds();
-      const input: CreateOperationLogInput = {
-        staffId: cognitoUser.id,
-        action: "go_directly",
-        resource: "attendance",
-        resourceId: attendance?.id ?? undefined,
-        // primary timestamp: when the user pressed the button
-        timestamp: pressedAt,
-        details: JSON.stringify({
-          workDate: today,
-          attendanceTime: attendanceStartTime,
-          staffName: staff
-            ? `${staff.familyName ?? ""} ${staff.givenName ?? ""}`.trim()
-            : undefined,
-        }),
-        userAgent:
-          typeof navigator !== "undefined" ? navigator.userAgent : undefined,
-      };
-      await createOperationLogData(input);
-    } catch (logErr) {
-      logger.error("Failed to create operation log for goDirectly", logErr);
+export async function goDirectlyCallback(cognitoUser: CognitoUser | null | undefined, staff: Staff | null | undefined, dispatch: Dispatch, clockIn: (staffId: string, workDate: string, startTime: string, goDirectlyFlag?: GoDirectlyFlag) => Promise<Attendance>, logger: Logger, 
+// optional explicit ISO timestamp to use for work start (allows AppConfig-driven times)
+startTimeIso?: string, occurredAt = getNowISOStringWithZeroSeconds()): Promise<void> {
+    if (!cognitoUser) {
+        logger.debug("Skipped goDirectlyCallback because cognitoUser is missing");
+        return;
     }
-
-    dispatch(setSnackbarSuccess(MESSAGE_CODE.S01003));
+    const workDate = resolveBusinessWorkDate(occurredAt);
+    const attendanceStartTime = resolveStartTime(startTimeIso);
     try {
-      await new TimeRecordMailSender(cognitoUser, attendance, staff).clockIn();
-    } catch (mailErr) {
-      logger.error("Failed to send go directly mail", mailErr);
+        const attendance = await clockIn(cognitoUser.id, workDate, attendanceStartTime, GoDirectlyFlag.YES);
+        dispatch(pushNotification({
+            tone: "success",
+            message: MESSAGE_CODE.S01003
+        }));
+        try {
+            await new TimeRecordMailSender(cognitoUser, attendance, staff).clockIn();
+        }
+        catch (mailErr) {
+            logger.error("Failed to send go directly mail", mailErr);
+        }
     }
-  } catch (error) {
-    logger.error("Failed to clock in with go directly flag", error);
-    dispatch(setSnackbarError(MESSAGE_CODE.E01005));
-  }
+    catch (error) {
+        logger.error("Failed to clock in with go directly flag", error);
+        dispatch(pushNotification({
+            tone: "error",
+            message: MESSAGE_CODE.E01005
+        }));
+    }
 }
-
 function resolveStartTime(startTimeIso?: string) {
-  if (startTimeIso) {
-    return startTimeIso;
-  }
-
-  return new AttendanceDateTime().setWorkStart().toISOString();
+    if (startTimeIso) {
+        return startTimeIso;
+    }
+    return new AttendanceDateTime().setWorkStart().toISOString();
 }

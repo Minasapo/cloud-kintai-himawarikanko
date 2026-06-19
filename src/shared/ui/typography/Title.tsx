@@ -1,50 +1,54 @@
-import { Typography, type TypographyProps } from "@mui/material";
-import { forwardRef } from "react";
+import { type CSSProperties, type HTMLAttributes, type ReactNode } from "react";
 
-import { designTokenVar } from "@/shared/designSystem";
+import {
+  Heading,
+  type HeadingAppearance,
+  type HeadingContrast,
+} from "./Heading";
 
 type TitleProps = {
+  appearance?: HeadingAppearance;
   borderColor?: string;
   color?: string;
-} & Omit<TypographyProps, "color">;
+  contrast?: HeadingContrast;
+  children?: ReactNode;
+  className?: string;
+  component?: "h1" | "h2" | "h3" | "div" | "span";
+  style?: CSSProperties;
+  sx?: CSSProperties;
+} & Omit<HTMLAttributes<HTMLElement>, "color" | "children">;
 
-const TITLE_ACCENT_COLOR = designTokenVar(
-  "component.title.accentColor",
-  "#0FA85E"
-);
-const TITLE_BORDER_WIDTH = designTokenVar("component.title.borderWidth", "5px");
-const TITLE_PADDING_LEFT = designTokenVar("component.title.paddingLeft", "8px");
-const TITLE_TEXT_COLOR = designTokenVar("component.title.textColor", "#0FA85E");
-
-const Title = forwardRef<HTMLSpanElement, TitleProps>(function Title(
-  {
-    children,
-    borderColor,
-    color = TITLE_TEXT_COLOR,
-    sx,
-    variant = "h1",
-    ...typographyProps
-  },
-  ref
-) {
-  const resolvedBorderColor = borderColor ?? color ?? TITLE_ACCENT_COLOR;
-
+const Title = ({
+  appearance = "hero",
+  children,
+  borderColor,
+  color,
+  contrast,
+  sx,
+  className,
+  style,
+  component = "h1",
+  ...rest
+}: TitleProps) => {
   return (
-    <Typography
-      ref={ref}
-      variant={variant}
+    <Heading
+      as={component}
+      appearance={appearance}
+      borderColor={borderColor}
+      className={className}
+      color={color}
+      contrast={contrast}
+      level="page"
       style={{
-        paddingLeft: TITLE_PADDING_LEFT,
-        borderBottom: `solid ${TITLE_BORDER_WIDTH} ${resolvedBorderColor}`,
-        color,
+        ...sx,
+        ...style,
       }}
-      sx={sx}
-      {...typographyProps}
+      {...rest}
     >
       {children}
-    </Typography>
+    </Heading>
   );
-});
+};
 
 Title.displayName = "Title";
 

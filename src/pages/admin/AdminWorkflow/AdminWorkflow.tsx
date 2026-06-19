@@ -1,66 +1,31 @@
+import { AuthContext } from "@app/providers/auth/AuthContext";
 import useAppConfig from "@entities/app-config/model/useAppConfig";
 import { useStaffs } from "@entities/staff/model/useStaffs/useStaffs";
 import useWorkflows from "@entities/workflow/model/useWorkflows";
-import OpenInNewOutlinedIcon from "@mui/icons-material/OpenInNewOutlined";
-import {
-  Button,
-  Container,
-  FormControl,
-  IconButton,
-  InputLabel,
-  LinearProgress,
-  MenuItem,
-  Paper,
-  Select,
-  SelectChangeEvent,
-  Stack,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TablePagination,
-  TableRow,
-  Tooltip,
-  Typography,
-  useMediaQuery,
-  useTheme,
-} from "@mui/material";
+import { useSplitView } from "@features/splitView";
 import { WorkflowCategory, WorkflowStatus } from "@shared/api/graphql/types";
-import StatusChip from "@shared/ui/chips/StatusChip";
-import {
-  ComponentType,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+import { useIsMobile } from "@shared/lib/hooks/useIsMobile";
+import { AppButton } from "@shared/ui/button";
+import { type ComponentType,useCallback, useContext, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { AuthContext } from "@/context/AuthContext";
-import {
-  CATEGORY_LABELS,
-  getWorkflowCategoryLabel,
-  STATUS_LABELS,
-} from "@/entities/workflow/lib/workflowLabels";
-import { useSplitView } from "@/features/splitView";
-
-import WorkflowCarouselDialog from "./components/WorkflowCarouselDialog";
 import WorkflowDetailPanel from "./components/WorkflowDetailPanel";
+import WorkflowDialogsSection from "./components/WorkflowDialogsSection";
+import WorkflowFiltersBar from "./components/WorkflowFiltersBar";
+import WorkflowListBody from "./components/WorkflowListBody";
+import WorkflowPageHeader from "./components/WorkflowPageHeader";
+import WorkflowPaginationBar from "./components/WorkflowPaginationBar";
 
-const STATUS_ALL_VALUE = "__ALL__";
 const STATUS_EXCLUDED_FROM_DEFAULT: WorkflowStatus[] = [
   WorkflowStatus.CANCELLED,
   WorkflowStatus.APPROVED,
 ];
 
 export default function AdminWorkflow() {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+  const isMobile = useIsMobile();
   const { authStatus } = useContext(AuthContext);
   const isAuthenticated = authStatus === "authenticated";
-  const { workflows, loading, error, fetchWorkflows } = useWorkflows({
+  const { workflows, loading, error } = useWorkflows({
     isAuthenticated,
   });
   const { config, getAbsentEnabled, getWorkflowCategoryOrder } = useAppConfig();
@@ -72,13 +37,14 @@ export default function AdminWorkflow() {
   const { enableSplitMode, setRightPanel } = useSplitView();
   const navigate = useNavigate();
 
-  // フィルター/ページネーション state
   const [categoryFilter, setCategoryFilter] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string[]>([]);
-  const [statusInitialized, setStatusInitialized] = useState(false);
+  const [statusFilterOverride, setStatusFilterOverride] = useState<
+    WorkflowStatus[] | null
+  >(null);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [isCarouselOpen, setIsCarouselOpen] = useState(false);
+  const [isSettingsDialogOpen, setIsSettingsDialogOpen] = useState(false);
   const [selectedWorkflowId, setSelectedWorkflowId] = useState<string | null>(
     null,
   );
@@ -94,43 +60,34 @@ export default function AdminWorkflow() {
     [config, getAbsentEnabled, getWorkflowCategoryOrder],
   );
 
-  // 利用可能なステータスをワークフローから抽出
   const statuses = Array.from(
-    new Set((workflows || []).map((w) => w.status).filter(Boolean)),
-  ) as Array<WorkflowStatus>;
+    new Set(
+      (workflows || []).map((workflow) => workflow.status).filter(Boolean),
+    ),
+  ) as WorkflowStatus[];
 
-  useEffect(() => {
-    if (statusInitialized) return;
-    if (statuses.length === 0) return;
+  const defaultStatusFilter = useMemo(
+    () =>
+      statuses.filter(
+        (status) => !STATUS_EXCLUDED_FROM_DEFAULT.includes(status),
+      ),
+    [statuses],
+  );
+  const statusFilter = statusFilterOverride ?? defaultStatusFilter;
 
-    const initialStatuses = statuses.filter(
-      (s) => !STATUS_EXCLUDED_FROM_DEFAULT.includes(s),
-    );
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setStatusFilter(initialStatuses);
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setStatusInitialized(true);
-  }, [statuses, statusInitialized]);
-
-  // フィルタ適用
-  const filteredWorkflows = (workflows || []).filter((w) => {
-    if (categoryFilter && w.category !== categoryFilter) return false;
-    if (statusFilter.length > 0 && !statusFilter.includes(w.status))
+  const filteredWorkflows = (workflows || []).filter((workflow) => {
+    if (categoryFilter && workflow.category !== categoryFilter) return false;
+    if (statusFilter.length > 0 && !statusFilter.includes(workflow.status)) {
       return false;
+    }
     return true;
   });
 
-  // 作成日で降順にソートしてからページネーションを適用
   const sortedWorkflows = filteredWorkflows.toSorted((a, b) => {
-    const at = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-    const bt = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-    return bt - at; // 降順
+    const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+    const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+    return bTime - aTime;
   });
-
-  const paginatedWorkflows = sortedWorkflows.slice(
-    page * rowsPerPage,
-    page * rowsPerPage + rowsPerPage,
-  );
 
   const workflowsById = new Map(
     sortedWorkflows.map((workflow) => [workflow.id, workflow]),
@@ -149,23 +106,19 @@ export default function AdminWorkflow() {
 
   const filteredWorkflowIds = sortedWorkflows.map((workflow) => workflow.id);
 
-  // ページングリセット: フィルター変更時にページを先頭に戻す
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setPage(0);
-  }, [categoryFilter, statusFilter]);
-
-  const handleStatusChange = (event: SelectChangeEvent<string[]>) => {
-    const value = event.target.value;
-    const nextValue = typeof value === "string" ? value.split(",") : value;
-
-    if (nextValue.includes(STATUS_ALL_VALUE)) {
-      setStatusFilter([]);
-      return;
-    }
-
-    setStatusFilter(nextValue);
-  };
+  const rowsPerPageOptions = isMobile ? [10] : [10, 25, 50];
+  const activeRowsPerPage = rowsPerPageOptions.includes(rowsPerPage)
+    ? rowsPerPage
+    : rowsPerPageOptions[0];
+  const totalPages = Math.max(
+    1,
+    Math.ceil(sortedWorkflows.length / activeRowsPerPage),
+  );
+  const currentPage = Math.min(page, totalPages - 1);
+  const paginatedWorkflows = sortedWorkflows.slice(
+    currentPage * activeRowsPerPage,
+    currentPage * activeRowsPerPage + activeRowsPerPage,
+  );
 
   const createWorkflowPanelComponent = useCallback(
     (workflowId: string): ComponentType<{ panelId: string }> => {
@@ -194,234 +147,117 @@ export default function AdminWorkflow() {
     setIsCarouselOpen(true);
   };
 
-  if (loading || staffLoading) return <LinearProgress />;
-  if (error || staffError)
+  const toggleStatusFilter = (status: WorkflowStatus) => {
+    setStatusFilterOverride((current) => {
+      const base = current ?? defaultStatusFilter;
+      if (base.includes(status)) {
+        return base.filter((item) => item !== status);
+      }
+      return [...base, status];
+    });
+    setPage(0);
+  };
+
+  if (loading || staffLoading) {
     return (
-      <Typography>
-        データ取得中に問題が発生しました。管理者に連絡してください。
-      </Typography>
+      <div className="w-full">
+        <div className="h-1 w-full overflow-hidden bg-slate-200">
+          <div className="h-full w-1/3 animate-pulse bg-emerald-600" />
+        </div>
+      </div>
     );
+  }
+
+  if (error || staffError) {
+    return (
+      <p className="px-4 py-6 text-sm text-rose-700">
+        データ取得中に問題が発生しました。管理者に連絡してください。
+      </p>
+    );
+  }
 
   return (
-    <Container maxWidth="xl" sx={{ height: 1, pt: 2 }}>
-      <Stack spacing={2}>
-        <Typography variant="body2" color="text.secondary">
-          ワークフローの一覧を表示します。管理者用の画面です。
-        </Typography>
+    <div className="h-full w-full px-3 pt-2 sm:px-4 lg:px-6">
+      <div className="space-y-4">
+        <WorkflowPageHeader
+          onOpenSettings={() => setIsSettingsDialogOpen(true)}
+        />
 
-        {/* フィルター */}
-        <Stack
-          direction={{ xs: "column", sm: "row" }}
-          spacing={2}
-          alignItems={{ xs: "stretch", sm: "center" }}
-        >
-          <FormControl size="small" sx={{ minWidth: { sm: 160 } }}>
-            <InputLabel id="category-filter-label">種別</InputLabel>
-            <Select
-              labelId="category-filter-label"
-              value={categoryFilter}
-              label="種別"
-              onChange={(e) => setCategoryFilter(String(e.target.value))}
-            >
-              <MenuItem value="">すべて</MenuItem>
-              {categories.map((c) => (
-                <MenuItem key={c.category} value={c.category}>
-                  {CATEGORY_LABELS[c.category] || c.label}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+        <WorkflowFiltersBar
+          categoryFilter={categoryFilter}
+          onCategoryChange={(value) => {
+            setCategoryFilter(value);
+            setPage(0);
+          }}
+          categories={categories}
+          statuses={statuses}
+          statusFilter={statusFilter}
+          onToggleStatus={toggleStatusFilter}
+          onClearStatus={() => {
+            setStatusFilterOverride([]);
+            setPage(0);
+          }}
+        />
 
-          <FormControl size="small" sx={{ minWidth: { sm: 160 } }}>
-            <InputLabel id="status-filter-label">ステータス</InputLabel>
-            <Select
-              labelId="status-filter-label"
-              multiple
-              value={statusFilter}
-              label="ステータス"
-              onChange={handleStatusChange}
-              renderValue={(selected) =>
-                selected.length === 0
-                  ? "すべて"
-                  : selected
-                      .map(
-                        (s) =>
-                          STATUS_LABELS[String(s) as WorkflowStatus] ||
-                          String(s),
-                      )
-                      .join("、")
-              }
-            >
-              <MenuItem value={STATUS_ALL_VALUE}>すべて</MenuItem>
-              {statuses.map((s) => (
-                <MenuItem key={String(s)} value={String(s)}>
-                  {STATUS_LABELS[String(s) as WorkflowStatus] || String(s)}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-        </Stack>
-
-        <Paper sx={{ p: { xs: 1.5, sm: 2 } }}>
-          <Stack
-            direction={{ xs: "column", sm: "row" }}
-            justifyContent="space-between"
-            alignItems={{ xs: "stretch", sm: "center" }}
-            mb={2}
-          >
-            <Typography variant="body2" color="text.secondary">
+        <section className="rounded-xl border border-slate-200 bg-white p-3 sm:p-4">
+          <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm text-slate-600">
               {filteredWorkflows.length} 件の申請
-            </Typography>
-            <Button
-              variant="contained"
+            </p>
+            <AppButton
               onClick={handleOpenCarousel}
               disabled={filteredWorkflowIds.length === 0}
+              className="min-w-0"
             >
               まとめて確認
-            </Button>
-          </Stack>
+            </AppButton>
+          </div>
 
-          {isMobile ? (
-            <Stack spacing={1.5}>
-              {paginatedWorkflows.map((w) => {
-                const staff = staffs.find((s) => s.id === w.staffId);
-                const staffName = staff
-                  ? `${staff.familyName || ""}${staff.givenName || ""}`
-                  : w.staffId || "不明";
-                const categoryLabel = getWorkflowCategoryLabel(w);
-
-                return (
-                  <Paper
-                    key={w.id}
-                    variant="outlined"
-                    onClick={() => navigate(`/admin/workflow/${w.id}`)}
-                    sx={{ p: 1.5, cursor: "pointer" }}
-                  >
-                    <Stack spacing={1}>
-                      <Stack direction="row" justifyContent="space-between">
-                        <Typography variant="subtitle2">
-                          {categoryLabel}
-                        </Typography>
-                        <Tooltip title="右側で開く">
-                          <IconButton
-                            size="small"
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              handleOpenInRightPanel(w.id);
-                            }}
-                          >
-                            <OpenInNewOutlinedIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                      </Stack>
-                      <Typography variant="body2">{staffName}</Typography>
-                      <Stack
-                        direction="row"
-                        justifyContent="space-between"
-                        alignItems="center"
-                      >
-                        <StatusChip status={w.status} />
-                        <Typography variant="caption" color="text.secondary">
-                          {w.createdAt ? w.createdAt.split("T")[0] : ""}
-                        </Typography>
-                      </Stack>
-                    </Stack>
-                  </Paper>
-                );
-              })}
-            </Stack>
+          {paginatedWorkflows.length === 0 ? (
+            <p className="rounded-lg border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-sm text-slate-500">
+              条件に一致する申請はありません。
+            </p>
           ) : (
-            <TableContainer sx={{ overflowX: "auto" }}>
-              <Table size="small">
-                <TableHead>
-                  <TableRow>
-                    <TableCell sx={{ width: "50px" }} />
-                    <TableCell>種別</TableCell>
-                    <TableCell>申請者</TableCell>
-                    <TableCell>ステータス</TableCell>
-                    <TableCell>作成日</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {paginatedWorkflows.map((w) => {
-                    const staff = staffs.find((s) => s.id === w.staffId);
-                    const staffName = staff
-                      ? `${staff.familyName || ""}${staff.givenName || ""}`
-                      : w.staffId || "不明";
-                    const categoryLabel = getWorkflowCategoryLabel(w);
-
-                    return (
-                      <TableRow
-                        key={w.id}
-                        hover
-                        onClick={() => navigate(`/admin/workflow/${w.id}`)}
-                        sx={{ cursor: "pointer" }}
-                      >
-                        <TableCell
-                          sx={{ width: "50px", padding: "8px 4px" }}
-                          onClick={(event) => event.stopPropagation()}
-                        >
-                          <Tooltip title="右側で開く">
-                            <IconButton
-                              size="small"
-                              onClick={() => handleOpenInRightPanel(w.id)}
-                            >
-                              <OpenInNewOutlinedIcon
-                                sx={{ fontSize: "18px" }}
-                              />
-                            </IconButton>
-                          </Tooltip>
-                        </TableCell>
-                        <TableCell>{categoryLabel}</TableCell>
-                        <TableCell>{staffName}</TableCell>
-                        <TableCell>
-                          <StatusChip status={w.status} />
-                        </TableCell>
-                        <TableCell>
-                          {w.createdAt ? w.createdAt.split("T")[0] : ""}
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </TableContainer>
+            <WorkflowListBody
+              paginatedWorkflows={paginatedWorkflows}
+              isMobile={isMobile}
+              staffs={staffs}
+              navigate={navigate}
+              onOpenInRightPanel={handleOpenInRightPanel}
+            />
           )}
 
-          <TablePagination
-            component="div"
-            count={filteredWorkflows.length}
-            page={page}
-            onPageChange={(_, newPage) => setPage(newPage)}
-            rowsPerPage={rowsPerPage}
-            onRowsPerPageChange={(e) => {
-              setRowsPerPage(parseInt(e.target.value, 10));
+          <WorkflowPaginationBar
+            currentPage={currentPage}
+            totalPages={totalPages}
+            activeRowsPerPage={activeRowsPerPage}
+            rowsPerPageOptions={rowsPerPageOptions}
+            onRowsPerPageChange={(value) => {
+              setRowsPerPage(value);
               setPage(0);
             }}
-            rowsPerPageOptions={isMobile ? [10] : [10, 25, 50]}
+            onPrevPage={() => setPage(Math.max(0, currentPage - 1))}
+            onNextPage={() =>
+              setPage(Math.min(totalPages - 1, currentPage + 1))
+            }
           />
-        </Paper>
+        </section>
 
-        {selectedWorkflowId && (
-          <WorkflowCarouselDialog
-            open={isCarouselOpen}
-            onClose={() => {
-              setIsCarouselOpen(false);
-              setSelectedWorkflowId(null);
-            }}
-            selectedWorkflowId={selectedWorkflowId}
-            filteredWorkflowIds={filteredWorkflowIds}
-            workflowsById={workflowsById}
-            staffNamesById={staffNamesById}
-            onOpenInRightPanel={(workflowId) => {
-              handleOpenInRightPanel(workflowId);
-              setIsCarouselOpen(false);
-            }}
-            enableApprovalActions
-            onWorkflowActionCompleted={fetchWorkflows}
-          />
-        )}
-      </Stack>
-    </Container>
+        <WorkflowDialogsSection
+          isCarouselOpen={isCarouselOpen}
+          selectedWorkflowId={selectedWorkflowId}
+          onCloseCarousel={() => {
+            setIsCarouselOpen(false);
+            setSelectedWorkflowId(null);
+          }}
+          filteredWorkflowIds={filteredWorkflowIds}
+          workflowsById={workflowsById}
+          staffNamesById={staffNamesById}
+          onOpenInRightPanel={handleOpenInRightPanel}
+          isSettingsDialogOpen={isSettingsDialogOpen}
+          onCloseSettings={() => setIsSettingsDialogOpen(false)}
+        />
+      </div>
+    </div>
   );
 }

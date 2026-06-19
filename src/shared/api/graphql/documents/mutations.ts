@@ -15,6 +15,7 @@ export const createCheckForUpdate = /* GraphQL */ `mutation CreateCheckForUpdate
   createCheckForUpdate(input: $input, condition: $condition) {
     id
     deployUuid
+    version
     createdAt
     updatedAt
     __typename
@@ -31,6 +32,7 @@ export const updateCheckForUpdate = /* GraphQL */ `mutation UpdateCheckForUpdate
   updateCheckForUpdate(input: $input, condition: $condition) {
     id
     deployUuid
+    version
     createdAt
     updatedAt
     __typename
@@ -47,6 +49,7 @@ export const deleteCheckForUpdate = /* GraphQL */ `mutation DeleteCheckForUpdate
   deleteCheckForUpdate(input: $input, condition: $condition) {
     id
     deployUuid
+    version
     createdAt
     updatedAt
     __typename
@@ -76,6 +79,9 @@ export const createAppConfig = /* GraphQL */ `mutation CreateAppConfig(
     amPmHolidayEnabled
     officeMode
     attendanceStatisticsEnabled
+    workflowNotificationEnabled
+    timeRecorderAnnouncementEnabled
+    timeRecorderAnnouncementMessage
     absentEnabled
     hourlyPaidHolidayEnabled
     links {
@@ -120,6 +126,9 @@ export const createAppConfig = /* GraphQL */ `mutation CreateAppConfig(
       __typename
     }
     overTimeCheckEnabled
+    shiftCollaborativeEnabled
+    shiftDefaultMode
+    version
     createdAt
     updatedAt
     __typename
@@ -149,6 +158,9 @@ export const updateAppConfig = /* GraphQL */ `mutation UpdateAppConfig(
     amPmHolidayEnabled
     officeMode
     attendanceStatisticsEnabled
+    workflowNotificationEnabled
+    timeRecorderAnnouncementEnabled
+    timeRecorderAnnouncementMessage
     absentEnabled
     hourlyPaidHolidayEnabled
     links {
@@ -193,6 +205,9 @@ export const updateAppConfig = /* GraphQL */ `mutation UpdateAppConfig(
       __typename
     }
     overTimeCheckEnabled
+    shiftCollaborativeEnabled
+    shiftDefaultMode
+    version
     createdAt
     updatedAt
     __typename
@@ -222,6 +237,9 @@ export const deleteAppConfig = /* GraphQL */ `mutation DeleteAppConfig(
     amPmHolidayEnabled
     officeMode
     attendanceStatisticsEnabled
+    workflowNotificationEnabled
+    timeRecorderAnnouncementEnabled
+    timeRecorderAnnouncementMessage
     absentEnabled
     hourlyPaidHolidayEnabled
     links {
@@ -266,6 +284,9 @@ export const deleteAppConfig = /* GraphQL */ `mutation DeleteAppConfig(
       __typename
     }
     overTimeCheckEnabled
+    shiftCollaborativeEnabled
+    shiftDefaultMode
+    version
     createdAt
     updatedAt
     __typename
@@ -311,6 +332,7 @@ export const createStaff = /* GraphQL */ `mutation CreateStaff(
     approverMultipleMode
     shiftGroup
     attendanceManagementEnabled
+    version
     createdAt
     updatedAt
     __typename
@@ -356,6 +378,7 @@ export const updateStaff = /* GraphQL */ `mutation UpdateStaff(
     approverMultipleMode
     shiftGroup
     attendanceManagementEnabled
+    version
     createdAt
     updatedAt
     __typename
@@ -401,6 +424,7 @@ export const deleteStaff = /* GraphQL */ `mutation DeleteStaff(
     approverMultipleMode
     shiftGroup
     attendanceManagementEnabled
+    version
     createdAt
     updatedAt
     __typename
@@ -418,6 +442,7 @@ export const createHolidayCalendar = /* GraphQL */ `mutation CreateHolidayCalend
     id
     holidayDate
     name
+    version
     createdAt
     updatedAt
     __typename
@@ -435,6 +460,7 @@ export const updateHolidayCalendar = /* GraphQL */ `mutation UpdateHolidayCalend
     id
     holidayDate
     name
+    version
     createdAt
     updatedAt
     __typename
@@ -452,6 +478,7 @@ export const deleteHolidayCalendar = /* GraphQL */ `mutation DeleteHolidayCalend
     id
     holidayDate
     name
+    version
     createdAt
     updatedAt
     __typename
@@ -469,6 +496,7 @@ export const createCompanyHolidayCalendar = /* GraphQL */ `mutation CreateCompan
     id
     holidayDate
     name
+    version
     createdAt
     updatedAt
     __typename
@@ -486,6 +514,7 @@ export const updateCompanyHolidayCalendar = /* GraphQL */ `mutation UpdateCompan
     id
     holidayDate
     name
+    version
     createdAt
     updatedAt
     __typename
@@ -503,6 +532,7 @@ export const deleteCompanyHolidayCalendar = /* GraphQL */ `mutation DeleteCompan
     id
     holidayDate
     name
+    version
     createdAt
     updatedAt
     __typename
@@ -521,6 +551,7 @@ export const createEventCalendar = /* GraphQL */ `mutation CreateEventCalendar(
     eventDate
     name
     description
+    version
     createdAt
     updatedAt
     __typename
@@ -539,6 +570,7 @@ export const updateEventCalendar = /* GraphQL */ `mutation UpdateEventCalendar(
     eventDate
     name
     description
+    version
     createdAt
     updatedAt
     __typename
@@ -557,6 +589,7 @@ export const deleteEventCalendar = /* GraphQL */ `mutation DeleteEventCalendar(
     eventDate
     name
     description
+    version
     createdAt
     updatedAt
     __typename
@@ -575,6 +608,7 @@ export const createCloseDate = /* GraphQL */ `mutation CreateCloseDate(
     closeDate
     startDate
     endDate
+    version
     createdAt
     updatedAt
     __typename
@@ -593,6 +627,7 @@ export const updateCloseDate = /* GraphQL */ `mutation UpdateCloseDate(
     closeDate
     startDate
     endDate
+    version
     createdAt
     updatedAt
     __typename
@@ -611,6 +646,7 @@ export const deleteCloseDate = /* GraphQL */ `mutation DeleteCloseDate(
     closeDate
     startDate
     endDate
+    version
     createdAt
     updatedAt
     __typename
@@ -627,6 +663,7 @@ export const createAttendance = /* GraphQL */ `mutation CreateAttendance(
   createAttendance(input: $input, condition: $condition) {
     id
     staffId
+    staffWorkDateKey
     workDate
     startTime
     endTime
@@ -726,6 +763,7 @@ export const updateAttendance = /* GraphQL */ `mutation UpdateAttendance(
   updateAttendance(input: $input, condition: $condition) {
     id
     staffId
+    staffWorkDateKey
     workDate
     startTime
     endTime
@@ -825,6 +863,7 @@ export const deleteAttendance = /* GraphQL */ `mutation DeleteAttendance(
   deleteAttendance(input: $input, condition: $condition) {
     id
     staffId
+    staffWorkDateKey
     workDate
     startTime
     endTime
@@ -916,6 +955,135 @@ export const deleteAttendance = /* GraphQL */ `mutation DeleteAttendance(
 ` as GeneratedMutation<
   APITypes.DeleteAttendanceMutationVariables,
   APITypes.DeleteAttendanceMutation
+>;
+export const createAttendanceStatisticsSnapshot = /* GraphQL */ `mutation CreateAttendanceStatisticsSnapshot(
+  $input: CreateAttendanceStatisticsSnapshotInput!
+  $condition: ModelAttendanceStatisticsSnapshotConditionInput
+) {
+  createAttendanceStatisticsSnapshot(input: $input, condition: $condition) {
+    id
+    staffId
+    year
+    status
+    progressPercent
+    currentStepLabel
+    rangeStart
+    rangeEnd
+    monthlySummaries {
+      month
+      rangeStart
+      rangeEnd
+      workHours
+      paidDays
+      specialHolidayDays
+      absentDays
+      workDays
+      isFallback
+      __typename
+    }
+    totalWorkHours
+    totalPaidDays
+    totalSpecialHolidayDays
+    totalAbsentDays
+    totalWorkDays
+    startedAt
+    completedAt
+    lastAggregatedAt
+    errorMessage
+    createdAt
+    updatedAt
+    __typename
+  }
+}
+` as GeneratedMutation<
+  APITypes.CreateAttendanceStatisticsSnapshotMutationVariables,
+  APITypes.CreateAttendanceStatisticsSnapshotMutation
+>;
+export const updateAttendanceStatisticsSnapshot = /* GraphQL */ `mutation UpdateAttendanceStatisticsSnapshot(
+  $input: UpdateAttendanceStatisticsSnapshotInput!
+  $condition: ModelAttendanceStatisticsSnapshotConditionInput
+) {
+  updateAttendanceStatisticsSnapshot(input: $input, condition: $condition) {
+    id
+    staffId
+    year
+    status
+    progressPercent
+    currentStepLabel
+    rangeStart
+    rangeEnd
+    monthlySummaries {
+      month
+      rangeStart
+      rangeEnd
+      workHours
+      paidDays
+      specialHolidayDays
+      absentDays
+      workDays
+      isFallback
+      __typename
+    }
+    totalWorkHours
+    totalPaidDays
+    totalSpecialHolidayDays
+    totalAbsentDays
+    totalWorkDays
+    startedAt
+    completedAt
+    lastAggregatedAt
+    errorMessage
+    createdAt
+    updatedAt
+    __typename
+  }
+}
+` as GeneratedMutation<
+  APITypes.UpdateAttendanceStatisticsSnapshotMutationVariables,
+  APITypes.UpdateAttendanceStatisticsSnapshotMutation
+>;
+export const deleteAttendanceStatisticsSnapshot = /* GraphQL */ `mutation DeleteAttendanceStatisticsSnapshot(
+  $input: DeleteAttendanceStatisticsSnapshotInput!
+  $condition: ModelAttendanceStatisticsSnapshotConditionInput
+) {
+  deleteAttendanceStatisticsSnapshot(input: $input, condition: $condition) {
+    id
+    staffId
+    year
+    status
+    progressPercent
+    currentStepLabel
+    rangeStart
+    rangeEnd
+    monthlySummaries {
+      month
+      rangeStart
+      rangeEnd
+      workHours
+      paidDays
+      specialHolidayDays
+      absentDays
+      workDays
+      isFallback
+      __typename
+    }
+    totalWorkHours
+    totalPaidDays
+    totalSpecialHolidayDays
+    totalAbsentDays
+    totalWorkDays
+    startedAt
+    completedAt
+    lastAggregatedAt
+    errorMessage
+    createdAt
+    updatedAt
+    __typename
+  }
+}
+` as GeneratedMutation<
+  APITypes.DeleteAttendanceStatisticsSnapshotMutationVariables,
+  APITypes.DeleteAttendanceStatisticsSnapshotMutation
 >;
 export const createDocument = /* GraphQL */ `mutation CreateDocument(
   $input: CreateDocumentInput!
@@ -1024,6 +1192,15 @@ export const createShiftRequest = /* GraphQL */ `mutation CreateShiftRequest(
       changeReason
       __typename
     }
+    comments {
+      id
+      cellKey
+      staffId
+      authorName
+      body
+      createdAt
+      __typename
+    }
     createdAt
     __typename
   }
@@ -1077,6 +1254,15 @@ export const updateShiftRequest = /* GraphQL */ `mutation UpdateShiftRequest(
       recordedAt
       recordedByStaffId
       changeReason
+      __typename
+    }
+    comments {
+      id
+      cellKey
+      staffId
+      authorName
+      body
+      createdAt
       __typename
     }
     createdAt
@@ -1134,6 +1320,15 @@ export const deleteShiftRequest = /* GraphQL */ `mutation DeleteShiftRequest(
       changeReason
       __typename
     }
+    comments {
+      id
+      cellKey
+      staffId
+      authorName
+      body
+      createdAt
+      __typename
+    }
     createdAt
     __typename
   }
@@ -1141,6 +1336,75 @@ export const deleteShiftRequest = /* GraphQL */ `mutation DeleteShiftRequest(
 ` as GeneratedMutation<
   APITypes.DeleteShiftRequestMutationVariables,
   APITypes.DeleteShiftRequestMutation
+>;
+export const createShiftEditLock = /* GraphQL */ `mutation CreateShiftEditLock(
+  $input: CreateShiftEditLockInput!
+  $condition: ModelShiftEditLockConditionInput
+) {
+  createShiftEditLock(input: $input, condition: $condition) {
+    id
+    targetMonth
+    staffId
+    date
+    holderUserId
+    holderUserName
+    acquiredAt
+    expiresAt
+    version
+    createdAt
+    updatedAt
+    __typename
+  }
+}
+` as GeneratedMutation<
+  APITypes.CreateShiftEditLockMutationVariables,
+  APITypes.CreateShiftEditLockMutation
+>;
+export const updateShiftEditLock = /* GraphQL */ `mutation UpdateShiftEditLock(
+  $input: UpdateShiftEditLockInput!
+  $condition: ModelShiftEditLockConditionInput
+) {
+  updateShiftEditLock(input: $input, condition: $condition) {
+    id
+    targetMonth
+    staffId
+    date
+    holderUserId
+    holderUserName
+    acquiredAt
+    expiresAt
+    version
+    createdAt
+    updatedAt
+    __typename
+  }
+}
+` as GeneratedMutation<
+  APITypes.UpdateShiftEditLockMutationVariables,
+  APITypes.UpdateShiftEditLockMutation
+>;
+export const deleteShiftEditLock = /* GraphQL */ `mutation DeleteShiftEditLock(
+  $input: DeleteShiftEditLockInput!
+  $condition: ModelShiftEditLockConditionInput
+) {
+  deleteShiftEditLock(input: $input, condition: $condition) {
+    id
+    targetMonth
+    staffId
+    date
+    holderUserId
+    holderUserName
+    acquiredAt
+    expiresAt
+    version
+    createdAt
+    updatedAt
+    __typename
+  }
+}
+` as GeneratedMutation<
+  APITypes.DeleteShiftEditLockMutationVariables,
+  APITypes.DeleteShiftEditLockMutation
 >;
 export const createShiftPlanYear = /* GraphQL */ `mutation CreateShiftPlanYear(
   $input: CreateShiftPlanYearInput!
@@ -1160,6 +1424,7 @@ export const createShiftPlanYear = /* GraphQL */ `mutation CreateShiftPlanYear(
     notes
     createdBy
     updatedBy
+    version
     createdAt
     updatedAt
     __typename
@@ -1187,6 +1452,7 @@ export const updateShiftPlanYear = /* GraphQL */ `mutation UpdateShiftPlanYear(
     notes
     createdBy
     updatedBy
+    version
     createdAt
     updatedAt
     __typename
@@ -1214,6 +1480,7 @@ export const deleteShiftPlanYear = /* GraphQL */ `mutation DeleteShiftPlanYear(
     notes
     createdBy
     updatedBy
+    version
     createdAt
     updatedAt
     __typename
@@ -1266,6 +1533,7 @@ export const createWorkflow = /* GraphQL */ `mutation CreateWorkflow(
       createdAt
       __typename
     }
+    version
     createdAt
     updatedAt
     __typename
@@ -1318,6 +1586,7 @@ export const updateWorkflow = /* GraphQL */ `mutation UpdateWorkflow(
       createdAt
       __typename
     }
+    version
     createdAt
     updatedAt
     __typename
@@ -1370,6 +1639,7 @@ export const deleteWorkflow = /* GraphQL */ `mutation DeleteWorkflow(
       createdAt
       __typename
     }
+    version
     createdAt
     updatedAt
     __typename
@@ -1389,6 +1659,7 @@ export const createWorkflowTemplate = /* GraphQL */ `mutation CreateWorkflowTemp
     title
     content
     organizationId
+    version
     createdAt
     updatedAt
     __typename
@@ -1408,6 +1679,7 @@ export const updateWorkflowTemplate = /* GraphQL */ `mutation UpdateWorkflowTemp
     title
     content
     organizationId
+    version
     createdAt
     updatedAt
     __typename
@@ -1427,6 +1699,7 @@ export const deleteWorkflowTemplate = /* GraphQL */ `mutation DeleteWorkflowTemp
     title
     content
     organizationId
+    version
     createdAt
     updatedAt
     __typename
@@ -1436,6 +1709,84 @@ export const deleteWorkflowTemplate = /* GraphQL */ `mutation DeleteWorkflowTemp
   APITypes.DeleteWorkflowTemplateMutationVariables,
   APITypes.DeleteWorkflowTemplateMutation
 >;
+export const createWorkflowNotificationEvent = /* GraphQL */ `mutation CreateWorkflowNotificationEvent(
+  $input: CreateWorkflowNotificationEventInput!
+  $condition: ModelWorkflowNotificationEventConditionInput
+) {
+  createWorkflowNotificationEvent(input: $input, condition: $condition) {
+    id
+    recipientStaffId
+    actorStaffId
+    workflowId
+    eventType
+    commentId
+    title
+    body
+    isRead
+    readAt
+    eventAt
+    version
+    createdAt
+    updatedAt
+    __typename
+  }
+}
+` as GeneratedMutation<
+  APITypes.CreateWorkflowNotificationEventMutationVariables,
+  APITypes.CreateWorkflowNotificationEventMutation
+>;
+export const updateWorkflowNotificationEvent = /* GraphQL */ `mutation UpdateWorkflowNotificationEvent(
+  $input: UpdateWorkflowNotificationEventInput!
+  $condition: ModelWorkflowNotificationEventConditionInput
+) {
+  updateWorkflowNotificationEvent(input: $input, condition: $condition) {
+    id
+    recipientStaffId
+    actorStaffId
+    workflowId
+    eventType
+    commentId
+    title
+    body
+    isRead
+    readAt
+    eventAt
+    version
+    createdAt
+    updatedAt
+    __typename
+  }
+}
+` as GeneratedMutation<
+  APITypes.UpdateWorkflowNotificationEventMutationVariables,
+  APITypes.UpdateWorkflowNotificationEventMutation
+>;
+export const deleteWorkflowNotificationEvent = /* GraphQL */ `mutation DeleteWorkflowNotificationEvent(
+  $input: DeleteWorkflowNotificationEventInput!
+  $condition: ModelWorkflowNotificationEventConditionInput
+) {
+  deleteWorkflowNotificationEvent(input: $input, condition: $condition) {
+    id
+    recipientStaffId
+    actorStaffId
+    workflowId
+    eventType
+    commentId
+    title
+    body
+    isRead
+    readAt
+    eventAt
+    version
+    createdAt
+    updatedAt
+    __typename
+  }
+}
+` as GeneratedMutation<
+  APITypes.DeleteWorkflowNotificationEventMutationVariables,
+  APITypes.DeleteWorkflowNotificationEventMutation
+>;
 export const createOperationLog = /* GraphQL */ `mutation CreateOperationLog(
   $input: CreateOperationLogInput!
   $condition: ModelOperationLogConditionInput
@@ -1443,15 +1794,28 @@ export const createOperationLog = /* GraphQL */ `mutation CreateOperationLog(
   createOperationLog(input: $input, condition: $condition) {
     id
     staffId
+    resourceKey
+    targetStaffId
     action
     resource
     resourceId
+    summary
     timestamp
+    before
+    after
+    diff
     details
     ipAddress
     userAgent
     metadata
+    clientTimezone
+    occurredAt
+    resolvedWorkDate
+    idempotencyKey
+    appVersion
     severity
+    logFormatVersion
+    version
     createdAt
     updatedAt
     __typename
@@ -1468,15 +1832,28 @@ export const updateOperationLog = /* GraphQL */ `mutation UpdateOperationLog(
   updateOperationLog(input: $input, condition: $condition) {
     id
     staffId
+    resourceKey
+    targetStaffId
     action
     resource
     resourceId
+    summary
     timestamp
+    before
+    after
+    diff
     details
     ipAddress
     userAgent
     metadata
+    clientTimezone
+    occurredAt
+    resolvedWorkDate
+    idempotencyKey
+    appVersion
     severity
+    logFormatVersion
+    version
     createdAt
     updatedAt
     __typename
@@ -1493,15 +1870,28 @@ export const deleteOperationLog = /* GraphQL */ `mutation DeleteOperationLog(
   deleteOperationLog(input: $input, condition: $condition) {
     id
     staffId
+    resourceKey
+    targetStaffId
     action
     resource
     resourceId
+    summary
     timestamp
+    before
+    after
+    diff
     details
     ipAddress
     userAgent
     metadata
+    clientTimezone
+    occurredAt
+    resolvedWorkDate
+    idempotencyKey
+    appVersion
     severity
+    logFormatVersion
+    version
     createdAt
     updatedAt
     __typename
@@ -1531,6 +1921,7 @@ export const createAuditLog = /* GraphQL */ `mutation CreateAuditLog(
     createdAt
     ttl
     reason
+    version
     updatedAt
     __typename
   }
@@ -1559,6 +1950,7 @@ export const updateAuditLog = /* GraphQL */ `mutation UpdateAuditLog(
     createdAt
     ttl
     reason
+    version
     updatedAt
     __typename
   }
@@ -1587,6 +1979,7 @@ export const deleteAuditLog = /* GraphQL */ `mutation DeleteAuditLog(
     createdAt
     ttl
     reason
+    version
     updatedAt
     __typename
   }
@@ -1621,6 +2014,7 @@ export const createDailyReport = /* GraphQL */ `mutation CreateDailyReport(
       createdAt
       __typename
     }
+    version
     createdAt
     __typename
   }
@@ -1655,6 +2049,7 @@ export const updateDailyReport = /* GraphQL */ `mutation UpdateDailyReport(
       createdAt
       __typename
     }
+    version
     createdAt
     __typename
   }
@@ -1689,6 +2084,7 @@ export const deleteDailyReport = /* GraphQL */ `mutation DeleteDailyReport(
       createdAt
       __typename
     }
+    version
     createdAt
     __typename
   }
@@ -1696,4 +2092,103 @@ export const deleteDailyReport = /* GraphQL */ `mutation DeleteDailyReport(
 ` as GeneratedMutation<
   APITypes.DeleteDailyReportMutationVariables,
   APITypes.DeleteDailyReportMutation
+>;
+export const upsertAttendanceByStaffAndDate = /* GraphQL */ `mutation UpsertAttendanceByStaffAndDate(
+  $input: UpsertAttendanceByStaffAndDateInput!
+) {
+  upsertAttendanceByStaffAndDate(input: $input) {
+    id
+    staffId
+    staffWorkDateKey
+    workDate
+    startTime
+    endTime
+    goDirectlyFlag
+    returnDirectlyFlag
+    absentFlag
+    rests {
+      startTime
+      endTime
+      __typename
+    }
+    hourlyPaidHolidayTimes {
+      startTime
+      endTime
+      __typename
+    }
+    remarks
+    paidHolidayFlag
+    specialHolidayFlag
+    isDeemedHoliday
+    hourlyPaidHolidayHours
+    substituteHolidayDate
+    histories {
+      staffId
+      workDate
+      startTime
+      endTime
+      goDirectlyFlag
+      absentFlag
+      returnDirectlyFlag
+      rests {
+        startTime
+        endTime
+        __typename
+      }
+      hourlyPaidHolidayTimes {
+        startTime
+        endTime
+        __typename
+      }
+      remarks
+      paidHolidayFlag
+      specialHolidayFlag
+      hourlyPaidHolidayHours
+      substituteHolidayFlag
+      substituteHolidayDate
+      createdAt
+      __typename
+    }
+    changeRequests {
+      startTime
+      endTime
+      goDirectlyFlag
+      absentFlag
+      returnDirectlyFlag
+      rests {
+        startTime
+        endTime
+        __typename
+      }
+      hourlyPaidHolidayTimes {
+        startTime
+        endTime
+        __typename
+      }
+      remarks
+      paidHolidayFlag
+      specialHolidayFlag
+      hourlyPaidHolidayHours
+      substituteHolidayFlag
+      substituteHolidayDate
+      completed
+      comment
+      staffComment
+      __typename
+    }
+    systemComments {
+      comment
+      confirmed
+      createdAt
+      __typename
+    }
+    revision
+    createdAt
+    updatedAt
+    __typename
+  }
+}
+` as GeneratedMutation<
+  APITypes.UpsertAttendanceByStaffAndDateMutationVariables,
+  APITypes.UpsertAttendanceByStaffAndDateMutation
 >;

@@ -1,34 +1,19 @@
-import EditIcon from "@mui/icons-material/Edit";
+import { AttendanceDate } from "@entities/attendance/lib/AttendanceDate";
+import { AttendanceRecordTableRow } from "@entities/attendance/ui/adminStaffAttendance/AttendanceRecordTableRow";
 import {
-  IconButton,
-  Stack,
-  TableCell as MuiTableCell,
-  TableCell,
-  TableRow,
-} from "@mui/material";
+  AttendanceRowVariant,
+  getAttendanceRowVariant,
+} from "@entities/attendance/ui/rowVariant";
+import { AttendanceRecordActionCell } from "@features/attendance/list/ui/AttendanceRecordActionCell";
 import {
   Attendance,
   CompanyHolidayCalendar,
   HolidayCalendar,
   Staff,
 } from "@shared/api/graphql/types";
+import { createMonthSearchParamsFromDate } from "@shared/lib/monthQuery";
 import dayjs from "dayjs";
 import { useNavigate } from "react-router-dom";
-
-import { AttendanceDate } from "@/entities/attendance/lib/AttendanceDate";
-import { CreatedAtTableCell } from "@/entities/attendance/ui/adminStaffAttendance/CreatedAtTableCell";
-import { RestTimeTableCell } from "@/entities/attendance/ui/adminStaffAttendance/RestTimeTableCell";
-import { SummaryTableCell } from "@/entities/attendance/ui/adminStaffAttendance/SummaryTableCell";
-import { UpdatedAtTableCell } from "@/entities/attendance/ui/adminStaffAttendance/UpdatedAtTableCell";
-import { WorkDateTableCell } from "@/entities/attendance/ui/adminStaffAttendance/WorkDateTableCell";
-import { WorkTimeTableCell } from "@/entities/attendance/ui/adminStaffAttendance/WorkTimeTableCell";
-import {
-  AttendanceRowVariant,
-  attendanceRowVariantStyles,
-  getAttendanceRowVariant,
-} from "@/entities/attendance/ui/rowVariant";
-
-import { AttendanceStatusTooltip } from "../AttendanceStatusTooltip";
 
 export default function TableBodyRow({
   attendance,
@@ -46,9 +31,10 @@ export default function TableBodyRow({
   const handleEdit = () => {
     const { workDate } = attendance;
     const formattedWorkDate = dayjs(workDate).format(
-      AttendanceDate.QueryParamFormat
+      AttendanceDate.QueryParamFormat,
     );
-    navigate(`/attendance/${formattedWorkDate}/edit`);
+    const monthQuery = createMonthSearchParamsFromDate(dayjs(workDate)).toString();
+    navigate(`/attendance/${formattedWorkDate}/edit?${monthQuery}`);
   };
 
   const rowVariant: AttendanceRowVariant = (() => {
@@ -61,52 +47,26 @@ export default function TableBodyRow({
     return getAttendanceRowVariant(
       attendance,
       holidayCalendars,
-      companyHolidayCalendars
+      companyHolidayCalendars,
     );
   })();
 
   return (
-    <TableRow sx={attendanceRowVariantStyles[rowVariant]}>
-      <MuiTableCell>
-        <Stack direction="row" spacing={1} alignItems="center">
-          <AttendanceStatusTooltip
-            staff={staff}
-            attendance={attendance}
-            holidayCalendars={holidayCalendars}
-            companyHolidayCalendars={companyHolidayCalendars}
-          />
-          <IconButton onClick={handleEdit}>
-            <EditIcon fontSize="small" />
-          </IconButton>
-        </Stack>
-      </MuiTableCell>
-      {/* 勤務日 */}
-      <WorkDateTableCell
-        workDate={attendance.workDate}
-        holidayCalendars={holidayCalendars}
-        companyHolidayCalendars={companyHolidayCalendars}
-      />
-      {/* 勤務時間 */}
-      <WorkTimeTableCell attendance={attendance} />
-
-      {/* 休憩時間(最近) */}
-      <RestTimeTableCell attendance={attendance} />
-
-      {/* 摘要 */}
-      <SummaryTableCell
-        substituteHolidayDate={attendance.substituteHolidayDate}
-        specialHolidayFlag={attendance.specialHolidayFlag}
-        paidHolidayFlag={attendance.paidHolidayFlag}
-        absentFlag={attendance.absentFlag}
-      />
-
-      {/* 作成日時 */}
-      <CreatedAtTableCell createdAt={attendance.createdAt} />
-
-      {/* 更新日時 */}
-      <UpdatedAtTableCell updatedAt={attendance.updatedAt} />
-
-      <TableCell sx={{ width: 1 }} />
-    </TableRow>
+    <AttendanceRecordTableRow
+      key={attendance.id}
+      attendance={attendance}
+      rowVariant={rowVariant}
+      holidayCalendars={holidayCalendars}
+      companyHolidayCalendars={companyHolidayCalendars}
+      actionCell={
+        <AttendanceRecordActionCell
+          staff={staff}
+          attendance={attendance}
+          holidayCalendars={holidayCalendars}
+          companyHolidayCalendars={companyHolidayCalendars}
+          onEdit={handleEdit}
+        />
+      }
+    />
   );
 }

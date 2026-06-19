@@ -1,76 +1,118 @@
-import { createBrowserRouter, Navigate } from "react-router-dom";
+import { createBrowserRouter } from "react-router-dom";
+
+import {
+  collectExtensionAdminRoutes,
+  collectExtensionRoutes,
+  extensionManifests,
+} from "@/extensions";
 
 import Layout from "./Layout";
 import { adminChildRoutes } from "./router/adminChildRoutes";
 import { createLazyRoute } from "./router/lazyRoute";
-import { workflowDetailLoader } from "./router/loaders/workflowDetailLoader";
-import { workflowEditLoader } from "./router/loaders/workflowEditLoader";
+import RouteErrorBoundary from "./router/RouteErrorBoundary";
+import { wrapWithMuiXDateProvider } from "./router/wrapWithMuiXDateProvider";
 
-const AdminDashboardRoute = createLazyRoute(
-  () => import("./pages/admin/AdminDashboard")
-);
+const loadAdminDashboardLoader = async () =>
+  (
+    await import("./router/loaders/adminDashboardLoader")
+  ).adminDashboardLoader();
+
+const loadAttendanceListLoader = async () =>
+  (
+    await import("./router/loaders/attendanceListLoader")
+  ).attendanceListLoader();
+
+const loadWorkflowDetailLoader = async (
+  args: Parameters<
+    Awaited<
+      typeof import("./router/loaders/workflowDetailLoader")
+    >["workflowDetailLoader"]
+  >[0],
+) =>
+  (await import("./router/loaders/workflowDetailLoader")).workflowDetailLoader(
+    args,
+  );
+
+const loadWorkflowEditLoader = async (
+  args: Parameters<
+    Awaited<
+      typeof import("./router/loaders/workflowEditLoader")
+    >["workflowEditLoader"]
+  >[0],
+) =>
+  (await import("./router/loaders/workflowEditLoader")).workflowEditLoader(
+    args,
+  );
+
+const loadWorkflowListLoader = async () =>
+  (await import("./router/loaders/workflowListLoader")).workflowListLoader();
+
 const AdminLayoutRoute = createLazyRoute(
-  () => import("./pages/admin/AdminLayout")
+  () => import("./pages/admin/AdminLayout"),
 );
-const DailyReportRoute = createLazyRoute(
-  () => import("./pages/attendance/daily-report/DailyReport")
+const AdminDashboardRoute = createLazyRoute(
+  () => import("./pages/admin/AdminDashboard"),
+);
+const AdminGuardRoute = createLazyRoute(
+  () => import("./pages/admin/AdminGuard"),
+  {
+    wrap: wrapWithMuiXDateProvider,
+  },
 );
 const AttendanceEditRoute = createLazyRoute(
-  () => import("./pages/attendance/edit/AttendanceEdit")
+  () => import("./pages/attendance/edit/AttendanceEdit"),
+  {
+    wrap: wrapWithMuiXDateProvider,
+  },
 );
 const AttendanceListRoute = createLazyRoute(
-  () => import("./pages/attendance/list/AttendanceListPage")
+  () => import("./pages/attendance/list/AttendanceListPage"),
+  {
+    wrap: wrapWithMuiXDateProvider,
+  },
 );
-const AttendanceStatisticsRoute = createLazyRoute(
-  () => import("./pages/attendance/statistics/AttendanceStatisticsPage")
-);
-const LoginRoute = createLazyRoute(() => import("./pages/Login/Login"));
-const OfficeHomeRoute = createLazyRoute(
-  () => import("./pages/office/home/OfficeHomePage")
-);
-const OfficeLayoutRoute = createLazyRoute(
-  () => import("./pages/office/layout/OfficeLayoutPage")
-);
-const OfficeQrRoute = createLazyRoute(
-  () => import("./pages/office/qr/OfficeQrPage")
-);
-const OfficeQrRegisterRoute = createLazyRoute(
-  () => import("./pages/office/qr-register/OfficeQrRegisterPage")
-);
+const LoginRoute = createLazyRoute(() => import("./pages/Login/LoginShell"));
 const DesignTokenPreviewRoute = createLazyRoute(
-  () => import("./pages/preview/DesignTokenPreviewPage")
+  () => import("./pages/preview/DesignTokenPreviewPage"),
 );
+const NotFoundRoute = createLazyRoute(() => import("./pages/NotFound"));
 const ProfileRoute = createLazyRoute(() => import("./pages/Profile"));
 const RegisterRoute = createLazyRoute(() => import("./pages/Register"));
 const ShiftRequestRoute = createLazyRoute(
-  () => import("./pages/shift/request")
+  () => import("./pages/shift/request"),
 );
 const ShiftCollaborativeRoute = createLazyRoute(
-  () => import("./pages/shift/collaborative")
+  () => import("@extensions/shift-collaborative/pages"),
 );
 const WorkflowDetailRoute = createLazyRoute(
-  () => import("./pages/workflow/detail/WorkflowDetailPage"),
-  {
-    loader: workflowDetailLoader,
-  }
+  () => import("./pages/workflow/detail/WorkflowDetail"),
 );
 const WorkflowEditRoute = createLazyRoute(
-  () => import("./pages/workflow/edit/WorkflowEditPage"),
-  {
-    loader: workflowEditLoader,
-  }
+  () => import("./pages/workflow/edit/WorkflowEdit"),
 );
 const WorkflowListRoute = createLazyRoute(
-  () => import("./pages/workflow/list/WorkflowListPage")
+  () => import("./pages/workflow/list/Workflow"),
+  {
+    wrap: wrapWithMuiXDateProvider,
+  },
 );
 const NewWorkflowRoute = createLazyRoute(
-  () => import("./pages/workflow/new/NewWorkflowPage")
+  () => import("./pages/workflow/new/NewWorkflow"),
 );
+
+const extensionTopRoutes = collectExtensionRoutes(extensionManifests);
+const extensionAdminRoutes = collectExtensionAdminRoutes(extensionManifests);
 
 const router = createBrowserRouter([
   {
+    path: "/login",
+    lazy: LoginRoute,
+    errorElement: <RouteErrorBoundary />,
+  },
+  {
     path: "/",
     element: <Layout />,
+    errorElement: <RouteErrorBoundary />,
     children: [
       {
         index: true,
@@ -90,14 +132,7 @@ const router = createBrowserRouter([
           {
             path: "list",
             lazy: AttendanceListRoute,
-          },
-          {
-            path: "stats",
-            lazy: AttendanceStatisticsRoute,
-          },
-          {
-            path: "report",
-            lazy: DailyReportRoute,
+            loader: loadAttendanceListLoader,
           },
           {
             path: ":targetWorkDate/edit",
@@ -105,13 +140,9 @@ const router = createBrowserRouter([
           },
           {
             path: "*",
-            lazy: AttendanceListRoute,
+            lazy: NotFoundRoute,
           },
         ],
-      },
-      {
-        path: "login",
-        lazy: LoginRoute,
       },
       {
         path: "workflow",
@@ -119,18 +150,25 @@ const router = createBrowserRouter([
           {
             index: true,
             lazy: WorkflowListRoute,
+            loader: loadWorkflowListLoader,
           },
           {
             path: ":id",
             lazy: WorkflowDetailRoute,
+            loader: loadWorkflowDetailLoader,
           },
           {
             path: ":id/edit",
             lazy: WorkflowEditRoute,
+            loader: loadWorkflowEditLoader,
           },
           {
             path: "new",
             lazy: NewWorkflowRoute,
+          },
+          {
+            path: "*",
+            lazy: NotFoundRoute,
           },
         ],
       },
@@ -145,6 +183,10 @@ const router = createBrowserRouter([
             path: "collaborative",
             lazy: ShiftCollaborativeRoute,
           },
+          {
+            path: "*",
+            lazy: NotFoundRoute,
+          },
         ],
       },
       {
@@ -153,42 +195,27 @@ const router = createBrowserRouter([
       },
       {
         path: "/admin",
-        lazy: AdminLayoutRoute,
+        lazy: AdminGuardRoute,
+        loader: loadAdminDashboardLoader,
         children: [
           {
             path: "",
-            lazy: AdminDashboardRoute,
+            lazy: AdminLayoutRoute,
             children: [
               {
                 index: true,
-                element: <Navigate to="attendances" replace />,
+                lazy: AdminDashboardRoute,
               },
+              ...extensionAdminRoutes,
               ...adminChildRoutes,
             ],
           },
         ],
       },
-      {
-        path: "office",
-        lazy: OfficeLayoutRoute,
-        children: [
-          {
-            index: true,
-            lazy: OfficeHomeRoute,
-          },
-          {
-            path: "qr",
-            lazy: OfficeQrRoute,
-          },
-          {
-            path: "qr/register",
-            lazy: OfficeQrRegisterRoute,
-          },
-        ],
-      },
+      ...extensionTopRoutes,
       {
         path: "*",
-        element: <div>Not Found</div>,
+        lazy: NotFoundRoute,
       },
     ],
   },

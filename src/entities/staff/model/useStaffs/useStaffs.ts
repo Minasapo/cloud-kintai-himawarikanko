@@ -1,29 +1,43 @@
+import { useAppDispatchV2 } from "@app/hooks";
+import {
+  staffApi,
+  useCreateStaffMutation,
+  useDeleteStaffMutation,
+  useGetStaffsQuery,
+  useUpdateStaffMutation,
+} from "@entities/staff/api/staffApi";
+import { StaffExternalLink } from "@entities/staff/externalLink";
+import { isAttendanceManagementEnabled } from "@entities/staff/lib/attendanceManagement";
+import {
+  mapStaffRoleFromStaffRecord,
+  StaffRole,
+} from "@entities/staff/lib/staffRoleMapping";
+import { graphqlClient } from "@shared/api/amplify/graphqlClient";
+import {
+  buildVersionOrUpdatedAtCondition,
+  getNextVersion,
+} from "@shared/api/graphql/concurrency";
+import {
+  onCreateStaff,
+  onDeleteStaff,
+  onUpdateStaff,
+} from "@shared/api/graphql/documents/subscriptions";
 import {
   ApproverMultipleMode,
   ApproverSettingMode,
   CreateStaffInput,
   DeleteStaffInput,
+  OnCreateStaffSubscription,
+  OnDeleteStaffSubscription,
+  OnUpdateStaffSubscription,
   Staff,
   UpdateStaffInput,
 } from "@shared/api/graphql/types";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 
-import { StaffExternalLink } from "@/entities/staff/externalLink";
-
-import createStaffData from "./createStaffData";
-import deleteStaffData from "./deleteStaffData";
 import fetchStaffs from "./fetchStaffs";
-import updateStaffData from "./updateStaffData";
 
-export enum StaffRole {
-  OWNER = "Owner",
-  ADMIN = "Admin",
-  STAFF_ADMIN = "StaffAdmin",
-  STAFF = "Staff",
-  GUEST = "Guest",
-  OPERATOR = "Operator",
-  NONE = "None",
-}
+export { StaffRole } from "@entities/staff/lib/staffRoleMapping";
 
 export const roleLabelMap = new Map<StaffRole, string>([
   [StaffRole.OWNER, "オーナー"],
@@ -47,6 +61,7 @@ export type StaffType = {
   status: Staff["status"];
   createdAt: Staff["createdAt"];
   updatedAt: Staff["updatedAt"];
+  version?: Staff["version"];
   usageStartDate?: Staff["usageStartDate"];
   notifications?: Staff["notifications"];
   externalLinks?: (StaffExternalLink | null)[] | null;
@@ -62,276 +77,235 @@ export type StaffType = {
 };
 
 export function mappingStaffRole(role: Staff["role"]): StaffRole {
-  switch (role) {
-    case StaffRole.ADMIN:
-      return StaffRole.ADMIN;
-    case StaffRole.STAFF_ADMIN:
-      return StaffRole.STAFF_ADMIN;
-    case StaffRole.STAFF:
-      return StaffRole.STAFF;
-    case StaffRole.GUEST:
-      return StaffRole.GUEST;
-    case StaffRole.OPERATOR:
-      return StaffRole.OPERATOR;
-    default:
-      return StaffRole.NONE;
-  }
+  return mapStaffRoleFromStaffRecord(role);
 }
 
 export type UseStaffsParams = {
   isAuthenticated: boolean;
 };
 
-export function useStaffs({ isAuthenticated }: UseStaffsParams) {
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<Error | null>(null);
-  const [staffs, setStaffs] = useState<StaffType[]>([]);
-
-  useEffect(() => {
-    if (!isAuthenticated) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setLoading(false);
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setError(null);
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setStaffs([]);
-      return;
-    }
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setLoading(true);
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setError(null);
-    fetchStaffs()
-      .then((res) =>
-        setStaffs(
-          res.map((staff) => ({
-            id: staff.id,
-            cognitoUserId: staff.cognitoUserId,
-            familyName: staff.familyName,
-            givenName: staff.givenName,
-            mailAddress: staff.mailAddress,
-            owner: staff.owner ?? false,
-            role: mappingStaffRole(staff.role),
-            enabled: staff.enabled,
-            status: staff.status,
-            usageStartDate: staff.usageStartDate,
-            createdAt: staff.createdAt,
-            updatedAt: staff.updatedAt,
-            notifications: staff.notifications,
-            externalLinks: staff.externalLinks ?? null,
-            sortKey: staff.sortKey,
-            workType: (staff as unknown as Record<string, unknown>).workType as
-              | string
-              | null,
-            developer: (staff as unknown as Record<string, unknown>)
-              .developer as boolean | undefined,
-            approverSetting: staff.approverSetting ?? null,
-            approverSingle: staff.approverSingle ?? null,
-            approverMultiple: staff.approverMultiple ?? null,
-            approverMultipleMode: staff.approverMultipleMode ?? null,
-            shiftGroup: staff.shiftGroup ?? null,
-            attendanceManagementEnabled: (
-              staff as unknown as Record<string, unknown>
-            ).attendanceManagementEnabled as boolean | null | undefined,
-          })),
-        ),
-      )
-      .catch((e: Error) => {
-        setError(e);
-      })
-      .finally(() => {
-        setLoading(false);
-      });
-  }, [isAuthenticated]);
-
-  const refreshStaff = () => {
-    if (!isAuthenticated) {
-      return Promise.reject(new Error("User is not authenticated"));
-    }
-    return fetchStaffs()
-      .then((res) => {
-        setStaffs(
-          res.map((staff) => ({
-            id: staff.id,
-            cognitoUserId: staff.cognitoUserId,
-            familyName: staff.familyName,
-            givenName: staff.givenName,
-            mailAddress: staff.mailAddress,
-            owner: staff.owner ?? false,
-            role: mappingStaffRole(staff.role),
-            enabled: staff.enabled,
-            status: staff.status,
-            createdAt: staff.createdAt,
-            updatedAt: staff.updatedAt,
-            notifications: staff.notifications,
-            externalLinks: staff.externalLinks ?? null,
-            sortKey: staff.sortKey,
-            usageStartDate: staff.usageStartDate,
-            workType: staff.workType,
-            developer: (staff as unknown as Record<string, unknown>)
-              .developer as boolean | undefined,
-            approverSetting: staff.approverSetting ?? null,
-            approverSingle: staff.approverSingle ?? null,
-            approverMultiple: staff.approverMultiple ?? null,
-            approverMultipleMode: staff.approverMultipleMode ?? null,
-            shiftGroup: staff.shiftGroup ?? null,
-            attendanceManagementEnabled: (
-              staff as unknown as Record<string, unknown>
-            ).attendanceManagementEnabled as boolean | null | undefined,
-          })),
-        );
-      })
-      .catch((e: Error) => {
-        throw e;
-      });
+function mapStaff(staff: Staff): StaffType {
+  return {
+    id: staff.id,
+    cognitoUserId: staff.cognitoUserId,
+    familyName: staff.familyName,
+    givenName: staff.givenName,
+    mailAddress: staff.mailAddress,
+    owner: staff.owner ?? false,
+    role: mappingStaffRole(staff.role),
+    enabled: staff.enabled,
+    status: staff.status,
+    createdAt: staff.createdAt,
+    updatedAt: staff.updatedAt,
+    version: staff.version,
+    usageStartDate: staff.usageStartDate,
+    notifications: staff.notifications,
+    externalLinks: staff.externalLinks ?? null,
+    sortKey: staff.sortKey,
+    workType: (staff as unknown as Record<string, unknown>).workType as
+      | string
+      | null,
+    developer: (staff as unknown as Record<string, unknown>).developer as
+      | boolean
+      | undefined,
+    approverSetting: staff.approverSetting ?? null,
+    approverSingle: staff.approverSingle ?? null,
+    approverMultiple: staff.approverMultiple ?? null,
+    approverMultipleMode: staff.approverMultipleMode ?? null,
+    shiftGroup: staff.shiftGroup ?? null,
+    attendanceManagementEnabled: isAttendanceManagementEnabled(staff),
   };
+}
 
-  const ensureAuthenticated = () => {
+function toError(error: unknown): Error | null {
+  if (!error) {
+    return null;
+  }
+
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "message" in error &&
+    typeof (error as { message?: unknown }).message === "string"
+  ) {
+    return new Error((error as { message: string }).message);
+  }
+
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "error" in error &&
+    typeof (error as { error?: unknown }).error === "string"
+  ) {
+    return new Error((error as { error: string }).error);
+  }
+
+  return new Error("Unknown staff error");
+}
+
+export function useStaffs({ isAuthenticated }: UseStaffsParams) {
+  const dispatch = useAppDispatchV2();
+  const {
+    data,
+    isLoading,
+    isFetching,
+    error: queryError,
+    refetch,
+  } = useGetStaffsQuery(undefined, {
+    skip: !isAuthenticated,
+  });
+  const [createStaffMutation, createState] = useCreateStaffMutation();
+  const [updateStaffMutation, updateState] = useUpdateStaffMutation();
+  const [deleteStaffMutation, deleteState] = useDeleteStaffMutation();
+
+  const staffs = useMemo(() => (data ?? []).map(mapStaff), [data]);
+  const loading =
+    isAuthenticated &&
+    (isLoading ||
+      isFetching ||
+      createState.isLoading ||
+      updateState.isLoading ||
+      deleteState.isLoading);
+  const error =
+    toError(queryError) ??
+    toError(createState.error) ??
+    toError(updateState.error) ??
+    toError(deleteState.error);
+
+  const refreshStaff = useCallback(async () => {
     if (!isAuthenticated) {
       throw new Error("User is not authenticated");
     }
-  };
 
-  const createStaff = async (input: CreateStaffInput) => {
-    ensureAuthenticated();
-    const inputWithDefault = {
-      ...input,
-      attendanceManagementEnabled:
-        (
-          input as CreateStaffInput & {
-            attendanceManagementEnabled?: boolean | null;
+    await refetch();
+  }, [isAuthenticated, refetch]);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      return;
+    }
+
+    let isMounted = true;
+    let refetchTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const scheduleRefetch = () => {
+      if (refetchTimer) {
+        clearTimeout(refetchTimer);
+      }
+
+      refetchTimer = setTimeout(() => {
+        if (!isMounted) {
+          return;
+        }
+        void refetch();
+      }, 300);
+    };
+
+    const createSubscription = graphqlClient
+      .graphql({ query: onCreateStaff, authMode: "userPool" })
+      .subscribe({
+        next: ({ data }: { data?: OnCreateStaffSubscription }) => {
+          if (!data?.onCreateStaff) {
+            return;
           }
-        ).attendanceManagementEnabled ?? true,
-    } as CreateStaffInput;
-
-    return createStaffData(inputWithDefault)
-      .then((staff) => {
-        setStaffs([
-          ...staffs,
-          {
-            id: staff.id,
-            cognitoUserId: staff.cognitoUserId,
-            familyName: staff.familyName,
-            givenName: staff.givenName,
-            mailAddress: staff.mailAddress,
-            owner: staff.owner ?? false,
-            role: mappingStaffRole(staff.role),
-            enabled: staff.enabled,
-            status: staff.status,
-            createdAt: staff.createdAt,
-            updatedAt: staff.updatedAt,
-            usageStartDate: staff.usageStartDate,
-            notifications: staff.notifications,
-            externalLinks: staff.externalLinks ?? null,
-            sortKey: staff.sortKey,
-            workType: staff.workType,
-            developer: (staff as unknown as Record<string, unknown>)
-              .developer as boolean | undefined,
-            approverSetting: staff.approverSetting ?? null,
-            approverSingle: staff.approverSingle ?? null,
-            approverMultiple: staff.approverMultiple ?? null,
-            approverMultipleMode: staff.approverMultipleMode ?? null,
-            shiftGroup: staff.shiftGroup ?? null,
-            attendanceManagementEnabled: (
-              staff as unknown as Record<string, unknown>
-            ).attendanceManagementEnabled as boolean | null | undefined,
-          },
-        ]);
-      })
-      .catch((e: Error) => {
-        throw e;
+          scheduleRefetch();
+        },
       });
-  };
 
-  const updateStaff = async (input: UpdateStaffInput) => {
-    ensureAuthenticated();
-    return updateStaffData(input)
-      .then((staff) => {
-        setStaffs(
-          staffs.map((s) => {
-            if (s.id === staff.id) {
-              return {
-                id: staff.id,
-                cognitoUserId: staff.cognitoUserId,
-                familyName: staff.familyName,
-                givenName: staff.givenName,
-                mailAddress: staff.mailAddress,
-                owner: staff.owner ?? false,
-                role: mappingStaffRole(staff.role),
-                enabled: staff.enabled,
-                status: staff.status,
-                createdAt: staff.createdAt,
-                updatedAt: staff.updatedAt,
-                usageStartDate: staff.usageStartDate,
-                notifications: staff.notifications,
-                externalLinks: staff.externalLinks ?? null,
-                sortKey: staff.sortKey,
-                workType: staff.workType,
-                developer: (staff as unknown as Record<string, unknown>)
-                  .developer as boolean | undefined,
-                approverSetting: staff.approverSetting ?? null,
-                approverSingle: staff.approverSingle ?? null,
-                approverMultiple: staff.approverMultiple ?? null,
-                approverMultipleMode: staff.approverMultipleMode ?? null,
-                shiftGroup: staff.shiftGroup ?? null,
-                attendanceManagementEnabled: (
-                  staff as unknown as Record<string, unknown>
-                ).attendanceManagementEnabled as boolean | null | undefined,
-              };
+    const updateSubscription = graphqlClient
+      .graphql({ query: onUpdateStaff, authMode: "userPool" })
+      .subscribe({
+        next: ({ data }: { data?: OnUpdateStaffSubscription }) => {
+          if (!data?.onUpdateStaff) {
+            return;
+          }
+          scheduleRefetch();
+        },
+      });
+
+    const deleteSubscription = graphqlClient
+      .graphql({ query: onDeleteStaff, authMode: "userPool" })
+      .subscribe({
+        next: ({ data }: { data?: OnDeleteStaffSubscription }) => {
+          if (!data?.onDeleteStaff) {
+            return;
+          }
+          scheduleRefetch();
+        },
+      });
+
+    return () => {
+      isMounted = false;
+      if (refetchTimer) {
+        clearTimeout(refetchTimer);
+      }
+      createSubscription.unsubscribe();
+      updateSubscription.unsubscribe();
+      deleteSubscription.unsubscribe();
+    };
+  }, [isAuthenticated, refetch]);
+
+  const createStaff = useCallback(
+    async (input: CreateStaffInput) => {
+      if (!isAuthenticated) {
+        throw new Error("User is not authenticated");
+      }
+      const inputWithDefault = {
+        ...input,
+        attendanceManagementEnabled:
+          (
+            input as CreateStaffInput & {
+              attendanceManagementEnabled?: boolean | null;
             }
-            return s;
-          }),
-        );
-        return; // keep Promise<void> signature
-      })
-      .catch((e: Error) => {
-        throw e;
-      });
-  };
+          ).attendanceManagementEnabled ?? true,
+      } as CreateStaffInput;
 
-  const deleteStaff = async (input: DeleteStaffInput) => {
-    ensureAuthenticated();
-    return deleteStaffData(input)
-      .then((staff) => {
-        setStaffs(staffs.filter((s) => s.id !== staff.id));
-      })
-      .catch((e: Error) => {
-        throw e;
-      });
-  };
+      await createStaffMutation(inputWithDefault).unwrap();
+    },
+    [createStaffMutation, isAuthenticated],
+  );
 
-  const getAllStaffs = async (): Promise<StaffType[]> => {
-    ensureAuthenticated();
+  const updateStaff = useCallback(
+    async (input: UpdateStaffInput) => {
+      if (!isAuthenticated) {
+        throw new Error("User is not authenticated");
+      }
+      const currentStaff = staffs.find((staff) => staff.id === input.id);
+
+      await updateStaffMutation({
+        input: {
+          ...input,
+          version: getNextVersion(currentStaff?.version),
+        },
+        condition: buildVersionOrUpdatedAtCondition(
+          currentStaff?.version,
+          currentStaff?.updatedAt,
+        ),
+      }).unwrap();
+    },
+    [isAuthenticated, staffs, updateStaffMutation],
+  );
+
+  const deleteStaff = useCallback(
+    async (input: DeleteStaffInput) => {
+      if (!isAuthenticated) {
+        throw new Error("User is not authenticated");
+      }
+      await deleteStaffMutation(input).unwrap();
+    },
+    [deleteStaffMutation, isAuthenticated],
+  );
+
+  const getAllStaffs = useCallback(async (): Promise<StaffType[]> => {
+    if (!isAuthenticated) {
+      throw new Error("User is not authenticated");
+    }
     const res = await fetchStaffs();
-    return res.map((staff) => ({
-      id: staff.id,
-      cognitoUserId: staff.cognitoUserId,
-      familyName: staff.familyName,
-      givenName: staff.givenName,
-      mailAddress: staff.mailAddress,
-      owner: staff.owner ?? false,
-      role: mappingStaffRole(staff.role),
-      enabled: staff.enabled,
-      status: staff.status,
-      usageStartDate: staff.usageStartDate,
-      createdAt: staff.createdAt,
-      updatedAt: staff.updatedAt,
-      notifications: staff.notifications,
-      externalLinks: staff.externalLinks ?? null,
-      sortKey: staff.sortKey,
-      workType: staff.workType,
-      developer: (staff as unknown as Record<string, unknown>).developer as
-        | boolean
-        | undefined,
-      approverSetting: staff.approverSetting ?? null,
-      approverSingle: staff.approverSingle ?? null,
-      approverMultiple: staff.approverMultiple ?? null,
-      approverMultipleMode: staff.approverMultipleMode ?? null,
-      shiftGroup: staff.shiftGroup ?? null,
-      attendanceManagementEnabled: (staff as unknown as Record<string, unknown>)
-        .attendanceManagementEnabled as boolean | null | undefined,
-    }));
-  };
+    dispatch(
+      staffApi.util.upsertQueryData("getStaffs", undefined, res) as never,
+    );
+    return res.map(mapStaff);
+  }, [dispatch, isAuthenticated]);
 
   return {
     loading,

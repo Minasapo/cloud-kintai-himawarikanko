@@ -1,8 +1,7 @@
 import { createTimeRangeValidator } from "@entities/attendance/validation/validators";
+import { validationMessages } from "@shared/config/validationMessages";
 import dayjs from "dayjs";
 import { z } from "zod";
-
-import { validationMessages } from "@/shared/config/validationMessages";
 
 const isoDateTimeSchema = z
   .string({
@@ -33,8 +32,8 @@ const dateField = z.union([isoDateSchema, z.null(), z.undefined()]);
 
 const restIntervalSchema = createTimeRangeValidator(
   z.object({
-    startTime: dateTimeField.optional(),
-    endTime: dateTimeField.optional(),
+    startTime: dateTimeField,
+    endTime: dateTimeField,
   }),
   {
     incomplete: validationMessages.attendance.rest.incomplete,
@@ -44,20 +43,14 @@ const restIntervalSchema = createTimeRangeValidator(
 
 const hourlyPaidHolidayTimeSchema = createTimeRangeValidator(
   z.object({
-    startTime: dateTimeField.optional(),
-    endTime: dateTimeField.optional(),
+    startTime: dateTimeField,
+    endTime: dateTimeField,
   }),
   {
     incomplete: validationMessages.attendance.hourlyPaidHoliday.incomplete,
     range: validationMessages.attendance.hourlyPaidHoliday.range,
   },
 );
-
-const systemCommentSchema = z.object({
-  comment: z.string(),
-  confirmed: z.boolean(),
-  createdAt: isoDateTimeSchema,
-});
 
 export const attendanceEditSchema = z
   .object({
@@ -82,7 +75,6 @@ export const attendanceEditSchema = z
     staffComment: z.string().optional(),
     histories: z.any().optional(),
     changeRequests: z.any().optional(),
-    systemComments: z.array(systemCommentSchema).optional(),
     revision: z.number().optional().nullable(),
   })
   .superRefine((data, ctx) => {

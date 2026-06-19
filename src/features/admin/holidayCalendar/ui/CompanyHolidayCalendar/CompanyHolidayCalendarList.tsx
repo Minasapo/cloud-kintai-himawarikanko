@@ -1,57 +1,48 @@
+import { useAppDispatchV2 } from "@app/hooks";
+import { AttendanceDate } from "@entities/attendance/lib/AttendanceDate";
 import {
+  type UpdateCompanyHolidayCalendarPayload,
   useBulkCreateCompanyHolidayCalendarsMutation,
   useCreateCompanyHolidayCalendarMutation,
   useDeleteCompanyHolidayCalendarMutation,
   useGetCompanyHolidayCalendarsQuery,
   useUpdateCompanyHolidayCalendarMutation,
 } from "@entities/calendar/api/calendarApi";
-import DeleteIcon from "@mui/icons-material/Delete";
+import { useHolidayCalendarList } from "@features/admin/holidayCalendar/model/useHolidayCalendarList";
+import CreatedAtTableCell from "@features/admin/holidayCalendar/ui/components/CreatedAtTableCell";
+import HolidayCalendarListScaffold from "@features/admin/holidayCalendar/ui/components/HolidayCalendarListScaffold";
+import { TableCell } from "@mui/material";
 import {
-  Button,
-  FormControl,
-  IconButton,
-  InputLabel,
-  LinearProgress,
-  MenuItem,
-  Paper,
-  Select,
-  Stack,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableFooter,
-  TableHead,
-  TablePagination,
-  TableRow,
-  TextField,
-  Typography,
-} from "@mui/material";
+  buildVersionOrUpdatedAtCondition,
+  getNextVersion,
+} from "@shared/api/graphql/concurrency";
 import { CompanyHolidayCalendar } from "@shared/api/graphql/types";
+import { createLogger } from "@shared/lib/logger";
+import { CompanyHolidayCalendarMessage } from "@shared/lib/message/CompanyHolidayCalendarMessage";
+import { MessageStatus } from "@shared/lib/message/Message";
+import { pushNotification } from "@shared/lib/store/notificationSlice";
+import { AppDeleteIconButton } from "@shared/ui/button/AppActionIconButton";
+import { ProgressBar } from "@shared/ui/feedback";
+import ConfirmDialog from "@shared/ui/feedback/ConfirmDialog";
 import dayjs from "dayjs";
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { useAppDispatchV2 } from "@/app/hooks";
-import { AttendanceDate } from "@/entities/attendance/lib/AttendanceDate";
 import * as MESSAGE_CODE from "@/errors";
-import { useHolidayCalendarList } from "@/features/admin/holidayCalendar/model/useHolidayCalendarList";
-import { CompanyHolidayCalendarMessage } from "@/shared/lib/message/CompanyHolidayCalendarMessage";
-import { MessageStatus } from "@/shared/lib/message/Message";
-import {
-  setSnackbarError,
-  setSnackbarSuccess,
-} from "@/shared/lib/store/snackbarSlice";
 
 import { ExcelFilePicker } from "../HolidayCalendar/ExcelFilePicker";
 import AddCompanyHolidayCalendar from "./AddCompanyHolidayCalendar";
 import CompanyHolidayCalendarCopy from "./CompanyHolidayCalendarCopy";
 import CompanyHolidayCalendarEdit from "./CompanyHolidayCalendarEdit";
 
+const logger = createLogger("CompanyHolidayCalendarList");
+
 const YEAR_RANGE = 5;
 const YEAR_OFFSET = 4;
 
 export default function CompanyHolidayCalendarList() {
   const dispatch = useAppDispatchV2();
+  const [deleteTarget, setDeleteTarget] =
+    useState<CompanyHolidayCalendar | null>(null);
   const {
     data: companyHolidayCalendars = [],
     isLoading: isCompanyHolidayCalendarsLoading,
@@ -70,26 +61,34 @@ export default function CompanyHolidayCalendarList() {
   const createCompanyHolidayCalendar = useCallback(
     async (input: Parameters<typeof createCompanyHolidayCalendarMutation>[0]) =>
       createCompanyHolidayCalendarMutation(input).unwrap(),
-    [createCompanyHolidayCalendarMutation]
+    [createCompanyHolidayCalendarMutation],
   );
 
   const updateCompanyHolidayCalendar = useCallback(
-    async (input: Parameters<typeof updateCompanyHolidayCalendarMutation>[0]) =>
-      updateCompanyHolidayCalendarMutation(input).unwrap(),
-    [updateCompanyHolidayCalendarMutation]
+    async (input: CompanyHolidayCalendar) =>
+      updateCompanyHolidayCalendarMutation({
+        input: {
+          id: input.id,
+          holidayDate: input.holidayDate,
+          name: input.name,
+          version: getNextVersion(input.version),
+        },
+        condition: buildVersionOrUpdatedAtCondition(input.version, input.updatedAt),
+      } satisfies UpdateCompanyHolidayCalendarPayload).unwrap(),
+    [updateCompanyHolidayCalendarMutation],
   );
 
   const deleteCompanyHolidayCalendar = useCallback(
     async (input: Parameters<typeof deleteCompanyHolidayCalendarMutation>[0]) =>
       deleteCompanyHolidayCalendarMutation(input).unwrap(),
-    [deleteCompanyHolidayCalendarMutation]
+    [deleteCompanyHolidayCalendarMutation],
   );
 
   const bulkCreateCompanyHolidayCalendar = useCallback(
     async (
-      input: Parameters<typeof bulkCreateCompanyHolidayCalendarsMutation>[0]
+      input: Parameters<typeof bulkCreateCompanyHolidayCalendarsMutation>[0],
     ) => bulkCreateCompanyHolidayCalendarsMutation(input).unwrap(),
-    [bulkCreateCompanyHolidayCalendarsMutation]
+    [bulkCreateCompanyHolidayCalendarsMutation],
   );
 
   const calendarLoading =
@@ -97,8 +96,13 @@ export default function CompanyHolidayCalendarList() {
 
   useEffect(() => {
     if (companyHolidayCalendarsError) {
-      console.error(companyHolidayCalendarsError);
-      dispatch(setSnackbarError(MESSAGE_CODE.E00001));
+      logger.error(companyHolidayCalendarsError);
+      dispatch(
+        pushNotification({
+          tone: "error",
+          message: MESSAGE_CODE.E00001,
+        }),
+      );
     }
   }, [companyHolidayCalendarsError, dispatch]);
 
@@ -112,7 +116,6 @@ export default function CompanyHolidayCalendarList() {
     setSelectedMonth,
     nameFilter,
     setNameFilter,
-    /* yearMonthFilter intentionally unused */
     applyYearMonthFilter,
     filtered,
     paginated,
@@ -125,48 +128,63 @@ export default function CompanyHolidayCalendarList() {
     yearOffset: YEAR_OFFSET,
   });
 
-  if (calendarLoading) {
-    return <LinearProgress sx={{ width: "100%" }} />;
-  }
+  const deleteMessage = useMemo(() => {
+    if (!deleteTarget) {
+      return "";
+    }
 
-  const handleDelete = async (
-    companyHolidayCalendar: CompanyHolidayCalendar
-  ) => {
-    // eslint-disable-next-line no-alert
-    const beDeleteDate = dayjs(companyHolidayCalendar.holidayDate).format(
-      AttendanceDate.DisplayFormat
+    const beDeleteDate = dayjs(deleteTarget.holidayDate).format(
+      AttendanceDate.DisplayFormat,
     );
-    const beDeleteName = companyHolidayCalendar.name;
-    const message = `「${beDeleteDate}(${beDeleteName})」を削除しますか？\n削除したデータは元に戻せません。`;
+    return `「${beDeleteDate}(${deleteTarget.name})」を削除しますか？\n削除したデータは元に戻せません。`;
+  }, [deleteTarget]);
 
-    const confirm = window.confirm(message);
-    if (!confirm) {
+  const handleOpenDeleteConfirm = (companyHolidayCalendar: CompanyHolidayCalendar) => {
+    setDeleteTarget(companyHolidayCalendar);
+  };
+
+  const handleCloseDeleteConfirm = () => {
+    setDeleteTarget(null);
+  };
+
+  const handleDelete = async () => {
+    if (!deleteTarget) {
       return;
     }
 
-    const id = companyHolidayCalendar.id;
+    const target = deleteTarget;
+    setDeleteTarget(null);
+
     const companyHolidayCalendarMessage = CompanyHolidayCalendarMessage();
-    await deleteCompanyHolidayCalendar({ id })
+    await deleteCompanyHolidayCalendar({ id: target.id })
       .then(() =>
         dispatch(
-          setSnackbarSuccess(
-            companyHolidayCalendarMessage.delete(MessageStatus.SUCCESS)
-          )
-        )
+          pushNotification({
+            tone: "success",
+            message: companyHolidayCalendarMessage.delete(MessageStatus.SUCCESS),
+          }),
+        ),
       )
       .catch(() =>
         dispatch(
-          setSnackbarError(
-            companyHolidayCalendarMessage.delete(MessageStatus.ERROR)
-          )
-        )
+          pushNotification({
+            tone: "error",
+            message: companyHolidayCalendarMessage.delete(MessageStatus.ERROR),
+          }),
+        ),
       );
   };
 
+
+  if (calendarLoading) {
+    return <ProgressBar className="w-full" />;
+  }
+
   return (
     <>
-      <Stack direction="column" spacing={1}>
-        <Stack direction="row" spacing={1}>
+      <HolidayCalendarListScaffold
+      actions={
+        <>
           <AddCompanyHolidayCalendar
             createCompanyHolidayCalendar={createCompanyHolidayCalendar}
             bulkCreateCompanyHolidayCalendar={bulkCreateCompanyHolidayCalendar}
@@ -174,145 +192,66 @@ export default function CompanyHolidayCalendarList() {
           <ExcelFilePicker
             bulkCreateCompanyHolidayCalendar={bulkCreateCompanyHolidayCalendar}
           />
-        </Stack>
-        <Paper variant="outlined" sx={{ p: 1, width: "100%" }}>
-          <Typography variant="subtitle2" sx={{ mb: 1 }}>
-            フィルター
-          </Typography>
-          <Stack direction="row" spacing={1} alignItems="center">
-            <FormControl size="small" sx={{ minWidth: 110 }}>
-              <InputLabel id="company-select-year-label">年</InputLabel>
-              <Select
-                labelId="company-select-year-label"
-                value={selectedYear}
-                label="年"
-                onChange={(e) => {
-                  const y = e.target.value as number;
-                  setSelectedYear(y);
-                  applyYearMonthFilter(y, selectedMonth);
-                }}
-              >
-                <MenuItem value="">-</MenuItem>
-                {years.map((y) => (
-                  <MenuItem key={y} value={y}>
-                    {y}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-            <FormControl size="small" sx={{ minWidth: 100 }}>
-              <InputLabel id="company-select-month-label">月</InputLabel>
-              <Select
-                labelId="company-select-month-label"
-                value={selectedMonth}
-                label="月"
-                onChange={(e) => {
-                  const m = e.target.value as number;
-                  setSelectedMonth(m);
-                  applyYearMonthFilter(selectedYear, m);
-                }}
-              >
-                <MenuItem value="">-</MenuItem>
-                {Array.from({ length: 12 }).map((_, i) => (
-                  <MenuItem key={i + 1} value={i + 1}>
-                    {i + 1}月
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-            <TextField
-              label="休日名で検索"
-              size="small"
-              value={nameFilter}
-              onChange={(e) => {
-                setNameFilter(e.target.value);
-              }}
-              sx={{ minWidth: 200 }}
-            />
-            <Button
-              size="small"
-              onClick={() => {
-                clearFilters();
-              }}
-            >
-              クリア
-            </Button>
-          </Stack>
-        </Paper>
-      </Stack>
-      <TableContainer>
-        <Table size="small">
-          <TableHead>
-            <TableRow>
-              <TableCell sx={{ width: 50 }} />
-              <TableCell sx={{ width: 100 }}>日付</TableCell>
-              <TableCell sx={{ width: 200 }}>名前</TableCell>
-              <TableCell sx={{ width: 100 }}>作成日</TableCell>
-              <TableCell sx={{ flexGrow: 1 }} />
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {paginated.map((holidayCalendar, index) => (
-              <TableRow key={holidayCalendar.id ?? index}>
-                <TableCell>
-                  <Stack direction="row" spacing={0}>
-                    <CompanyHolidayCalendarEdit
-                      holidayCalendar={holidayCalendar}
-                      updateCompanyHolidayCalendar={
-                        updateCompanyHolidayCalendar
-                      }
-                    />
-                    <CompanyHolidayCalendarCopy
-                      companyHolidayCalendar={holidayCalendar}
-                      createCompanyHolidayCalendar={
-                        createCompanyHolidayCalendar
-                      }
-                    />
-                    <IconButton onClick={() => handleDelete(holidayCalendar)}>
-                      <DeleteIcon fontSize="small" />
-                    </IconButton>
-                  </Stack>
-                </TableCell>
-                <TableCell>
-                  {(() => {
-                    const date = dayjs(holidayCalendar.holidayDate);
-                    return date.format(AttendanceDate.DisplayFormat);
-                  })()}
-                </TableCell>
-                <TableCell>{holidayCalendar.name}</TableCell>
-                <TableCell>
-                  {(() => {
-                    const date = dayjs(holidayCalendar.createdAt);
-                    return date.format(AttendanceDate.DisplayFormat);
-                  })()}
-                </TableCell>
-                <TableCell />
-              </TableRow>
-            ))}
-          </TableBody>
-          <TableFooter>
-            <TableRow>
-              <TablePagination
-                rowsPerPageOptions={[10, 20, 50, 100]}
-                colSpan={5}
-                count={filtered.length}
-                rowsPerPage={rowsPerPage}
-                page={page}
-                labelRowsPerPage="表示件数"
-                labelDisplayedRows={({ from, to, count }) =>
-                  `${from}-${to} / ${count === -1 ? `以上` : `${count}`} 件`
-                }
-                SelectProps={{
-                  inputProps: { "aria-label": "rows per page" },
-                  native: false,
-                }}
-                onPageChange={handleChangePage}
-                onRowsPerPageChange={handleChangeRowsPerPage}
-              />
-            </TableRow>
-          </TableFooter>
-        </Table>
-      </TableContainer>
+        </>
+      }
+      paginated={paginated}
+      filteredCount={filtered.length}
+      page={page}
+      rowsPerPage={rowsPerPage}
+      years={years}
+      selectedYear={selectedYear}
+      selectedMonth={selectedMonth}
+      onYearChange={(year) => {
+        setSelectedYear(year);
+        applyYearMonthFilter(year, selectedMonth);
+      }}
+      onMonthChange={(month) => {
+        setSelectedMonth(month);
+        applyYearMonthFilter(selectedYear, month);
+      }}
+      nameFilter={nameFilter}
+      onNameFilterChange={setNameFilter}
+      onClearFilters={clearFilters}
+      onPageChange={handleChangePage}
+      onRowsPerPageChange={handleChangeRowsPerPage}
+      nameFilterLabel="休日名で検索"
+      filterIdPrefix="company"
+      getRowKey={(holidayCalendar, index) => holidayCalendar.id ?? index}
+      renderActionButtons={(holidayCalendar) => (
+        <>
+          <CompanyHolidayCalendarEdit
+            holidayCalendar={holidayCalendar}
+            updateCompanyHolidayCalendar={updateCompanyHolidayCalendar}
+          />
+          <CompanyHolidayCalendarCopy
+            companyHolidayCalendar={holidayCalendar}
+            createCompanyHolidayCalendar={createCompanyHolidayCalendar}
+          />
+          <AppDeleteIconButton
+            onClick={() => handleOpenDeleteConfirm(holidayCalendar)}
+          />
+        </>
+      )}
+      renderDataCells={(holidayCalendar) => (
+        <>
+          <TableCell>
+            {dayjs(holidayCalendar.holidayDate).format(AttendanceDate.DisplayFormat)}
+          </TableCell>
+          <TableCell>{holidayCalendar.name}</TableCell>
+          <CreatedAtTableCell holidayCalendar={holidayCalendar} />
+        </>
+      )}
+      />
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        title="削除確認"
+        message={deleteMessage}
+        confirmLabel="削除"
+        onConfirm={() => {
+          void handleDelete();
+        }}
+        onCancel={handleCloseDeleteConfirm}
+      />
     </>
   );
 }

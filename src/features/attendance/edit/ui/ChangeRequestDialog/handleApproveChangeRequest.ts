@@ -1,16 +1,17 @@
-import { Attendance, UpdateAttendanceInput } from "@shared/api/graphql/types";
+import { type UpdateAttendanceMutationArg } from "@entities/attendance/api/attendanceApi";
+import { Attendance } from "@shared/api/graphql/types";
 
 export default async function handleApproveChangeRequest(
   attendance: Attendance | null,
-  updateAttendance: (input: UpdateAttendanceInput) => Promise<Attendance>,
-  comment: string | undefined
+  updateAttendance: (input: UpdateAttendanceMutationArg) => Promise<Attendance>,
+  comment: string | undefined,
 ) {
   if (!attendance || !attendance.changeRequests) {
     throw new Error("attendance or attendance.changeRequests is null");
   }
 
   const changeRequests = attendance.changeRequests.filter(
-    (item): item is NonNullable<typeof item> => item !== null
+    (item): item is NonNullable<typeof item> => item !== null,
   );
   const targetChangeRequest =
     changeRequests.find((request) => !request.completed) || changeRequests[0];
@@ -36,6 +37,7 @@ export default async function handleApproveChangeRequest(
         : attendance.endTime,
     goDirectlyFlag:
       targetChangeRequest.goDirectlyFlag ?? attendance.goDirectlyFlag,
+    absentFlag: targetChangeRequest.absentFlag ?? attendance.absentFlag,
     returnDirectlyFlag:
       targetChangeRequest.returnDirectlyFlag ?? attendance.returnDirectlyFlag,
     remarks:
@@ -99,6 +101,12 @@ export default async function handleApproveChangeRequest(
       comment,
     })),
     revision: attendance.revision,
+    logContext: {
+      action: "attendance.request.approve",
+      details: {
+        comment: comment ?? null,
+      },
+    },
   }).catch((e: Error) => {
     throw e;
   });

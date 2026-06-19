@@ -1,3 +1,4 @@
+import { AttendanceDate } from "@entities/attendance/lib/AttendanceDate";
 import {
   Table,
   TableBody,
@@ -10,7 +11,7 @@ import { Attendance, AttendanceChangeRequest } from "@shared/api/graphql/types";
 import dayjs from "dayjs";
 import { useMemo } from "react";
 
-import { AttendanceDate } from "@/entities/attendance/lib/AttendanceDate";
+import ComparisonTableRow from "../shared/ComparisonTableRow";
 
 export type ChangeRequestDiffTableProps = {
   attendance: Attendance;
@@ -40,35 +41,13 @@ export function ChangeRequestDiffTable({
         </TableHead>
         <TableBody>
           {rows.map((row) => (
-            <TableRow
+            <ComparisonTableRow
               key={row.label}
-              sx={
-                row.changed
-                  ? { backgroundColor: "rgba(255,193,7,0.12)" }
-                  : undefined
-              }
-            >
-              <TableCell
-                sx={{
-                  whiteSpace: "nowrap",
-                  fontWeight: row.changed ? 600 : 400,
-                }}
-              >
-                {row.label}
-              </TableCell>
-              <TableCell sx={{ whiteSpace: "pre-line" }}>
-                {row.current}
-              </TableCell>
-              <TableCell
-                sx={{
-                  whiteSpace: "pre-line",
-                  fontWeight: row.changed ? 600 : 400,
-                  color: row.changed ? "warning.dark" : undefined,
-                }}
-              >
-                {row.requested}
-              </TableCell>
-            </TableRow>
+              label={row.label}
+              beforeValue={row.current}
+              afterValue={row.requested}
+              highlightDifference={row.changed}
+            />
           ))}
         </TableBody>
       </Table>

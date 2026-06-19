@@ -1,9 +1,14 @@
 import {
+  type UpdateWorkflowTemplatePayload,
   useCreateWorkflowTemplateMutation,
   useDeleteWorkflowTemplateMutation,
   useGetWorkflowTemplatesQuery,
   useUpdateWorkflowTemplateMutation,
 } from "@entities/workflow-template/api/workflowTemplateApi";
+import {
+  buildVersionOrUpdatedAtCondition,
+  getNextVersion,
+} from "@shared/api/graphql/concurrency";
 import type {
   CreateWorkflowTemplateInput,
   UpdateWorkflowTemplateInput,
@@ -103,10 +108,20 @@ export default function useWorkflowTemplates({
       if (!isAuthenticated || !organizationId) {
         throw new Error("User is not authenticated");
       }
-      const updated = await updateTemplateMutation(input).unwrap();
+      const currentTemplate = templates.find((template) => template.id === input.id);
+      const updated = await updateTemplateMutation({
+        input: {
+          ...input,
+          version: getNextVersion(currentTemplate?.version),
+        },
+        condition: buildVersionOrUpdatedAtCondition(
+          currentTemplate?.version,
+          currentTemplate?.updatedAt,
+        ),
+      } satisfies UpdateWorkflowTemplatePayload).unwrap();
       return updated;
     },
-    [isAuthenticated, organizationId, updateTemplateMutation],
+    [isAuthenticated, organizationId, templates, updateTemplateMutation],
   );
 
   const removeTemplate = useCallback(

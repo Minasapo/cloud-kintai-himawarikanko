@@ -1,4 +1,16 @@
-import { expect, test } from "@playwright/test";
+import {
+  type ConsoleMessage,
+  expect,
+  type Page,
+  type Response,
+  test,
+} from "@playwright/test";
+
+interface CollectedPageErrors {
+  readonly console: string[];
+  readonly network: string[];
+  readonly pageErrors: Error[];
+}
 
 /**
  * スモークテスト: 全ページエラー検出
@@ -41,15 +53,15 @@ const ADMIN_PAGES = [
 
 test.describe("スモークテスト - ページエラー検出", () => {
   // ページごとにエラーを収集
-  const collectErrorsForPage = (page: any) => {
-    const errors = {
-      console: [] as string[],
-      network: [] as string[],
-      pageErrors: [] as Error[],
+  const collectErrorsForPage = (page: Page): CollectedPageErrors => {
+    const errors: CollectedPageErrors = {
+      console: [],
+      network: [],
+      pageErrors: [],
     };
 
     // コンソールエラーをキャッチ（リソースロードエラーは除外）
-    page.on("console", (msg: any) => {
+    page.on("console", (msg: ConsoleMessage) => {
       if (msg.type() === "error") {
         const text = msg.text();
         // リソースロードエラー（400系）は除外
@@ -63,7 +75,7 @@ test.describe("スモークテスト - ページエラー検出", () => {
     });
 
     // ネットワークエラー（5xx）をキャッチ
-    page.on("response", (response: any) => {
+    page.on("response", (response: Response) => {
       const status = response.status();
       if (status >= 500) {
         errors.network.push(`[${status}] ${response.url()}`);
@@ -80,7 +92,11 @@ test.describe("スモークテスト - ページエラー検出", () => {
 
   test.describe("スタッフユーザー - ページナビゲーション", () => {
     STAFF_PAGES.forEach(({ path, name }) => {
-      test(`${name} (${path})`, async ({ page }) => {
+      test(`${name} (${path})`, async ({ page }, testInfo) => {
+        if (testInfo.project.name !== "chromium-staff") {
+          testInfo.skip();
+        }
+
         const errors = collectErrorsForPage(page);
 
         // ページへナビゲート
@@ -102,14 +118,14 @@ test.describe("スモークテスト - ページエラー検出", () => {
         expect(errors.console.length).toBe(
           0,
           `JavaScriptコンソールエラーが検出されました: ${errors.console.join(
-            ", "
-          )}`
+            ", ",
+          )}`,
         );
 
         // サーバーエラーがないことを確認
         expect(errors.network.length).toBe(
           0,
-          `サーバーエラーが検出されました: ${errors.network.join(", ")}`
+          `サーバーエラーが検出されました: ${errors.network.join(", ")}`,
         );
 
         // グローバルエラーがないことを確認
@@ -117,7 +133,7 @@ test.describe("スモークテスト - ページエラー検出", () => {
           0,
           `ページエラーが検出されました: ${errors.pageErrors
             .map((e) => e.message)
-            .join(", ")}`
+            .join(", ")}`,
         );
       });
     });
@@ -125,7 +141,11 @@ test.describe("スモークテスト - ページエラー検出", () => {
 
   test.describe("管理者ユーザー - ページナビゲーション", () => {
     ADMIN_PAGES.forEach(({ path, name }) => {
-      test(`${name} (${path})`, async ({ page }) => {
+      test(`${name} (${path})`, async ({ page }, testInfo) => {
+        if (testInfo.project.name !== "chromium-admin") {
+          testInfo.skip();
+        }
+
         const errors = collectErrorsForPage(page);
 
         // ページへナビゲート
@@ -147,14 +167,14 @@ test.describe("スモークテスト - ページエラー検出", () => {
         expect(errors.console.length).toBe(
           0,
           `JavaScriptコンソールエラーが検出されました: ${errors.console.join(
-            ", "
-          )}`
+            ", ",
+          )}`,
         );
 
         // サーバーエラーがないことを確認
         expect(errors.network.length).toBe(
           0,
-          `サーバーエラーが検出されました: ${errors.network.join(", ")}`
+          `サーバーエラーが検出されました: ${errors.network.join(", ")}`,
         );
 
         // グローバルエラーがないことを確認
@@ -162,7 +182,7 @@ test.describe("スモークテスト - ページエラー検出", () => {
           0,
           `ページエラーが検出されました: ${errors.pageErrors
             .map((e) => e.message)
-            .join(", ")}`
+            .join(", ")}`,
         );
       });
     });
@@ -177,7 +197,7 @@ test.describe("スモークテスト - ページエラー検出", () => {
       // 意図しないグローバルエラーが発生していないことを確認
       expect(errors.pageErrors.length).toBe(
         0,
-        "グローバルエラーが発生しました"
+        "グローバルエラーが発生しました",
       );
     });
   });

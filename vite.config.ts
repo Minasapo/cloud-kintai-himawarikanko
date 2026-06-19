@@ -1,6 +1,7 @@
+import ViteYaml from "@modyfi/vite-plugin-yaml";
 import react from "@vitejs/plugin-react";
 import path from "path";
-import { defineConfig, splitVendorChunkPlugin } from "vite";
+import { defineConfig } from "vite";
 import checker from "vite-plugin-checker";
 import tsconfigPaths from "vite-tsconfig-paths";
 
@@ -66,6 +67,9 @@ const manualChunks = (id: string) => {
 
 const shouldUseManualChunks = process.env.ENABLE_MANUAL_CHUNKS === "true";
 const checkerOverlayEnabled = process.env.VITE_CHECKER_OVERLAY !== "false";
+// Rollout plan: docs/REACT_COMPILER_REINTRODUCTION_PLAN.md
+const shouldEnableReactCompiler =
+  process.env.VITE_ENABLE_REACT_COMPILER === "true";
 
 export default defineConfig({
   server: {
@@ -88,24 +92,25 @@ export default defineConfig({
     },
   },
   plugins: [
-    react({
-      // React Compilerは一時的に無効化
-      // 理由: 既存コードベースの大規模な修正が必要
-      // TODO: コードの安定後、段階的に再導入を検討
-      // babel: {
-      //   babelrc: false,
-      //   configFile: false,
-      //   plugins: [
-      //     [
-      //       "babel-plugin-react-compiler",
-      //       {
-      //         compilationMode: "annotation",
-      //       },
-      //     ],
-      //   ],
-      // },
-    }),
-    splitVendorChunkPlugin(),
+    ViteYaml(),
+    react(
+      shouldEnableReactCompiler
+        ? {
+            babel: {
+              babelrc: false,
+              configFile: false,
+              plugins: [
+                [
+                  "babel-plugin-react-compiler",
+                  {
+                    compilationMode: "annotation",
+                  },
+                ],
+              ],
+            },
+          }
+        : {},
+    ),
     tsconfigPaths(),
     checker({
       typescript: true,

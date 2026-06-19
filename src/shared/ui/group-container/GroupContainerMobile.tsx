@@ -1,7 +1,6 @@
-import { Box, Stack, SxProps, Theme, Typography } from "@mui/material";
+import { designTokenVar } from "@shared/designSystem";
+import { Heading } from "@shared/ui/typography";
 import { CSSProperties, ReactNode } from "react";
-
-import { designTokenVar } from "@/shared/designSystem";
 
 const GROUP_BORDER_WIDTH = designTokenVar(
   "component.groupContainer.borderWidth",
@@ -13,11 +12,11 @@ const GROUP_ACCENT_WIDTH = designTokenVar(
 );
 const GROUP_BORDER_COLOR = designTokenVar(
   "component.groupContainer.borderColor",
-  "#D9E2DD",
+  "rgb(217 226 221)",
 );
 const GROUP_ACCENT_COLOR = designTokenVar(
   "component.groupContainer.accentColor",
-  "#0FA85E",
+  "rgb(15 168 94)",
 );
 const GROUP_RADIUS = designTokenVar(
   "component.groupContainer.borderRadius",
@@ -29,7 +28,7 @@ const GROUP_PADDING = designTokenVar(
 );
 const GROUP_BACKGROUND = designTokenVar(
   "component.groupContainer.background",
-  "#FFFFFF",
+  "rgb(255 255 255)",
 );
 const GROUP_CONTENT_GAP = designTokenVar(
   "component.groupContainer.contentGap",
@@ -37,7 +36,7 @@ const GROUP_CONTENT_GAP = designTokenVar(
 );
 const GROUP_COUNT_COLOR = designTokenVar(
   "component.groupContainer.countColor",
-  "#5E726A",
+  "rgb(94 114 106)",
 );
 
 export interface GroupContainerMobileProps {
@@ -45,7 +44,8 @@ export interface GroupContainerMobileProps {
   count?: number;
   hideAccent?: boolean;
   hideBorder?: boolean;
-  sx?: SxProps<Theme>;
+  className?: string;
+  style?: CSSProperties;
   children?: ReactNode;
 }
 
@@ -55,7 +55,8 @@ const GroupContainerMobile = ({
   hideAccent = false,
   hideBorder = false,
   children,
-  sx,
+  className,
+  style,
 }: GroupContainerMobileProps) => {
   const borderClassName = hideBorder
     ? "border-0"
@@ -83,33 +84,36 @@ const GroupContainerMobile = ({
   }
 
   return (
-    <Box
-      className={`rounded-[var(--group-radius)] border-solid bg-[var(--group-background)] p-[var(--group-padding)] ${borderClassName} ${accentClassName}`}
-      style={groupVars}
-      sx={sx}
+    <section
+      className={[
+        "rounded-[var(--group-radius)] border-solid bg-[var(--group-background)] p-[var(--group-padding)]",
+        borderClassName,
+        accentClassName,
+        className,
+      ]
+        .filter(Boolean)
+        .join(" ")}
+      style={{ ...groupVars, ...style }}
     >
       {title ? (
-        <Stack
-          direction="row"
-          alignItems="center"
-          justifyContent="space-between"
-        >
-          <Typography variant="subtitle1" fontWeight={700}>
+        <div className="flex items-center justify-between">
+          <Heading
+            level="section"
+            appearance="quiet"
+            className="m-0 text-slate-900"
+          >
             {title}
-          </Typography>
+          </Heading>
           {typeof count === "number" && (
-            <Typography
-              variant="caption"
-              className="text-[color:var(--group-count-color)]"
-            >
+            <span className="text-xs leading-5 text-[color:var(--group-count-color)]">
               {`(${count}件)`}
-            </Typography>
+            </span>
           )}
-        </Stack>
+        </div>
       ) : null}
 
-      <Box className="mt-[var(--group-content-gap)]">{children}</Box>
-    </Box>
+      <div className="mt-[var(--group-content-gap)]">{children}</div>
+    </section>
   );
 };
 

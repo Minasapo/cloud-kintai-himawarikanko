@@ -1,10 +1,9 @@
-import dayjs, { Dayjs } from "dayjs";
-
 import {
   buildBasePayload,
   buildStandardWorkHours,
   formatTime,
-} from "@/features/admin/configManagement/lib/payloadHelpers";
+} from "@features/admin/configManagement/lib/payloadHelpers";
+import dayjs, { Dayjs } from "dayjs";
 
 describe("buildBasePayload helpers", () => {
   test("formatTime formats Dayjs to HH:mm", () => {
@@ -60,7 +59,12 @@ describe("buildBasePayload helpers", () => {
       amPmHolidayEnabled: true,
       specialHolidayEnabled: false,
       attendanceStatisticsEnabled: true,
+      workflowNotificationEnabled: true,
+      timeRecorderAnnouncementEnabled: true,
+      timeRecorderAnnouncementMessage: "お知らせ本文",
       overTimeCheckEnabled: true,
+      shiftCollaborativeEnabled: true,
+      shiftDefaultMode: "collaborative",
     });
     expect(payload.workStartTime).toBe("09:00");
     expect(payload.workEndTime).toBe("18:00");
@@ -68,6 +72,9 @@ describe("buildBasePayload helpers", () => {
     expect(payload.lunchRestEndTime).toBe("13:00");
     expect(payload.amHolidayStartTime).toBe("09:00");
     expect(payload.pmHolidayEndTime).toBe("18:00");
+    expect(payload.workflowNotificationEnabled).toBe(true);
+    expect(payload.timeRecorderAnnouncementEnabled).toBe(true);
+    expect(payload.timeRecorderAnnouncementMessage).toBe("お知らせ本文");
     expect(typeof payload.standardWorkHours).toBe("number");
     expect(Array.isArray(payload.links)).toBe(true);
     expect(Array.isArray(payload.reasons)).toBe(true);

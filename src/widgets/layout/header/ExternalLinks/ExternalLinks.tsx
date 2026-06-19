@@ -1,14 +1,15 @@
+import { AuthContext } from "@app/providers/auth/AuthContext";
+import { AppConfigContext } from "@entities/app-config/model/AppConfigContext";
 import { usePersonalExternalLinks } from "@entities/staff/model/useStaff/usePersonalExternalLinks";
+import { StaffRole } from "@entities/staff/model/useStaffs/useStaffs";
 import ExternalLinksView, {
   ExternalLinkItem,
 } from "@shared/ui/header/ExternalLinks";
 import { useContext, useMemo } from "react";
 
-import { AppConfigContext } from "@/context/AppConfigContext";
-import { AuthContext } from "@/context/AuthContext";
-
 export function ExternalLinks() {
-  const { cognitoUser, authStatus } = useContext(AuthContext);
+  const { cognitoUser, authStatus, isCognitoUserRole } =
+    useContext(AuthContext);
   const { getLinks } = useContext(AppConfigContext);
 
   const companyLinks = useMemo<ExternalLinkItem[]>(() => {
@@ -17,7 +18,9 @@ export function ExternalLinks() {
     return resolvedLinks;
   }, [getLinks]);
 
-  const personalLinks = usePersonalExternalLinks(cognitoUser?.id);
+  const { personalLinks, hasFetchError } = usePersonalExternalLinks(
+    cognitoUser?.id,
+  );
 
   const { familyName = "", givenName = "" } = cognitoUser ?? {};
 
@@ -30,14 +33,24 @@ export function ExternalLinks() {
 
   const mergedLinks = useMemo(
     () => [...companyLinks, ...personalLinks],
-    [companyLinks, personalLinks]
+    [companyLinks, personalLinks],
   );
 
-  if (authStatus !== "authenticated" || !cognitoUser) {
+  if (
+    isCognitoUserRole(StaffRole.OPERATOR) ||
+    authStatus !== "authenticated" ||
+    !cognitoUser
+  ) {
     return null;
   }
 
-  return <ExternalLinksView links={mergedLinks} staffName={staffName} />;
+  return (
+    <ExternalLinksView
+      links={mergedLinks}
+      staffName={staffName}
+      personalLinksFetchError={hasFetchError}
+    />
+  );
 }
 
 const filterEnabledLinks = (links: ExternalLinkItem[]) =>
@@ -47,5 +60,5 @@ const filterEnabledLinks = (links: ExternalLinkItem[]) =>
       typeof link.label === "string" &&
       link.label.trim() !== "" &&
       typeof link.url === "string" &&
-      link.url.trim() !== ""
+      link.url.trim() !== "",
   );

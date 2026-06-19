@@ -1,5 +1,5 @@
 import AttendanceEditor from "@features/attendance/edit/ui/AttendanceEditor";
-import { Container } from "@mui/material";
+import { PageContent } from "@shared/ui/layout";
 import { useSearchParams } from "react-router-dom";
 
 export default function AdminAttendanceEditor() {
@@ -7,8 +7,8 @@ export default function AdminAttendanceEditor() {
   const readOnly = searchParams.get("readOnly") === "true";
 
   return (
-    <Container maxWidth="xl" sx={{ pt: 1 }}>
+    <PageContent width="wide" className="pt-1">
       <AttendanceEditor readOnly={readOnly} />
-    </Container>
+    </PageContent>
   );
 }

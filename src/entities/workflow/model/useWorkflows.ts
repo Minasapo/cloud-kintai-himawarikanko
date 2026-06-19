@@ -1,15 +1,29 @@
 import {
+  type UpdateWorkflowPayload,
   useCreateWorkflowMutation,
   useDeleteWorkflowMutation,
   useGetWorkflowsQuery,
   useUpdateWorkflowMutation,
 } from "@entities/workflow/api/workflowApi";
+import { graphqlClient } from "@shared/api/amplify/graphqlClient";
+import {
+  buildVersionOrUpdatedAtCondition,
+  getNextVersion,
+} from "@shared/api/graphql/concurrency";
+import {
+  onCreateWorkflow,
+  onDeleteWorkflow,
+  onUpdateWorkflow,
+} from "@shared/api/graphql/documents/subscriptions";
 import {
   CreateWorkflowInput,
+  OnCreateWorkflowSubscription,
+  OnDeleteWorkflowSubscription,
+  OnUpdateWorkflowSubscription,
   UpdateWorkflowInput,
   Workflow as APIWorkflow,
 } from "@shared/api/graphql/types";
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
 
 const extractErrorMessage = (error: unknown) => {
   if (!error) {
@@ -37,7 +51,6 @@ export type UseWorkflowsParams = {
 };
 
 export default function useWorkflows({ isAuthenticated }: UseWorkflowsParams) {
-
   const {
     data,
     isLoading: isQueryLoading,
@@ -78,6 +91,71 @@ export default function useWorkflows({ isAuthenticated }: UseWorkflowsParams) {
     await refetch();
   }, [isAuthenticated, refetch]);
 
+  useEffect(() => {
+    if (!isAuthenticated) {
+      return;
+    }
+
+    let isMounted = true;
+    let refetchTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const scheduleRefetch = () => {
+      if (refetchTimer) {
+        clearTimeout(refetchTimer);
+      }
+
+      refetchTimer = setTimeout(() => {
+        if (!isMounted) {
+          return;
+        }
+        void refetch();
+      }, 300);
+    };
+
+    const createSubscription = graphqlClient
+      .graphql({ query: onCreateWorkflow, authMode: "userPool" })
+      .subscribe({
+        next: ({ data }: { data?: OnCreateWorkflowSubscription }) => {
+          if (!data?.onCreateWorkflow) {
+            return;
+          }
+          scheduleRefetch();
+        },
+      });
+
+    const updateSubscription = graphqlClient
+      .graphql({ query: onUpdateWorkflow, authMode: "userPool" })
+      .subscribe({
+        next: ({ data }: { data?: OnUpdateWorkflowSubscription }) => {
+          if (!data?.onUpdateWorkflow) {
+            return;
+          }
+          scheduleRefetch();
+        },
+      });
+
+    const deleteSubscription = graphqlClient
+      .graphql({ query: onDeleteWorkflow, authMode: "userPool" })
+      .subscribe({
+        next: ({ data }: { data?: OnDeleteWorkflowSubscription }) => {
+          if (!data?.onDeleteWorkflow) {
+            return;
+          }
+          scheduleRefetch();
+        },
+      });
+
+    return () => {
+      isMounted = false;
+      if (refetchTimer) {
+        clearTimeout(refetchTimer);
+      }
+      createSubscription.unsubscribe();
+      updateSubscription.unsubscribe();
+      deleteSubscription.unsubscribe();
+    };
+  }, [isAuthenticated, refetch]);
+
   const create = useCallback(
     async (input: CreateWorkflowInput) => {
       if (!isAuthenticated) {
@@ -94,10 +172,20 @@ export default function useWorkflows({ isAuthenticated }: UseWorkflowsParams) {
       if (!isAuthenticated) {
         throw new Error("User is not authenticated");
       }
-      const updated = await updateWorkflowMutation(input).unwrap();
+      const currentWorkflow = workflows?.find((workflow) => workflow.id === input.id);
+      const updated = await updateWorkflowMutation({
+        input: {
+          ...input,
+          version: getNextVersion(currentWorkflow?.version),
+        },
+        condition: buildVersionOrUpdatedAtCondition(
+          currentWorkflow?.version,
+          currentWorkflow?.updatedAt,
+        ),
+      } satisfies UpdateWorkflowPayload).unwrap();
       return updated;
     },
-    [isAuthenticated, updateWorkflowMutation]
+    [isAuthenticated, updateWorkflowMutation, workflows]
   );
 
   const remove = useCallback(
